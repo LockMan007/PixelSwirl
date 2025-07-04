@@ -3,127 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Swirl Version 1.008</title> <style>
+    <title>Pixel Swirl Version 1.011</title>
+    <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex; /* Changed to flex to control main content better */
-            flex-direction: row; /* Main content and right panel side-by-side */
-            justify-content: flex-start; /* Align content to the start (left) */
-            align-items: stretch; /* Stretch children to fill height */
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: stretch;
             background-color: #222;
             color: #eee;
             margin: 0;
             padding: 0;
-            height: 100vh; /* Make body fill viewport height */
-            width: 100vw; /* Make body fill viewport width */
-            overflow: hidden; /* Prevent scrollbars if content slightly overflows */
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
             box-sizing: border-box;
         }
 
         .main-content-container {
             display: flex;
-            flex-direction: row; 
-            flex-grow: 1; /* Allows it to take up available space */
-            gap: 20px; /* Space between canvas and controls (if right-panel isn't fixed) */
-            align-items: flex-start; /* Align content to the top */
-            height: 100%; 
-            padding: 10px; /* Small padding around the main content */
+            flex-direction: row;
+            flex-grow: 1;
+            gap: 20px;
+            align-items: flex-start; /* Aligns canvas container to the top */
+            height: 100%;
+            padding: 10px;
             box-sizing: border-box;
-            /* Removed justify-content: center to avoid pushing canvas to center if right panel is fixed */
+            /* margin-right will be set by JS */
         }
 
         .canvas-container {
-            flex-grow: 1; /* Allows it to take available space */
-            flex-shrink: 1; /* Allows it to shrink if needed */
-            max-width: 100%; /* Take full available width within main-content-container */
-            max-height: calc(100vh - 20px); /* Limit canvas height based on viewport and main-container padding */
-            display: flex; /* Use flex to center canvas if smaller than container */
-            align-items: center;
-            justify-content: center;
-            overflow: hidden; /* Hide any overflow if image is too big for its container */
+            flex-grow: 1;
+            flex-shrink: 1;
+            display: flex;
+            align-items: center; /* Center canvas vertically if it doesn't fill */
+            justify-content: center; /* Center canvas horizontally if it doesn't fill */
+            overflow: hidden;
+            background-color: #000;
+            /* Width and height will be set by JS */
         }
 
         canvas {
             border: 2px solid #555;
             background-color: #000;
             display: block;
-            max-width: 100%; /* Scale canvas down to fit container */
-            max-height: 100%; /* Scale canvas down to fit container */
-            width: auto; /* Maintain aspect ratio */
-            height: auto; /* Maintain aspect ratio */
-            object-fit: contain; /* Ensures image fits within bounds without cropping */
+            object-fit: contain;
         }
 
         .right-panel {
             display: flex;
-            flex-direction: column; /* Stack controls and title vertically */
-            gap: 8px; /* Reduced gap between each control "row" */
-            padding: 10px; /* Small padding inside the right panel */
-            min-width: 280px; /* Ensure enough space for controls */
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            width: 280px; /* Fixed width */
+            min-width: 280px; /* Prevent shrinking below this */
             flex-shrink: 0; /* Prevent the right panel from shrinking too much */
-            justify-content: flex-start; /* Align items to the top */
-            height: 100%; /* Take full height of main-content-container */
+            justify-content: flex-start;
+            height: 100%;
             box-sizing: border-box;
-            background-color: #333; /* Slightly darker background for controls */
+            background-color: #333;
             border-radius: 8px;
 
-            /* Docking and Locking to the right */
-            position: fixed; /* Make it fixed relative to the viewport */
-            right: 0; /* Align to the very right edge */
-            top: 0; /* Align to the very top edge */
-            height: 100vh; /* Make it fill the full viewport height */
-            z-index: 1000; /* Ensure it stays on top of other content */
-            padding-right: 20px; /* Add some padding on the right side of the panel itself */
-            padding-left: 10px; /* Adjust left padding as needed */
-            box-shadow: -5px 0 10px rgba(0,0,0,0.3); /* Optional shadow for separation */
+            position: fixed; /* Docking and Locking to the right */
+            right: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+            padding-right: 20px;
+            padding-left: 10px;
+            box-shadow: -5px 0 10px rgba(0,0,0,0.3);
         }
-
-        /* Adjust main content to not be hidden behind the fixed right panel */
-        .main-content-container {
-            margin-right: 310px; /* Width of right-panel + its right padding + gap/buffer */
-            /* This pushes the main content to the left, leaving space for the fixed right panel */
-        }
-
 
         .controls-row {
             display: flex;
-            flex-direction: column; /* Force each control group to its own "row" */
-            gap: 4px; /* Smaller gap within a control group */
-            width: 100%; /* Take full width of right-panel */
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
         }
 
         .control-group {
             display: flex;
-            flex-direction: column; /* Label above input/slider */
+            flex-direction: column;
             align-items: flex-start;
             gap: 5px;
-            white-space: nowrap; /* Prevent text labels from wrapping */
-            width: 100%; /* Make control group fill its row */
-        }
-
-        /* Specific styling for horizontal alignment for slider + buttons */
-        .slider-with-buttons {
-            display: flex;
-            flex-direction: row; /* Buttons and slider side-by-side */
-            align-items: center;
-            gap: 5px;
-            width: 100%; /* Occupy full available width */
-        }
-
-        .slider-with-value { /* New class for slider with its value span */
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 8px; /* Space between slider and value */
+            white-space: nowrap;
             width: 100%;
         }
 
+        .slider-with-buttons {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+            width: 100%;
+        }
+
+        .slider-with-value {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .control-group.piece-size-group {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .control-group.piece-size-group label,
+        .control-group.piece-size-group span {
+            flex-shrink: 0;
+        }
+
+        .control-group.piece-size-group .slider-with-buttons {
+            flex-basis: 100%;
+        }
+
         input[type="range"] {
-            flex-grow: 1; /* Allow slider to take up remaining space */
-            min-width: 80px; /* Ensure it doesn't get too small */
+            flex-grow: 1;
+            min-width: 80px;
         }
         input[type="number"] {
-            width: 100%; /* Make number input fill its available width */
+            width: 100%;
             padding: 5px;
             border-radius: 3px;
             border: 1px solid #555;
@@ -141,29 +146,27 @@
             border: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
-            width: 100%; /* Make buttons full width in their "row" */
-            box-sizing: border-box; /* Include padding and border in width */
+            width: 100%;
+            box-sizing: border-box;
         }
         button:hover {
             background-color: #0056b3;
         }
 
-        /* Styling for the new Defaults button */
         button#defaultsButton {
-            background-color: #dc3545; /* Red color */
+            background-color: #dc3545;
         }
 
         button#defaultsButton:hover {
-            background-color: #c82333; /* Darker red on hover */
+            background-color: #c82333;
         }
-        
-        /* Styling for the new Randomize button */
+
         button#randomizeButton {
-            background-color: #ff00ff; /* Fuchsia purple */
+            background-color: #ff00ff;
         }
 
         button#randomizeButton:hover {
-            background-color: #cc00cc; /* Darker fuchsia on hover */
+            background-color: #cc00cc;
         }
 
 
@@ -179,7 +182,7 @@
             color: white;
             border-radius: 5px;
             transition: background-color 0.3s ease;
-            width: 100%; /* Make load image button full width */
+            width: 100%;
             box-sizing: border-box;
             text-align: center;
         }
@@ -188,33 +191,33 @@
         }
         .checkbox-group {
             display: flex;
-            flex-direction: row; /* Checkbox and label side-by-side */
+            flex-direction: row;
             align-items: center;
-            gap: 8px; /* Space between checkbox and label */
+            gap: 8px;
             width: 100%;
         }
         .slider-button {
             padding: 5px 10px;
             font-size: 14px;
             min-width: 30px;
-            width: auto; /* Override button width for these */
-            flex-shrink: 0; /* Don't let buttons shrink */
+            width: auto;
+            flex-shrink: 0;
         }
 
         .app-info {
-            margin-top: auto; /* Push to the bottom of the right panel */
+            margin-top: auto;
             text-align: left;
             width: 100%;
-            padding-top: 15px; /* Add some space above title */
-            border-top: 1px solid #555; /* Separator line */
-            margin-top: 15px; /* Add space above separator */
+            padding-top: 15px;
+            border-top: 1px solid #555;
+            margin-top: 15px;
         }
         .app-info h2 {
-            margin-bottom: 5px; /* Space between title and version */
+            margin-bottom: 5px;
             margin-top: 0;
         }
         .app-info a {
-            color: #8ab4f8; /* A nice blue for links */
+            color: #8ab4f8;
             text-decoration: none;
         }
         .app-info a:hover {
@@ -266,14 +269,14 @@
         </div>
 
         <div class="controls-row">
-            <div class="control-group">
+            <div class="control-group piece-size-group">
                 <label>Puzzle Piece Size:</label>
+                <span id="pixelSizeValue">64x64</span>
                 <div class="slider-with-buttons">
                     <button id="pixelSizeMinus" class="slider-button">-</button>
                     <input type="range" id="pixelSizeSlider" min="0" max="8" value="6" step="1">
                     <button id="pixelSizePlus" class="slider-button">+</button>
                 </div>
-                <span id="pixelSizeValue">64x64</span>
             </div>
         </div>
 
@@ -282,17 +285,17 @@
                 <label for="gravitySlider">Gravity:</label>
                 <div class="slider-with-value">
                     <input type="range" id="gravitySlider" min="0.01" max="0.5" value="0.05" step="0.001">
-                    <span id="gravityValue">0.05</span>
+                    <span id="gravityValue">0.050</span>
                 </div>
             </div>
         </div>
-        
+
         <div class="controls-row">
             <div class="control-group">
-                <label for="snapDistanceSlider">Snap Distance:</label>
+                <label for="snapDistanceSlider">Snap Distance (pixels):</label>
                 <div class="slider-with-value">
                     <input type="range" id="snapDistanceSlider" min="0" max="16" value="0" step="1">
-                    <span id="snapDistanceValue">0 pixels</span>
+                    <span id="snapDistanceValue">0</span>
                 </div>
             </div>
         </div>
@@ -319,6 +322,20 @@
 
         <div class="controls-row">
             <div class="checkbox-group">
+                <input type="checkbox" id="windCheckbox">
+                <label for="windCheckbox">Wind</label>
+            </div>
+            <div class="control-group" id="windStrengthGroup" style="display: none;">
+                <label for="windStrengthSlider">Wind Strength:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="windStrengthSlider" min="0" max="0.1" value="0.01" step="0.001">
+                    <span id="windStrengthValue">0.010</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="checkbox-group">
                 <input type="checkbox" id="unlockFreedomCheckbox">
                 <label for="unlockFreedomCheckbox">Unlock more freedom</label>
             </div>
@@ -330,7 +347,7 @@
                 <label for="unlockPieceSizeCheckbox">Unlock Piece Size (lag)</label>
             </div>
         </div>
-        
+
         <div class="controls-row">
             <button id="defaultsButton">Defaults</button>
         </div>
@@ -341,15 +358,17 @@
 
         <div class="app-info">
             <h2>Pixel Swirl</h2>
-            <span id="versionNumber">Version 1.008</span>
+            <span id="versionNumber">Version 1.011</span>
             <span class="not-mobile">(Not for Mobile Use)</span>
-            <hr> <br>
+            <hr>
+            <br>
             Check out other cool stuff:<br>
             <br>
             <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.com/arcade</a><br>
             <br>
             <a href="https://github.com/ChrisPirillo" target="_blank">https://github.com/ChrisPirillo</a>
-            <hr> Vibe Coded with:<br>
+            <hr>
+            Vibe Coded with:<br>
             <a href="https://www.google.com/search?q=%22google+gemini%22" target="_blank">Gemini</a>
         </div>
     </div>
@@ -377,11 +396,18 @@
         const versionNumberSpan = document.getElementById('versionNumber');
         const maxPiecesInput = document.getElementById('maxPiecesInput');
         const defaultsButton = document.getElementById('defaultsButton');
-        const randomizeButton = document.getElementById('randomizeButton'); // New randomize button
+        const randomizeButton = document.getElementById('randomizeButton');
+        const windCheckbox = document.getElementById('windCheckbox');
+        const windStrengthSlider = document.getElementById('windStrengthSlider');
+        const windStrengthValueSpan = document.getElementById('windStrengthValue');
+        const windStrengthGroup = document.getElementById('windStrengthGroup');
+        const rightPanel = document.querySelector('.right-panel');
+        const mainContentContainer = document.querySelector('.main-content-container');
+        const canvasContainer = document.querySelector('.canvas-container');
 
         const PUZZLE_PIECE_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512];
-        
-        let TARGET_MAX_PIECES = 100000; 
+
+        let TARGET_MAX_PIECES = 100000;
 
         // Default ranges for sliders (before unlock freedom)
         const DEFAULT_SPEED_MIN = 0.1;
@@ -395,19 +421,23 @@
         const DEFAULT_FREQUENCY_MIN = 0;
         const DEFAULT_FREQUENCY_MAX = 10;
         const DEFAULT_PIECE_SIZE_INDEX = PUZZLE_PIECE_SIZES.indexOf(64);
+        const DEFAULT_WIND_STRENGTH_MIN = 0;
+        const DEFAULT_WIND_STRENGTH_MAX = 0.1;
 
 
         // Unlocked ranges for sliders
-        const UNLOCKED_SPEED_MIN = 0.1; // Stays same
+        const UNLOCKED_SPEED_MIN = 0.1;
         const UNLOCKED_SPEED_MAX = 10;
         const UNLOCKED_GRAVITY_MIN = 0.001;
         const UNLOCKED_GRAVITY_MAX = 0.99;
-        const UNLOCKED_SNAP_MIN = 0; // Stays same
+        const UNLOCKED_SNAP_MIN = 0;
         const UNLOCKED_SNAP_MAX = 256;
-        const UNLOCKED_REPEL_MIN = 0; // Stays same
+        const UNLOCKED_REPEL_MIN = 0;
         const UNLOCKED_REPEL_MAX = 5;
-        const UNLOCKED_FREQUENCY_MIN = 0; // Stays same
-        const UNLOCKED_FREQUENCY_MAX = 10; // Stays same
+        const UNLOCKED_FREQUENCY_MIN = 0;
+        const UNLOCKED_FREQUENCY_MAX = 10;
+        const UNLOCKED_WIND_STRENGTH_MIN = 0;
+        const UNLOCKED_WIND_STRENGTH_MAX = 0.5;
 
 
         let gl = null;
@@ -423,11 +453,13 @@
         let gravityForce = 0.05;
         let snapDistance = 0;
         let repelForce = 0;
-        let repelFrequency = 0; // In seconds (0-10)
+        let repelFrequency = 0;
+        let windEnabled = false;
+        let windStrength = 0.01;
 
         let puzzlePieces = [];
-        let originalImageWidth = 0;
-        let originalImageHeight = 0;
+        let actualCanvasWidth = 0; // Actual width of the WebGL canvas
+        let actualCanvasHeight = 0; // Actual height of the WebGL canvas
         let currentMinPieceSizeIndex = 0;
 
         let mainAtlasTexture = null;
@@ -436,8 +468,7 @@
 
         let lastSetPuzzlePieceSizeIndex = PUZZLE_PIECE_SIZES.indexOf(64);
 
-        // For frequency-based repel
-        let lastRepelTime = 0;
+        let lastRepelTriggerCheckTime = 0;
         let repelTriggeredThisFrame = false;
 
 
@@ -469,7 +500,8 @@
             gl = canvas.getContext('webgl');
             if (!gl) {
                 console.error('Unable to initialize WebGL. Your browser or machine may not support it.');
-                alert('WebGL is not supported in your browser. This simulator requires WebGL.');
+                // Replaced alert with console.error as per instructions
+                console.error('WebGL is not supported in your browser. This simulator requires WebGL.');
                 return false;
             }
 
@@ -536,7 +568,7 @@
                 this.y = startY;
                 this.targetX = targetX;
                 this.targetY = targetY;
-                this.dimension = pieceDimension;
+                this.dimension = pieceDimension; // This is the scaled dimension for rendering
                 this.texCoords = [
                     texU0, texV0, // Top-Left
                     texU1, texV0, // Top-Right
@@ -595,9 +627,14 @@
                 if (repelForce > 0 && repelFrequency > 0 && repelTriggeredThisFrame) {
                      effectiveForce = -repelForce;
                 }
-                
+
                 this.vx += swirlDx * effectiveForce;
                 this.vy += swirlDy * effectiveForce;
+
+                // Apply wind force
+                if (windEnabled) {
+                    this.vx += windStrength * animationSpeed;
+                }
 
                 this.vx *= this.damping;
                 this.vy *= this.damping;
@@ -611,7 +648,7 @@
 
                 this.x += this.vx;
                 this.y += this.vy;
-                
+
                 if (distance < 1 && this.swirlRadius < 5 && Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1) {
                     this.x = this.targetX;
                     this.y = this.targetY;
@@ -638,34 +675,101 @@
 
         // --- Setup and Rendering ---
 
+        // Function to dynamically size the canvas container and the canvas
+        function resizeCanvasContainerAndCanvas() {
+            const rightPanelWidth = rightPanel.offsetWidth +
+                                    parseFloat(window.getComputedStyle(rightPanel).paddingLeft) +
+                                    parseFloat(window.getComputedStyle(rightPanel).paddingRight);
+            const mainContentPadding = parseFloat(window.getComputedStyle(mainContentContainer).paddingLeft) +
+                                       parseFloat(window.getComputedStyle(mainContentContainer).paddingRight);
+
+            // Calculate available width for the canvas container
+            const availableWidth = window.innerWidth - rightPanelWidth - mainContentPadding;
+            const availableHeight = window.innerHeight - (parseFloat(window.getComputedStyle(mainContentContainer).paddingTop) +
+                                                         parseFloat(window.getComputedStyle(mainContentContainer).paddingBottom));
+
+            // Set the canvas container's dimensions
+            canvasContainer.style.width = `${availableWidth}px`;
+            canvasContainer.style.height = `${availableHeight}px`;
+
+            // Update main content container's margin to account for fixed right panel
+            mainContentContainer.style.marginRight = `${rightPanelWidth + mainContentPadding}px`;
+
+            // If an image is loaded, resize the canvas to fit the image aspect ratio within the new container size
+            if (originalImageObject) {
+                resizeCanvasToImage(originalImageObject);
+            } else {
+                // If no image is loaded, make the canvas fill the container
+                canvas.width = availableWidth;
+                canvas.height = availableHeight;
+                actualCanvasWidth = canvas.width;
+                actualCanvasHeight = canvas.height;
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                const projectionMatrix = createProjectionMatrix(gl.canvas.width, gl.canvas.height);
+                const uProjectionMatrixLoc = gl.getUniformLocation(program, 'u_projectionMatrix');
+                gl.uniformMatrix4fv(uProjectionMatrixLoc, false, projectionMatrix);
+            }
+        }
+
         function resizeCanvasToImage(img) {
-            canvas.width = img.width;
-            canvas.height = img.height;
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = canvasContainer.clientHeight;
+
+            let targetWidth = 0;
+            let targetHeight = 0;
+
+            const imageAspectRatio = img.width / img.height;
+            const containerAspectRatio = containerWidth / containerHeight;
+
+            if (imageAspectRatio > containerAspectRatio) {
+                // Image is wider than container, fit by container width
+                targetWidth = containerWidth;
+                targetHeight = containerWidth / imageAspectRatio;
+            } else {
+                // Image is taller or same aspect ratio as container, fit by container height
+                targetHeight = containerHeight;
+                targetWidth = containerHeight * imageAspectRatio;
+            }
+
+            // Set canvas dimensions to fit the calculated target size, preserving aspect ratio
+            canvas.width = Math.floor(targetWidth);
+            canvas.height = Math.floor(targetHeight);
+
+            // Update actualCanvasWidth/Height based on new canvas dimensions
+            actualCanvasWidth = canvas.width;
+            actualCanvasHeight = canvas.height;
+
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
             const projectionMatrix = createProjectionMatrix(gl.canvas.width, gl.canvas.height);
             const uProjectionMatrixLoc = gl.getUniformLocation(program, 'u_projectionMatrix');
             gl.uniformMatrix4fv(uProjectionMatrixLoc, false, projectionMatrix);
+
+            console.log(`Canvas resized to: ${canvas.width}x${canvas.height} for image ${img.width}x${img.height}. Container: ${containerWidth}x${containerHeight}`);
         }
 
         function calculateMinPieceSizeForImage() {
             if (!originalImageObject) return;
 
-            const imgWidth = originalImageObject.width;
-            const imgHeight = originalImageObject.height;
-            
+            const imgWidth = actualCanvasWidth; // Use actual canvas width
+            const imgHeight = actualCanvasHeight; // Use actual canvas height
+
             let calculatedMinIndex = 0;
 
             const currentTargetMaxPieces = parseInt(maxPiecesInput.value);
 
             for (let i = 0; i < PUZZLE_PIECE_SIZES.length; i++) {
                 const p = PUZZLE_PIECE_SIZES[i];
-                const pieceCountX = Math.ceil(imgWidth / p);
-                const pieceCountY = Math.ceil(imgHeight / p);
+                // When calculating piece count, use the original image's aspect ratio to ensure consistent piece distribution,
+                // but scale the piece dimension to the current canvas size
+                const scaledPieceDimension = p * (imgWidth / originalImageObject.width);
+
+                const pieceCountX = Math.ceil(imgWidth / scaledPieceDimension);
+                const pieceCountY = Math.ceil(imgHeight / scaledPieceDimension);
                 const totalPieceCount = pieceCountX * pieceCountY;
 
                 if (totalPieceCount <= currentTargetMaxPieces) {
                     calculatedMinIndex = i;
-                    break; 
+                    break;
                 }
             }
             currentMinPieceSizeIndex = calculatedMinIndex;
@@ -691,7 +795,7 @@
                 pixelSizeSlider.value = sliderMax;
                 valueChanged = true;
             }
-            
+
             if (valueChanged) {
                 pixelSizeSlider.dispatchEvent(new Event('input'));
             } else {
@@ -725,15 +829,23 @@
             puzzlePieces = [];
             numVertices = 0;
 
-            const imgWidth = originalImageObject.width;
-            const imgHeight = originalImageObject.height;
-            const pieceDim = currentPuzzlePieceSize;
+            // These are the dimensions of the original image's pixels that each piece corresponds to
+            const originalPieceDim = currentPuzzlePieceSize;
 
-            const numPiecesX = Math.ceil(imgWidth / pieceDim);
-            const numPiecesY = Math.ceil(imgHeight / pieceDim);
+            // Calculate the scale factor from original image dimensions to current canvas dimensions
+            const scaleFactorX = actualCanvasWidth / originalImageObject.width;
+            const scaleFactorY = actualCanvasHeight / originalImageObject.height;
 
-            const atlasWidth = nextPowerOf2(numPiecesX * pieceDim);
-            const atlasHeight = nextPowerOf2(numPiecesY * pieceDim);
+            // The dimension of the piece when rendered on the canvas
+            // Use the average scale for consistent square pieces visually
+            const pieceDimForRendering = originalPieceDim * Math.min(scaleFactorX, scaleFactorY);
+
+
+            const numPiecesX = Math.ceil(originalImageObject.width / originalPieceDim);
+            const numPiecesY = Math.ceil(originalImageObject.height / originalPieceDim);
+
+            const atlasWidth = nextPowerOf2(numPiecesX * originalPieceDim);
+            const atlasHeight = nextPowerOf2(numPiecesY * originalPieceDim);
 
             const atlasCanvas = document.createElement('canvas');
             const atlasCtx = atlasCanvas.getContext('2d', { willReadFrequently: true });
@@ -743,46 +855,48 @@
 
             let pieceCount = 0;
 
-            for (let y = 0; y < imgHeight; y += pieceDim) {
-                for (let x = 0; x < imgWidth; x += pieceDim) {
+            for (let y = 0; y < originalImageObject.height; y += originalPieceDim) {
+                for (let x = 0; x < originalImageObject.width; x += originalPieceDim) {
                     const currentPieceSrcX = x;
                     const currentPieceSrcY = y;
-                    
-                    const atlasCol = Math.floor(currentPieceSrcX / pieceDim);
-                    const atlasRow = Math.floor(currentPieceSrcY / pieceDim);
 
-                    const atlasDestX = atlasCol * pieceDim;
-                    const atlasDestY = atlasRow * pieceDim;
+                    const atlasCol = Math.floor(currentPieceSrcX / originalPieceDim);
+                    const atlasRow = Math.floor(currentPieceSrcY / originalPieceDim);
+
+                    const atlasDestX = atlasCol * originalPieceDim;
+                    const atlasDestY = atlasRow * originalPieceDim;
 
                     atlasCtx.drawImage(
                         originalImageObject,
-                        currentPieceSrcX, currentPieceSrcY, pieceDim, pieceDim,
-                        atlasDestX, atlasDestY, pieceDim, pieceDim
+                        currentPieceSrcX, currentPieceSrcY, originalPieceDim, originalPieceDim,
+                        atlasDestX, atlasDestY, originalPieceDim, originalPieceDim
                     );
-                    
+
                     const texU0 = atlasDestX / atlasWidth;
                     const texV0 = atlasDestY / atlasHeight;
-                    const texU1 = (atlasDestX + pieceDim) / atlasWidth;
-                    const texV1 = (atlasDestY + pieceDim) / atlasHeight;
+                    const texU1 = (atlasDestX + originalPieceDim) / atlasWidth;
+                    const texV1 = (atlasDestY + originalPieceDim) / atlasHeight;
 
                     let startX, startY;
                     const edge = Math.floor(Math.random() * 4);
 
+                    // These start positions should be relative to the scaled image (actualCanvasWidth/Height)
                     if (edge === 0) { // Top
-                        startX = Math.random() * imgWidth;
+                        startX = Math.random() * actualCanvasWidth;
                         startY = -Math.random() * 200;
                     } else if (edge === 1) { // Right
-                        startX = imgWidth + Math.random() * 200;
-                        startY = Math.random() * imgHeight;
+                        startX = actualCanvasWidth + Math.random() * 200;
+                        startY = Math.random() * actualCanvasHeight;
                     } else if (edge === 2) { // Bottom
-                        startX = Math.random() * imgWidth;
-                        startY = imgHeight + Math.random() * 200;
+                        startX = Math.random() * actualCanvasWidth;
+                        startY = actualCanvasHeight + Math.random() * 200;
                     } else { // Left
                         startX = -Math.random() * 200;
-                        startY = Math.random() * imgHeight;
+                        startY = Math.random() * actualCanvasHeight;
                     }
-                    
-                    puzzlePieces.push(new PuzzlePiece(startX, startY, x, y, pieceDim, texU0, texV0, texU1, texV1));
+
+                    // Target X and Y must be scaled according to current canvas dimensions
+                    puzzlePieces.push(new PuzzlePiece(startX, startY, x * scaleFactorX, y * scaleFactorY, pieceDimForRendering, texU0, texV0, texU1, texV1));
                     numVertices += 6;
                     pieceCount++;
                 }
@@ -791,7 +905,7 @@
             mainAtlasTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, mainAtlasTexture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
-            
+
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -813,20 +927,17 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, allPositions.byteLength, gl.DYNAMIC_DRAW);
 
-            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with dimension ${pieceDim}x${pieceDim}. Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Repel: ${repelForce}, Frequency: ${repelFrequency}. Atlas size: ${atlasWidth}x${atlasHeight}`);
-            
+            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with rendering dimension ${pieceDimForRendering.toFixed(2)}x${pieceDimForRendering.toFixed(2)} (original texture piece size: ${originalPieceDim}x${originalPieceDim}). Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Repel: ${repelForce}, Frequency: ${repelFrequency}. Wind: ${windEnabled ? windStrength : 'Off'}. Atlas size: ${atlasWidth}x${atlasHeight}`);
+
             startAnimation();
         }
 
         let previousTimeStamp = 0;
-        let lastRepelTriggerCheckTime = 0; // New: last time we checked if repel should be triggered
-        let repelInterval = 0; // Calculated interval based on repelFrequency
-        let repelImpulseDue = false; // Flag to indicate if a repel impulse is due
-
+        let repelInterval = 0;
 
         function drawScene(currentTimeStamp) {
             if (!previousTimeStamp) previousTimeStamp = currentTimeStamp;
-            const deltaTime = (currentTimeStamp - previousTimeStamp) / 1000; // Convert to seconds
+            const deltaTime = (currentTimeStamp - previousTimeStamp) / 1000;
             previousTimeStamp = currentTimeStamp;
 
             gl.clear(gl.COLOR_BUFFER_BIT);
@@ -834,19 +945,15 @@
             let currentPositionIndex = 0;
             let allSettled = true;
 
-            // Determine if a repel impulse should be triggered this frame
             repelTriggeredThisFrame = false;
             if (repelForce > 0 && repelFrequency > 0) {
-                // Calculate interval in milliseconds
                 repelInterval = repelFrequency * 1000;
 
-                // Only check for new impulse if enough time has passed since the last *successful* impulse or start
                 if (currentTimeStamp - lastRepelTriggerCheckTime >= repelInterval) {
                     repelTriggeredThisFrame = true;
-                    lastRepelTriggerCheckTime = currentTimeStamp; // Update the check time
+                    lastRepelTriggerCheckTime = currentTimeStamp;
                 }
             } else {
-                // If repel is off, ensure no impulses are triggered
                 repelTriggeredThisFrame = false;
             }
 
@@ -913,21 +1020,26 @@
                     p.vx = 0;
                     p.vy = 0;
                 });
-                previousTimeStamp = 0; // Reset previous timestamp for accurate delta time
-                lastRepelTriggerCheckTime = performance.now(); // Reset repel timer on animation start
+                previousTimeStamp = 0;
+                lastRepelTriggerCheckTime = performance.now();
                 drawScene();
             }
         }
 
         // --- Helper for Randomization ---
         function getRandomValue(min, max, step) {
-            if (step === 0) return min; // Avoid division by zero if step is 0 (shouldn't happen for ranges but as a safeguard)
-            const numSteps = Math.floor((max - min) / step);
+            const stepPrecision = (step.toString().split('.')[1] || '').length;
+            const factor = Math.pow(10, stepPrecision);
+
+            const scaledMin = Math.round(min * factor);
+            const scaledMax = Math.round(max * factor);
+            const scaledStep = Math.round(step * factor);
+
+            const numSteps = Math.floor((scaledMax - scaledMin) / scaledStep);
             const randomStep = Math.round(Math.random() * numSteps);
-            let value = min + randomStep * step;
-            // Correct for floating point inaccuracies for display
-            const precision = (step.toString().split('.')[1] || '').length;
-            return parseFloat(value.toFixed(precision));
+            let value = (scaledMin + randomStep * scaledStep) / factor;
+
+            return parseFloat(value.toFixed(stepPrecision));
         }
 
         // --- Event Listeners ---
@@ -940,12 +1052,11 @@
                     const img = new Image();
                     img.onload = () => {
                         originalImageObject = img;
-                        resizeCanvasToImage(img);
-                        
+                        resizeCanvasContainerAndCanvas(); // Recalculate container and canvas size
                         lastSetPuzzlePieceSizeIndex = parseInt(pixelSizeSlider.value);
 
-                        calculateMinPieceSizeForImage(); 
-                        
+                        calculateMinPieceSizeForImage();
+
                         pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
                         pixelSizeSlider.dispatchEvent(new Event('input'));
                     };
@@ -965,13 +1076,14 @@
                     maxPiecesInput.value = Math.floor(inputValue);
                 }
                 TARGET_MAX_PIECES = inputValue;
-                
-                calculateMinPieceSizeForImage(); 
-                
+
+                calculateMinPieceSizeForImage();
+
                 pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
                 pixelSizeSlider.dispatchEvent(new Event('input'));
             } else {
-                alert("Please load an image first!");
+                // Replaced alert with console.error as per instructions
+                console.error("Please load an image first!");
             }
         });
 
@@ -992,7 +1104,7 @@
             pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
             lastSetPuzzlePieceSizeIndex = sliderIndex;
             if (originalImageObject) {
-                createPuzzlePiecesFromImage(); 
+                createPuzzlePiecesFromImage();
             }
             updatePieceSizeSliderRange();
         });
@@ -1017,8 +1129,7 @@
 
         gravitySlider.addEventListener('input', (event) => {
             gravityForce = parseFloat(event.target.value);
-            // Dynamic precision for display based on current value
-            gravityValueSpan.textContent = gravityForce.toFixed(gravityForce < 0.01 ? 3 : 2);
+            gravityValueSpan.textContent = gravityForce.toFixed(3);
             if (animationFrameId === null && originalImageObject) {
                  startAnimation();
             }
@@ -1026,7 +1137,7 @@
 
         snapDistanceSlider.addEventListener('input', (event) => {
             snapDistance = parseFloat(event.target.value);
-            snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
+            snapDistanceValueSpan.textContent = `${snapDistance}`;
         });
 
         repelSlider.addEventListener('input', (event) => {
@@ -1041,13 +1152,28 @@
             repelFrequency = parseInt(event.target.value);
             frequencyValueSpan.textContent = repelFrequency.toString();
             if (repelFrequency > 0) {
-                 lastRepelTriggerCheckTime = performance.now(); // Reset on change
+                 lastRepelTriggerCheckTime = performance.now();
             }
             if (animationFrameId === null && originalImageObject) {
                 startAnimation();
             }
         });
 
+        windCheckbox.addEventListener('change', (event) => {
+            windEnabled = event.target.checked;
+            windStrengthGroup.style.display = windEnabled ? 'flex' : 'none';
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+        windStrengthSlider.addEventListener('input', (event) => {
+            windStrength = parseFloat(event.target.value);
+            windStrengthValueSpan.textContent = windStrength.toFixed(3);
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
 
         unlockPieceSizeCheckbox.addEventListener('change', () => {
             updatePieceSizeSliderRange();
@@ -1055,7 +1181,7 @@
 
         unlockFreedomCheckbox.addEventListener('change', (event) => {
             const checked = event.target.checked;
-            
+
             speedSlider.min = checked ? UNLOCKED_SPEED_MIN : DEFAULT_SPEED_MIN;
             speedSlider.max = checked ? UNLOCKED_SPEED_MAX : DEFAULT_SPEED_MAX;
             gravitySlider.min = checked ? UNLOCKED_GRAVITY_MIN : DEFAULT_GRAVITY_MIN;
@@ -1066,12 +1192,13 @@
             repelSlider.max = checked ? UNLOCKED_REPEL_MAX : DEFAULT_REPEL_MAX;
             frequencySlider.min = checked ? UNLOCKED_FREQUENCY_MIN : DEFAULT_FREQUENCY_MIN;
             frequencySlider.max = checked ? UNLOCKED_FREQUENCY_MAX : DEFAULT_FREQUENCY_MAX;
+            windStrengthSlider.min = checked ? UNLOCKED_WIND_STRENGTH_MIN : DEFAULT_WIND_STRENGTH_MIN;
+            windStrengthSlider.max = checked ? UNLOCKED_WIND_STRENGTH_MAX : DEFAULT_WIND_STRENGTH_MAX;
 
 
-            // Ensure values are within new bounds and update display by dispatching input events
             speedSlider.value = Math.min(Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min)), parseFloat(speedSlider.max));
             speedSlider.dispatchEvent(new Event('input'));
-            
+
             gravitySlider.value = Math.min(Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min)), parseFloat(gravitySlider.max));
             gravitySlider.dispatchEvent(new Event('input'));
 
@@ -1083,6 +1210,9 @@
 
             frequencySlider.value = Math.min(Math.max(parseFloat(frequencySlider.value), parseFloat(frequencySlider.min)), parseFloat(frequencySlider.max));
             frequencySlider.dispatchEvent(new Event('input'));
+
+            windStrengthSlider.value = Math.min(Math.max(parseFloat(windStrengthSlider.value), parseFloat(windStrengthSlider.min)), parseFloat(windStrengthSlider.max));
+            windStrengthSlider.dispatchEvent(new Event('input'));
         });
 
 
@@ -1097,94 +1227,102 @@
         });
 
         defaultsButton.addEventListener('click', () => {
-            // Reset all sliders to their default initial values
-            speedSlider.value = DEFAULT_SPEED_MIN; // Set to actual default min
-            gravitySlider.value = DEFAULT_GRAVITY_MIN; // Set to actual default min
-            snapDistanceSlider.value = DEFAULT_SNAP_MIN; // Set to actual default min
-            repelSlider.value = DEFAULT_REPEL_MIN; // Set to actual default min
-            frequencySlider.value = DEFAULT_FREQUENCY_MIN; // Set to actual default min
+            speedSlider.value = DEFAULT_SPEED_MIN;
+            gravitySlider.value = DEFAULT_GRAVITY_MIN;
+            snapDistanceSlider.value = DEFAULT_SNAP_MIN;
+            repelSlider.value = DEFAULT_REPEL_MIN;
+            frequencySlider.value = DEFAULT_FREQUENCY_MIN;
+            windStrengthSlider.value = DEFAULT_WIND_STRENGTH_MIN;
             maxPiecesInput.value = 100000;
             pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
             lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX;
 
-            // Reset checkboxes
             unlockFreedomCheckbox.checked = false;
             unlockPieceSizeCheckbox.checked = false;
+            windCheckbox.checked = false;
 
-            // Trigger change events to update UI and apply values
-            unlockFreedomCheckbox.dispatchEvent(new Event('change')); // Do this first to reset ranges
+            unlockFreedomCheckbox.dispatchEvent(new Event('change'));
             speedSlider.dispatchEvent(new Event('input'));
             gravitySlider.dispatchEvent(new Event('input'));
             snapDistanceSlider.dispatchEvent(new Event('input'));
             repelSlider.dispatchEvent(new Event('input'));
             frequencySlider.dispatchEvent(new Event('input'));
+            windStrengthSlider.dispatchEvent(new Event('input'));
             maxPiecesInput.dispatchEvent(new Event('change'));
-            pixelSizeSlider.dispatchEvent(new Event('input')); 
+            pixelSizeSlider.dispatchEvent(new Event('input'));
             unlockPieceSizeCheckbox.dispatchEvent(new Event('change'));
+            windCheckbox.dispatchEvent(new Event('change'));
 
             console.log("All settings reset to defaults.");
         });
 
         randomizeButton.addEventListener('click', () => {
-            // Randomize speed
             speedSlider.value = getRandomValue(parseFloat(speedSlider.min), parseFloat(speedSlider.max), parseFloat(speedSlider.step));
             speedSlider.dispatchEvent(new Event('input'));
 
-            // Randomize pixel size
             pixelSizeSlider.value = getRandomValue(parseInt(pixelSizeSlider.min), parseInt(pixelSizeSlider.max), parseInt(pixelSizeSlider.step));
-            pixelSizeSlider.dispatchEvent(new Event('input')); // This also triggers createPuzzlePiecesFromImage
+            pixelSizeSlider.dispatchEvent(new Event('input'));
 
-            // Randomize gravity
             gravitySlider.value = getRandomValue(parseFloat(gravitySlider.min), parseFloat(gravitySlider.max), parseFloat(gravitySlider.step));
             gravitySlider.dispatchEvent(new Event('input'));
 
-            // Randomize snap distance
             snapDistanceSlider.value = getRandomValue(parseFloat(snapDistanceSlider.min), parseFloat(snapDistanceSlider.max), parseFloat(snapDistanceSlider.step));
             snapDistanceSlider.dispatchEvent(new Event('input'));
 
-            // Randomize repel
             repelSlider.value = getRandomValue(parseFloat(repelSlider.min), parseFloat(repelSlider.max), parseFloat(repelSlider.step));
             repelSlider.dispatchEvent(new Event('input'));
 
-            // Randomize frequency
             frequencySlider.value = getRandomValue(parseFloat(frequencySlider.min), parseFloat(frequencySlider.max), parseFloat(frequencySlider.step));
             frequencySlider.dispatchEvent(new Event('input'));
 
-            // No need to randomize max pieces or checkboxes for now, focus on sliders
+            windCheckbox.checked = Math.random() < 0.5;
+            windCheckbox.dispatchEvent(new Event('change'));
+            if (windCheckbox.checked) {
+                windStrengthSlider.value = getRandomValue(parseFloat(windStrengthSlider.min), parseFloat(windStrengthSlider.max), parseFloat(windStrengthSlider.step));
+                windStrengthSlider.dispatchEvent(new Event('input'));
+            }
+
             console.log("Sliders randomized!");
         });
 
+        window.addEventListener('resize', () => {
+            resizeCanvasContainerAndCanvas(); // Recalculate container and canvas size on window resize
+            if (originalImageObject) {
+                createPuzzlePiecesFromImage();
+            }
+        });
 
         // App Versioning
-        const APP_VERSION = 1.008;
+        const APP_VERSION = 1.011;
 
         // Initialize on load
         window.onload = () => {
             if (initWebGL()) {
-                // Set initial slider ranges based on default (unlocked is false)
-                unlockFreedomCheckbox.checked = false; // Ensure it's initially unchecked
-                unlockFreedomCheckbox.dispatchEvent(new Event('change')); // Trigger initial range setup
+                // Initial sizing of the canvas container and canvas
+                resizeCanvasContainerAndCanvas();
 
-                // Set initial slider values and text based on constants
-                animationSpeed = DEFAULT_SPEED_MIN; // Start with the actual min default speed
+                unlockFreedomCheckbox.checked = false;
+                unlockFreedomCheckbox.dispatchEvent(new Event('change'));
+
+                animationSpeed = DEFAULT_SPEED_MIN;
                 speedSlider.value = animationSpeed;
                 speedValueSpan.textContent = animationSpeed.toFixed(1);
 
                 currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[DEFAULT_PIECE_SIZE_INDEX];
                 pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
-                lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX; // Store initial value
+                lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX;
                 pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
-                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1; // Set max for piece size slider
-                updatePieceSizeSliderRange(); // Update bounds for piece size slider
+                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1;
+                updatePieceSizeSliderRange();
 
-                gravityForce = DEFAULT_GRAVITY_MIN; // Start with the actual min default gravity
+                gravityForce = DEFAULT_GRAVITY_MIN;
                 gravitySlider.value = gravityForce;
-                gravityValueSpan.textContent = gravityForce.toFixed(3); // Display with precision
+                gravityValueSpan.textContent = gravityForce.toFixed(3);
 
                 snapDistance = DEFAULT_SNAP_MIN;
                 snapDistanceSlider.value = snapDistance;
-                snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
-                
+                snapDistanceValueSpan.textContent = `${snapDistance}`;
+
                 repelForce = DEFAULT_REPEL_MIN;
                 repelSlider.value = repelForce;
                 repelValueSpan.textContent = repelForce.toFixed(2);
@@ -1193,13 +1331,20 @@
                 frequencySlider.value = repelFrequency;
                 frequencyValueSpan.textContent = repelFrequency.toString();
 
+                windEnabled = false;
+                windCheckbox.checked = false;
+                windStrength = DEFAULT_WIND_STRENGTH_MIN;
+                windStrengthSlider.value = windStrength;
+                windStrengthValueSpan.textContent = windStrength.toFixed(3);
+                windStrengthGroup.style.display = 'none';
+
 
                 maxPiecesInput.value = TARGET_MAX_PIECES;
 
                 versionNumberSpan.textContent = `Version ${APP_VERSION.toFixed(3)}`;
                 document.title = `Pixel Swirl Version ${APP_VERSION.toFixed(3)}`;
 
-                lastRepelTriggerCheckTime = performance.now(); // Initialize repel timer
+                lastRepelTriggerCheckTime = performance.now();
             }
         };
 
