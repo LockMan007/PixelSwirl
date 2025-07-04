@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Swirl Version 1.007</title> <style>
+    <title>Pixel Swirl Version 1.008</title> <style>
         body {
             font-family: Arial, sans-serif;
             display: flex; /* Changed to flex to control main content better */
@@ -156,6 +156,16 @@
         button#defaultsButton:hover {
             background-color: #c82333; /* Darker red on hover */
         }
+        
+        /* Styling for the new Randomize button */
+        button#randomizeButton {
+            background-color: #ff00ff; /* Fuchsia purple */
+        }
+
+        button#randomizeButton:hover {
+            background-color: #cc00cc; /* Darker fuchsia on hover */
+        }
+
 
         input[type="file"] {
             display: none;
@@ -271,7 +281,7 @@
             <div class="control-group">
                 <label for="gravitySlider">Gravity:</label>
                 <div class="slider-with-value">
-                    <input type="range" id="gravitySlider" min="0.01" max="0.5" value="0.05" step="0.01">
+                    <input type="range" id="gravitySlider" min="0.01" max="0.5" value="0.05" step="0.001">
                     <span id="gravityValue">0.05</span>
                 </div>
             </div>
@@ -325,10 +335,13 @@
             <button id="defaultsButton">Defaults</button>
         </div>
 
+        <div class="controls-row">
+            <button id="randomizeButton">Randomize</button>
+        </div>
 
         <div class="app-info">
             <h2>Pixel Swirl</h2>
-            <span id="versionNumber">Version 1.007</span>
+            <span id="versionNumber">Version 1.008</span>
             <span class="not-mobile">(Not for Mobile Use)</span>
             <hr> <br>
             Check out other cool stuff:<br>
@@ -363,25 +376,38 @@
         const unlockFreedomCheckbox = document.getElementById('unlockFreedomCheckbox');
         const versionNumberSpan = document.getElementById('versionNumber');
         const maxPiecesInput = document.getElementById('maxPiecesInput');
-        const defaultsButton = document.getElementById('defaultsButton'); // New defaults button
+        const defaultsButton = document.getElementById('defaultsButton');
+        const randomizeButton = document.getElementById('randomizeButton'); // New randomize button
 
         const PUZZLE_PIECE_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512];
         
         let TARGET_MAX_PIECES = 100000; 
 
         // Default ranges for sliders (before unlock freedom)
+        const DEFAULT_SPEED_MIN = 0.1;
         const DEFAULT_SPEED_MAX = 5;
         const DEFAULT_GRAVITY_MIN = 0.01;
         const DEFAULT_GRAVITY_MAX = 0.5;
+        const DEFAULT_SNAP_MIN = 0;
         const DEFAULT_SNAP_MAX = 16;
+        const DEFAULT_REPEL_MIN = 0;
         const DEFAULT_REPEL_MAX = 1;
+        const DEFAULT_FREQUENCY_MIN = 0;
+        const DEFAULT_FREQUENCY_MAX = 10;
+        const DEFAULT_PIECE_SIZE_INDEX = PUZZLE_PIECE_SIZES.indexOf(64);
+
 
         // Unlocked ranges for sliders
+        const UNLOCKED_SPEED_MIN = 0.1; // Stays same
         const UNLOCKED_SPEED_MAX = 10;
         const UNLOCKED_GRAVITY_MIN = 0.001;
         const UNLOCKED_GRAVITY_MAX = 0.99;
+        const UNLOCKED_SNAP_MIN = 0; // Stays same
         const UNLOCKED_SNAP_MAX = 256;
+        const UNLOCKED_REPEL_MIN = 0; // Stays same
         const UNLOCKED_REPEL_MAX = 5;
+        const UNLOCKED_FREQUENCY_MIN = 0; // Stays same
+        const UNLOCKED_FREQUENCY_MAX = 10; // Stays same
 
 
         let gl = null;
@@ -411,7 +437,8 @@
         let lastSetPuzzlePieceSizeIndex = PUZZLE_PIECE_SIZES.indexOf(64);
 
         // For frequency-based repel
-        let lastRepelTime = 0; // Timestamp of the last repel impulse
+        let lastRepelTime = 0;
+        let repelTriggeredThisFrame = false;
 
 
         // --- Shaders ---
@@ -530,7 +557,7 @@
                 this.swirlSpeed = Math.random() * 0.05 + 0.01;
             }
 
-            update(deltaTime) { // Add deltaTime parameter for frame-independent updates
+            update(deltaTime) {
                 if (this.settled) {
                     return;
                 }
@@ -563,12 +590,10 @@
                 const swirlDx = swirlTargetX - this.x;
                 const swirlDy = swirlTargetY - this.y;
 
-                let effectiveForce = gravityForce * animationSpeed; // Default to attraction
+                let effectiveForce = gravityForce * animationSpeed;
 
-                // Repel logic: only apply if the global condition for repel is met this frame
-                // (This piece does not do the frequency check itself, a global timer does)
                 if (repelForce > 0 && repelFrequency > 0 && repelTriggeredThisFrame) {
-                     effectiveForce = -repelForce; // Negative force means repulsion
+                     effectiveForce = -repelForce;
                 }
                 
                 this.vx += swirlDx * effectiveForce;
@@ -794,7 +819,10 @@
         }
 
         let previousTimeStamp = 0;
-        let repelTriggeredThisFrame = false; // Flag to indicate if repel is active for the current frame
+        let lastRepelTriggerCheckTime = 0; // New: last time we checked if repel should be triggered
+        let repelInterval = 0; // Calculated interval based on repelFrequency
+        let repelImpulseDue = false; // Flag to indicate if a repel impulse is due
+
 
         function drawScene(currentTimeStamp) {
             if (!previousTimeStamp) previousTimeStamp = currentTimeStamp;
@@ -809,22 +837,23 @@
             // Determine if a repel impulse should be triggered this frame
             repelTriggeredThisFrame = false;
             if (repelForce > 0 && repelFrequency > 0) {
-                // Time since last repel in milliseconds
-                const timeSinceLastRepel = currentTimeStamp - lastRepelTime;
-                // Required interval in milliseconds
-                const requiredInterval = repelFrequency * 1000; 
+                // Calculate interval in milliseconds
+                repelInterval = repelFrequency * 1000;
 
-                if (timeSinceLastRepel >= requiredInterval) {
+                // Only check for new impulse if enough time has passed since the last *successful* impulse or start
+                if (currentTimeStamp - lastRepelTriggerCheckTime >= repelInterval) {
                     repelTriggeredThisFrame = true;
-                    lastRepelTime = currentTimeStamp; // Update last repel time
-                    console.log(`Repel triggered at ${currentTimeStamp.toFixed(0)}ms (interval: ${requiredInterval}ms)`);
+                    lastRepelTriggerCheckTime = currentTimeStamp; // Update the check time
                 }
+            } else {
+                // If repel is off, ensure no impulses are triggered
+                repelTriggeredThisFrame = false;
             }
 
 
             puzzlePieces.forEach(piece => {
                 if (!piece.settled) {
-                    piece.update(deltaTime); // Pass deltaTime to update if piece logic needs it (not currently for this version, but good practice)
+                    piece.update(deltaTime);
                     allSettled = false;
                 }
 
@@ -884,10 +913,21 @@
                     p.vx = 0;
                     p.vy = 0;
                 });
-                lastRepelTime = performance.now(); // Reset repel timer on animation start
                 previousTimeStamp = 0; // Reset previous timestamp for accurate delta time
+                lastRepelTriggerCheckTime = performance.now(); // Reset repel timer on animation start
                 drawScene();
             }
+        }
+
+        // --- Helper for Randomization ---
+        function getRandomValue(min, max, step) {
+            if (step === 0) return min; // Avoid division by zero if step is 0 (shouldn't happen for ranges but as a safeguard)
+            const numSteps = Math.floor((max - min) / step);
+            const randomStep = Math.round(Math.random() * numSteps);
+            let value = min + randomStep * step;
+            // Correct for floating point inaccuracies for display
+            const precision = (step.toString().split('.')[1] || '').length;
+            return parseFloat(value.toFixed(precision));
         }
 
         // --- Event Listeners ---
@@ -977,6 +1017,7 @@
 
         gravitySlider.addEventListener('input', (event) => {
             gravityForce = parseFloat(event.target.value);
+            // Dynamic precision for display based on current value
             gravityValueSpan.textContent = gravityForce.toFixed(gravityForce < 0.01 ? 3 : 2);
             if (animationFrameId === null && originalImageObject) {
                  startAnimation();
@@ -991,7 +1032,6 @@
         repelSlider.addEventListener('input', (event) => {
             repelForce = parseFloat(event.target.value);
             repelValueSpan.textContent = repelForce.toFixed(2);
-            // If repel is turned on from 0, or changed, and not animating, start it.
             if (animationFrameId === null && originalImageObject) {
                 startAnimation();
             }
@@ -1000,9 +1040,8 @@
         frequencySlider.addEventListener('input', (event) => {
             repelFrequency = parseInt(event.target.value);
             frequencyValueSpan.textContent = repelFrequency.toString();
-            // Reset lastRepelTime when frequency changes to ensure immediate effect or proper new timing
             if (repelFrequency > 0) {
-                 lastRepelTime = performance.now();
+                 lastRepelTriggerCheckTime = performance.now(); // Reset on change
             }
             if (animationFrameId === null && originalImageObject) {
                 startAnimation();
@@ -1015,35 +1054,35 @@
         });
 
         unlockFreedomCheckbox.addEventListener('change', (event) => {
-            if (event.target.checked) {
-                speedSlider.max = UNLOCKED_SPEED_MAX;
-                gravitySlider.min = UNLOCKED_GRAVITY_MIN;
-                gravitySlider.max = UNLOCKED_GRAVITY_MAX;
-                snapDistanceSlider.max = UNLOCKED_SNAP_MAX;
-                repelSlider.max = UNLOCKED_REPEL_MAX;
-            } else {
-                speedSlider.max = DEFAULT_SPEED_MAX;
-                gravitySlider.min = DEFAULT_GRAVITY_MIN;
-                gravitySlider.max = DEFAULT_GRAVITY_MAX;
-                snapDistanceSlider.max = DEFAULT_SNAP_MAX;
-                repelSlider.max = DEFAULT_REPEL_MAX;
-            }
-            // Ensure values are within new bounds and update display
-            speedSlider.value = Math.min(parseFloat(speedSlider.value), parseFloat(speedSlider.max));
-            speedSlider.value = Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min));
+            const checked = event.target.checked;
+            
+            speedSlider.min = checked ? UNLOCKED_SPEED_MIN : DEFAULT_SPEED_MIN;
+            speedSlider.max = checked ? UNLOCKED_SPEED_MAX : DEFAULT_SPEED_MAX;
+            gravitySlider.min = checked ? UNLOCKED_GRAVITY_MIN : DEFAULT_GRAVITY_MIN;
+            gravitySlider.max = checked ? UNLOCKED_GRAVITY_MAX : DEFAULT_GRAVITY_MAX;
+            snapDistanceSlider.min = checked ? UNLOCKED_SNAP_MIN : DEFAULT_SNAP_MIN;
+            snapDistanceSlider.max = checked ? UNLOCKED_SNAP_MAX : DEFAULT_SNAP_MAX;
+            repelSlider.min = checked ? UNLOCKED_REPEL_MIN : DEFAULT_REPEL_MIN;
+            repelSlider.max = checked ? UNLOCKED_REPEL_MAX : DEFAULT_REPEL_MAX;
+            frequencySlider.min = checked ? UNLOCKED_FREQUENCY_MIN : DEFAULT_FREQUENCY_MIN;
+            frequencySlider.max = checked ? UNLOCKED_FREQUENCY_MAX : DEFAULT_FREQUENCY_MAX;
+
+
+            // Ensure values are within new bounds and update display by dispatching input events
+            speedSlider.value = Math.min(Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min)), parseFloat(speedSlider.max));
             speedSlider.dispatchEvent(new Event('input'));
             
-            gravitySlider.value = Math.min(parseFloat(gravitySlider.value), parseFloat(gravitySlider.max));
-            gravitySlider.value = Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min));
+            gravitySlider.value = Math.min(Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min)), parseFloat(gravitySlider.max));
             gravitySlider.dispatchEvent(new Event('input'));
 
-            snapDistanceSlider.value = Math.min(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.max));
-            snapDistanceSlider.value = Math.max(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.min));
+            snapDistanceSlider.value = Math.min(Math.max(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.min)), parseFloat(snapDistanceSlider.max));
             snapDistanceSlider.dispatchEvent(new Event('input'));
 
-            repelSlider.value = Math.min(parseFloat(repelSlider.value), parseFloat(repelSlider.max));
-            repelSlider.value = Math.max(parseFloat(repelSlider.value), parseFloat(repelSlider.min));
+            repelSlider.value = Math.min(Math.max(parseFloat(repelSlider.value), parseFloat(repelSlider.min)), parseFloat(repelSlider.max));
             repelSlider.dispatchEvent(new Event('input'));
+
+            frequencySlider.value = Math.min(Math.max(parseFloat(frequencySlider.value), parseFloat(frequencySlider.min)), parseFloat(frequencySlider.max));
+            frequencySlider.dispatchEvent(new Event('input'));
         });
 
 
@@ -1059,83 +1098,108 @@
 
         defaultsButton.addEventListener('click', () => {
             // Reset all sliders to their default initial values
-            speedSlider.value = 1;
-            gravitySlider.value = 0.05;
-            snapDistanceSlider.value = 0;
-            repelSlider.value = 0;
-            frequencySlider.value = 0;
+            speedSlider.value = DEFAULT_SPEED_MIN; // Set to actual default min
+            gravitySlider.value = DEFAULT_GRAVITY_MIN; // Set to actual default min
+            snapDistanceSlider.value = DEFAULT_SNAP_MIN; // Set to actual default min
+            repelSlider.value = DEFAULT_REPEL_MIN; // Set to actual default min
+            frequencySlider.value = DEFAULT_FREQUENCY_MIN; // Set to actual default min
             maxPiecesInput.value = 100000;
-            pixelSizeSlider.value = PUZZLE_PIECE_SIZES.indexOf(64); // Reset to 64x64
-            lastSetPuzzlePieceSizeIndex = PUZZLE_PIECE_SIZES.indexOf(64);
+            pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
+            lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX;
 
             // Reset checkboxes
             unlockFreedomCheckbox.checked = false;
             unlockPieceSizeCheckbox.checked = false;
 
-            // Trigger input events to update UI and apply values
+            // Trigger change events to update UI and apply values
+            unlockFreedomCheckbox.dispatchEvent(new Event('change')); // Do this first to reset ranges
             speedSlider.dispatchEvent(new Event('input'));
             gravitySlider.dispatchEvent(new Event('input'));
             snapDistanceSlider.dispatchEvent(new Event('input'));
             repelSlider.dispatchEvent(new Event('input'));
             frequencySlider.dispatchEvent(new Event('input'));
-            maxPiecesInput.dispatchEvent(new Event('change')); // Use 'change' for number inputs
-            pixelSizeSlider.dispatchEvent(new Event('input')); // This also handles createPuzzlePiecesFromImage
-            unlockFreedomCheckbox.dispatchEvent(new Event('change')); // This re-sets slider ranges
+            maxPiecesInput.dispatchEvent(new Event('change'));
+            pixelSizeSlider.dispatchEvent(new Event('input')); 
             unlockPieceSizeCheckbox.dispatchEvent(new Event('change'));
 
             console.log("All settings reset to defaults.");
         });
 
+        randomizeButton.addEventListener('click', () => {
+            // Randomize speed
+            speedSlider.value = getRandomValue(parseFloat(speedSlider.min), parseFloat(speedSlider.max), parseFloat(speedSlider.step));
+            speedSlider.dispatchEvent(new Event('input'));
+
+            // Randomize pixel size
+            pixelSizeSlider.value = getRandomValue(parseInt(pixelSizeSlider.min), parseInt(pixelSizeSlider.max), parseInt(pixelSizeSlider.step));
+            pixelSizeSlider.dispatchEvent(new Event('input')); // This also triggers createPuzzlePiecesFromImage
+
+            // Randomize gravity
+            gravitySlider.value = getRandomValue(parseFloat(gravitySlider.min), parseFloat(gravitySlider.max), parseFloat(gravitySlider.step));
+            gravitySlider.dispatchEvent(new Event('input'));
+
+            // Randomize snap distance
+            snapDistanceSlider.value = getRandomValue(parseFloat(snapDistanceSlider.min), parseFloat(snapDistanceSlider.max), parseFloat(snapDistanceSlider.step));
+            snapDistanceSlider.dispatchEvent(new Event('input'));
+
+            // Randomize repel
+            repelSlider.value = getRandomValue(parseFloat(repelSlider.min), parseFloat(repelSlider.max), parseFloat(repelSlider.step));
+            repelSlider.dispatchEvent(new Event('input'));
+
+            // Randomize frequency
+            frequencySlider.value = getRandomValue(parseFloat(frequencySlider.min), parseFloat(frequencySlider.max), parseFloat(frequencySlider.step));
+            frequencySlider.dispatchEvent(new Event('input'));
+
+            // No need to randomize max pieces or checkboxes for now, focus on sliders
+            console.log("Sliders randomized!");
+        });
+
+
         // App Versioning
-        const APP_VERSION = 1.007;
+        const APP_VERSION = 1.008;
 
         // Initialize on load
         window.onload = () => {
             if (initWebGL()) {
-                // Set initial slider values and text
-                currentPuzzlePieceSize = 64;
-                pixelSizeSlider.value = PUZZLE_PIECE_SIZES.indexOf(currentPuzzlePieceSize);
-                if (pixelSizeSlider.value === -1) { 
-                    pixelSizeSlider.value = 0;
-                    currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[0];
-                }
-                lastSetPuzzlePieceSizeIndex = parseInt(pixelSizeSlider.value);
+                // Set initial slider ranges based on default (unlocked is false)
+                unlockFreedomCheckbox.checked = false; // Ensure it's initially unchecked
+                unlockFreedomCheckbox.dispatchEvent(new Event('change')); // Trigger initial range setup
 
-                pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
-                
-                // Initialize default slider ranges
-                speedSlider.max = DEFAULT_SPEED_MAX;
-                gravitySlider.min = DEFAULT_GRAVITY_MIN;
-                gravitySlider.max = DEFAULT_GRAVITY_MAX;
-                snapDistanceSlider.max = DEFAULT_SNAP_MAX;
-                repelSlider.max = DEFAULT_REPEL_MAX;
-                frequencySlider.max = 10;
-
+                // Set initial slider values and text based on constants
+                animationSpeed = DEFAULT_SPEED_MIN; // Start with the actual min default speed
                 speedSlider.value = animationSpeed;
                 speedValueSpan.textContent = animationSpeed.toFixed(1);
 
+                currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[DEFAULT_PIECE_SIZE_INDEX];
+                pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
+                lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX; // Store initial value
+                pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
+                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1; // Set max for piece size slider
+                updatePieceSizeSliderRange(); // Update bounds for piece size slider
+
+                gravityForce = DEFAULT_GRAVITY_MIN; // Start with the actual min default gravity
                 gravitySlider.value = gravityForce;
-                gravityValueSpan.textContent = gravityForce.toFixed(2);
+                gravityValueSpan.textContent = gravityForce.toFixed(3); // Display with precision
+
+                snapDistance = DEFAULT_SNAP_MIN;
                 snapDistanceSlider.value = snapDistance;
                 snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
                 
+                repelForce = DEFAULT_REPEL_MIN;
                 repelSlider.value = repelForce;
                 repelValueSpan.textContent = repelForce.toFixed(2);
 
+                repelFrequency = DEFAULT_FREQUENCY_MIN;
                 frequencySlider.value = repelFrequency;
                 frequencyValueSpan.textContent = repelFrequency.toString();
 
 
                 maxPiecesInput.value = TARGET_MAX_PIECES;
 
-                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1;
-                updatePieceSizeSliderRange();
-
                 versionNumberSpan.textContent = `Version ${APP_VERSION.toFixed(3)}`;
                 document.title = `Pixel Swirl Version ${APP_VERSION.toFixed(3)}`;
 
-                // Initial setup for repel timing
-                lastRepelTime = performance.now();
+                lastRepelTriggerCheckTime = performance.now(); // Initialize repel timer
             }
         };
 
