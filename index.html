@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Swirl Version 1.004</title> <style>
+    <title>Pixel Swirl Version 1.005</title> <style>
         body {
             font-family: Arial, sans-serif;
             display: flex; /* Changed to flex to control main content better */
@@ -224,14 +224,12 @@
         <div class="controls-row">
             <div class="control-group">
                 <label for="maxPiecesInput">Max # of Pieces:</label>
-                <input type="number" id="maxPiecesInput" value="100000" min="1000" step="1000">
-            </div>
+                <input type="number" id="maxPiecesInput" value="100000" min="4" step="1"> </div>
         </div>
 
         <div class="controls-row">
             <div class="control-group">
-                <label for="speedSlider">Animation Speed:</label>
-                <div class="slider-with-value">
+                <label for="speedSlider">Piece Momentum:</label> <div class="slider-with-value">
                     <input type="range" id="speedSlider" min="0.1" max="5" value="1" step="0.1">
                     <span id="speedValue">1.0</span>
                 </div>
@@ -272,27 +270,29 @@
 
         <div class="controls-row">
             <div class="checkbox-group">
+                <input type="checkbox" id="unlockFreedomCheckbox">
+                <label for="unlockFreedomCheckbox">Unlock more freedom</label>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="checkbox-group">
                 <input type="checkbox" id="unlockPieceSizeCheckbox">
                 <label for="unlockPieceSizeCheckbox">Unlock Piece Size (lag)</label>
             </div>
         </div>
         
-        <div class="controls-row">
-            <div class="checkbox-group">
-                <input type="checkbox" id="transparencyCheckbox">
-                <label for="transparencyCheckbox">Use Transparency (broken)</label>
-            </div>
-        </div>
-
         <div class="app-info">
             <h2>Pixel Swirl</h2>
-            <span id="versionNumber">Version 1.004</span>
+            <span id="versionNumber">Version 1.005</span>
             <hr> <br>
             Check out other cool stuff:<br>
             <br>
-            <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.com/arcade</a><br>
+            <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.2025/arcade</a><br>
             <br>
             <a href="https://github.com/ChrisPirillo" target="_blank">https://github.com/ChrisPirillo</a>
+            <hr> Vibe Coded with:<br>
+            <a href="https://www.google.com/search?q=%22google+gemini%22" target="_blank">Gemini</a>
         </div>
     </div>
 
@@ -306,12 +306,12 @@
         const pixelSizeMinusBtn = document.getElementById('pixelSizeMinus');
         const pixelSizePlusBtn = document.getElementById('pixelSizePlus');
         const pixelSizeValueSpan = document.getElementById('pixelSizeValue');
-        const transparencyCheckbox = document.getElementById('transparencyCheckbox');
         const gravitySlider = document.getElementById('gravitySlider');
         const gravityValueSpan = document.getElementById('gravityValue');
         const snapDistanceSlider = document.getElementById('snapDistanceSlider');
         const snapDistanceValueSpan = document.getElementById('snapDistanceValue');
         const unlockPieceSizeCheckbox = document.getElementById('unlockPieceSizeCheckbox');
+        const unlockFreedomCheckbox = document.getElementById('unlockFreedomCheckbox'); // New freedom checkbox
         const versionNumberSpan = document.getElementById('versionNumber');
         const maxPiecesInput = document.getElementById('maxPiecesInput');
 
@@ -319,7 +319,20 @@
         const PUZZLE_PIECE_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512];
         
         // This will be read from the input box, default value used for initial setup
-        let TARGET_MAX_PIECES = 100000; // Changed default to 100,000
+        let TARGET_MAX_PIECES = 100000; 
+
+        // Default ranges for sliders (before unlock freedom)
+        const DEFAULT_SPEED_MAX = 5;
+        const DEFAULT_GRAVITY_MIN = 0.01;
+        const DEFAULT_GRAVITY_MAX = 0.5;
+        const DEFAULT_SNAP_MAX = 16;
+
+        // Unlocked ranges for sliders
+        const UNLOCKED_SPEED_MAX = 10;
+        const UNLOCKED_GRAVITY_MIN = 0.001;
+        const UNLOCKED_GRAVITY_MAX = 0.99;
+        const UNLOCKED_SNAP_MAX = 256;
+
 
         let gl = null;
         let program = null;
@@ -331,7 +344,6 @@
 
         let currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[10]; // Initial 64x64 (updated index for new array)
         let animationSpeed = 1;
-        let useTransparency = false; // Still defaulting to false as it's labelled 'broken'
         let gravityForce = 0.05;
         let snapDistance = 0;
 
@@ -621,11 +633,15 @@
             }
 
             // Update TARGET_MAX_PIECES from the input box before creating pieces
-            TARGET_MAX_PIECES = parseInt(maxPiecesInput.value);
-            if (isNaN(TARGET_MAX_PIECES) || TARGET_MAX_PIECES <= 0) {
-                TARGET_MAX_PIECES = 1; // Prevent division by zero or negative pieces
-                maxPiecesInput.value = 1;
+            let inputValue = parseInt(maxPiecesInput.value);
+            // Input validation: ensure it's at least 4 and truncate decimals
+            if (isNaN(inputValue) || inputValue < 4) {
+                inputValue = 4;
+                maxPiecesInput.value = 4;
+            } else {
+                maxPiecesInput.value = Math.floor(inputValue); // Truncate decimals
             }
+            TARGET_MAX_PIECES = inputValue;
 
             // Clean up old main texture if it exists
             if (mainAtlasTexture) {
@@ -677,33 +693,8 @@
                         atlasDestX, atlasDestY, pieceDim, pieceDim              // Destination rectangle on atlas
                     );
                     
-                    // --- Handle transparency (read back from the drawn image on the atlas) ---
-                    let hasVisiblePixels = false;
-                    const imageData = atlasCtx.getImageData(atlasDestX, atlasDestY, pieceDim, pieceDim);
-                    const data = imageData.data;
-
-                    if (useTransparency) {
-                        for (let i = 3; i < data.length; i += 4) {
-                            if (data[i] > 0) { // If any pixel has alpha > 0
-                                hasVisiblePixels = true;
-                                break;
-                            }
-                        }
-                    } else {
-                        // If not using transparency, assume all pieces are visible and force opaque
-                        for (let i = 3; i < data.length; i += 4) {
-                            data[i] = 255; // Set alpha to full
-                        }
-                        atlasCtx.putImageData(imageData, atlasDestX, atlasDestY); // Write back opaque data
-                        hasVisiblePixels = true; // Always visible if transparency is off
-                    }
-
-                    if (!hasVisiblePixels && useTransparency) {
-                        // If this piece is fully transparent and transparency is on, skip it.
-                        // Clear its area in the atlas to avoid artifacts from previous drawings.
-                        atlasCtx.clearRect(atlasDestX, atlasDestY, pieceDim, pieceDim);
-                        continue;
-                    }
+                    // Transparency logic removed as per request. All pieces assumed opaque.
+                    // No check for `hasVisiblePixels` needed here, always add the piece.
 
                     // Calculate normalized texture coordinates for this piece within the atlas
                     // These are the UVs that the shader will use to sample from mainAtlasTexture
@@ -771,7 +762,7 @@
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, allPositions.byteLength, gl.DYNAMIC_DRAW); // Allocate space only
 
-            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with dimension ${pieceDim}x${pieceDim}. Transparency: ${useTransparency}, Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Atlas size: ${atlasWidth}x${atlasHeight}`);
+            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with dimension ${pieceDim}x${pieceDim}. Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Atlas size: ${atlasWidth}x${atlasHeight}`);
             
             startAnimation();
         }
@@ -886,11 +877,14 @@
             if (originalImageObject) {
                 // When restart is clicked, first update the global TARGET_MAX_PIECES
                 // from the input box, then recalculate min piece size.
-                TARGET_MAX_PIECES = parseInt(maxPiecesInput.value);
-                if (isNaN(TARGET_MAX_PIECES) || TARGET_MAX_PIECES <= 0) {
-                    TARGET_MAX_PIECES = 1; // Prevent issues
-                    maxPiecesInput.value = 1;
+                let inputValue = parseInt(maxPiecesInput.value);
+                if (isNaN(inputValue) || inputValue < 4) {
+                    inputValue = 4;
+                    maxPiecesInput.value = 4;
+                } else {
+                    maxPiecesInput.value = Math.floor(inputValue);
                 }
+                TARGET_MAX_PIECES = inputValue;
                 
                 calculateMinPieceSizeForImage(); 
                 
@@ -908,7 +902,7 @@
             animationSpeed = parseFloat(event.target.value);
             speedValueSpan.textContent = animationSpeed.toFixed(1); // Update speed value display
             puzzlePieces.forEach(p => {
-                p.maxSpeed = 10 * animationSpeed;
+                p.maxSpeed = 10 * animationSpeed; // Note: 10 here is tied to animationSpeed, not a global variable.
                 p.attractionForce = gravityForce * animationSpeed;
             });
             if (animationFrameId === null && originalImageObject) {
@@ -944,17 +938,9 @@
             }
         });
 
-
-        transparencyCheckbox.addEventListener('change', (event) => {
-            useTransparency = event.target.checked;
-            if (originalImageObject) {
-                createPuzzlePiecesFromImage(); // Re-create atlas and pieces with new transparency setting
-            }
-        });
-
         gravitySlider.addEventListener('input', (event) => {
             gravityForce = parseFloat(event.target.value);
-            gravityValueSpan.textContent = gravityForce.toFixed(2);
+            gravityValueSpan.textContent = gravityForce.toFixed(gravityForce < 0.01 ? 3 : 2); // Show more decimals for small values
             puzzlePieces.forEach(p => {
                 p.attractionForce = gravityForce * animationSpeed;
             });
@@ -972,16 +958,48 @@
             updatePieceSizeSliderRange(); // Adjust slider min based on unlock status
         });
 
-        // Max Pieces Input - no immediate effect, requires Restart button click
+        unlockFreedomCheckbox.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                speedSlider.max = UNLOCKED_SPEED_MAX;
+                gravitySlider.min = UNLOCKED_GRAVITY_MIN;
+                gravitySlider.max = UNLOCKED_GRAVITY_MAX;
+                snapDistanceSlider.max = UNLOCKED_SNAP_MAX;
+            } else {
+                speedSlider.max = DEFAULT_SPEED_MAX;
+                gravitySlider.min = DEFAULT_GRAVITY_MIN;
+                gravitySlider.max = DEFAULT_GRAVITY_MAX;
+                snapDistanceSlider.max = DEFAULT_SNAP_MAX;
+            }
+            // Ensure values are within new bounds and update display
+            speedSlider.value = Math.min(parseFloat(speedSlider.value), parseFloat(speedSlider.max));
+            speedSlider.value = Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min));
+            speedSlider.dispatchEvent(new Event('input')); // Trigger to update UI and values
+            
+            gravitySlider.value = Math.min(parseFloat(gravitySlider.value), parseFloat(gravitySlider.max));
+            gravitySlider.value = Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min));
+            gravitySlider.dispatchEvent(new Event('input'));
+
+            snapDistanceSlider.value = Math.min(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.max));
+            snapDistanceSlider.value = Math.max(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.min));
+            snapDistanceSlider.dispatchEvent(new Event('input'));
+        });
+
+
+        // Max Pieces Input validation on blur (when user clicks out or tabs away)
         maxPiecesInput.addEventListener('change', () => {
-            // Simply update the internal TARGET_MAX_PIECES when restart is clicked
-            // No direct action here.
+            let inputValue = parseInt(maxPiecesInput.value);
+            if (isNaN(inputValue) || inputValue < 4) {
+                maxPiecesInput.value = 4;
+            } else {
+                maxPiecesInput.value = Math.floor(inputValue); // Truncate decimals
+            }
+            // TARGET_MAX_PIECES will be updated on Restart button click
             console.log("Max # of Pieces changed to:", maxPiecesInput.value, "Will apply on Restart.");
         });
 
 
         // App Versioning
-        const APP_VERSION = 1.004;
+        const APP_VERSION = 1.005;
 
         // Initialize on load
         window.onload = () => {
@@ -995,15 +1013,20 @@
                 }
 
                 pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
-                transparencyCheckbox.checked = useTransparency;
+                
+                // Initialize default slider ranges
+                speedSlider.max = DEFAULT_SPEED_MAX;
+                gravitySlider.min = DEFAULT_GRAVITY_MIN;
+                gravitySlider.max = DEFAULT_GRAVITY_MAX;
+                snapDistanceSlider.max = DEFAULT_SNAP_MAX;
+
+                speedSlider.value = animationSpeed;
+                speedValueSpan.textContent = animationSpeed.toFixed(1);
 
                 gravitySlider.value = gravityForce;
                 gravityValueSpan.textContent = gravityForce.toFixed(2);
                 snapDistanceSlider.value = snapDistance;
                 snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
-                
-                speedSlider.value = animationSpeed; // Set initial speed slider value
-                speedValueSpan.textContent = animationSpeed.toFixed(1); // Display initial speed
 
                 maxPiecesInput.value = TARGET_MAX_PIECES; // Set initial value of the input box
 
