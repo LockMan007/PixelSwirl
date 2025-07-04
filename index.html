@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pixel Swirl Version 1.005</title> <style>
+    <title>Pixel Swirl Version 1.006</title> <style>
         body {
             font-family: Arial, sans-serif;
             display: flex; /* Changed to flex to control main content better */
@@ -224,12 +224,14 @@
         <div class="controls-row">
             <div class="control-group">
                 <label for="maxPiecesInput">Max # of Pieces:</label>
-                <input type="number" id="maxPiecesInput" value="100000" min="4" step="1"> </div>
+                <input type="number" id="maxPiecesInput" value="100000" min="4" step="1">
+            </div>
         </div>
 
         <div class="controls-row">
             <div class="control-group">
-                <label for="speedSlider">Piece Momentum:</label> <div class="slider-with-value">
+                <label for="speedSlider">Piece Momentum:</label>
+                <div class="slider-with-value">
                     <input type="range" id="speedSlider" min="0.1" max="5" value="1" step="0.1">
                     <span id="speedValue">1.0</span>
                 </div>
@@ -269,6 +271,26 @@
         </div>
 
         <div class="controls-row">
+            <div class="control-group">
+                <label for="repelSlider">Repel:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="repelSlider" min="0" max="1" value="0" step="0.01">
+                    <span id="repelValue">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="frequencySlider">Frequency:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="frequencySlider" min="0" max="10" value="0" step="1">
+                    <span id="frequencyValue">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
             <div class="checkbox-group">
                 <input type="checkbox" id="unlockFreedomCheckbox">
                 <label for="unlockFreedomCheckbox">Unlock more freedom</label>
@@ -284,11 +306,11 @@
         
         <div class="app-info">
             <h2>Pixel Swirl</h2>
-            <span id="versionNumber">Version 1.005</span>
+            <span id="versionNumber">Version 1.006</span>
             <hr> <br>
             Check out other cool stuff:<br>
             <br>
-            <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.2025/arcade</a><br>
+            <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.com/arcade</a><br>
             <br>
             <a href="https://github.com/ChrisPirillo" target="_blank">https://github.com/ChrisPirillo</a>
             <hr> Vibe Coded with:<br>
@@ -301,7 +323,7 @@
         const imageUpload = document.getElementById('imageUpload');
         const restartButton = document.getElementById('restartButton');
         const speedSlider = document.getElementById('speedSlider');
-        const speedValueSpan = document.getElementById('speedValue'); // New span for speed value
+        const speedValueSpan = document.getElementById('speedValue');
         const pixelSizeSlider = document.getElementById('pixelSizeSlider');
         const pixelSizeMinusBtn = document.getElementById('pixelSizeMinus');
         const pixelSizePlusBtn = document.getElementById('pixelSizePlus');
@@ -310,15 +332,18 @@
         const gravityValueSpan = document.getElementById('gravityValue');
         const snapDistanceSlider = document.getElementById('snapDistanceSlider');
         const snapDistanceValueSpan = document.getElementById('snapDistanceValue');
+        const repelSlider = document.getElementById('repelSlider'); // New Repel slider
+        const repelValueSpan = document.getElementById('repelValue'); // New Repel value span
+        const frequencySlider = document.getElementById('frequencySlider'); // New Frequency slider
+        const frequencyValueSpan = document.getElementById('frequencyValue'); // New Frequency value span
         const unlockPieceSizeCheckbox = document.getElementById('unlockPieceSizeCheckbox');
-        const unlockFreedomCheckbox = document.getElementById('unlockFreedomCheckbox'); // New freedom checkbox
+        const unlockFreedomCheckbox = document.getElementById('unlockFreedomCheckbox');
         const versionNumberSpan = document.getElementById('versionNumber');
         const maxPiecesInput = document.getElementById('maxPiecesInput');
 
         // Added more granular small sizes
         const PUZZLE_PIECE_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512];
         
-        // This will be read from the input box, default value used for initial setup
         let TARGET_MAX_PIECES = 100000; 
 
         // Default ranges for sliders (before unlock freedom)
@@ -326,35 +351,43 @@
         const DEFAULT_GRAVITY_MIN = 0.01;
         const DEFAULT_GRAVITY_MAX = 0.5;
         const DEFAULT_SNAP_MAX = 16;
+        const DEFAULT_REPEL_MAX = 1; // New default repel max
 
         // Unlocked ranges for sliders
         const UNLOCKED_SPEED_MAX = 10;
         const UNLOCKED_GRAVITY_MIN = 0.001;
         const UNLOCKED_GRAVITY_MAX = 0.99;
         const UNLOCKED_SNAP_MAX = 256;
+        const UNLOCKED_REPEL_MAX = 5; // New unlocked repel max
 
 
         let gl = null;
         let program = null;
         let positionBuffer = null;
         let texCoordBuffer = null;
-        let numVertices = 0; // Total vertices for all quads (6 per quad)
+        let numVertices = 0;
         let animationFrameId = null;
         let originalImageObject = null;
 
-        let currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[10]; // Initial 64x64 (updated index for new array)
+        let currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[10];
         let animationSpeed = 1;
         let gravityForce = 0.05;
         let snapDistance = 0;
+        let repelForce = 0; // New: Repel force
+        let repelFrequency = 0; // New: Repel frequency (0-10)
 
         let puzzlePieces = [];
         let originalImageWidth = 0;
         let originalImageHeight = 0;
-        let currentMinPieceSizeIndex = 0; // Index in PUZZLE_PIECE_SIZES array
+        let currentMinPieceSizeIndex = 0;
 
-        let mainAtlasTexture = null; // The single texture atlas for all pieces
-        let allPositions = null;     // Float32Array to hold all current piece positions
-        let allTexCoords = null;     // Float32Array to hold all texture coordinates within the atlas (fixed)
+        let mainAtlasTexture = null;
+        let allPositions = null;
+        let allTexCoords = null;
+
+        // Stores the user's preferred pixel size index, to be restored on restart
+        let lastSetPuzzlePieceSizeIndex = PUZZLE_PIECE_SIZES.indexOf(64);
+
 
         // --- Shaders ---
         const vsSource = `
@@ -390,7 +423,7 @@
 
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.enable(gl.BLEND);
-            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Standard alpha blending
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
             program = initShaderProgram(gl, vsSource, fsSource);
             if (!program) return false;
@@ -446,7 +479,6 @@
 
         // --- Core Logic for Particles (Puzzle Pieces) ---
         class PuzzlePiece {
-            // Now stores texture UV coordinates for its part of the atlas
             constructor(startX, startY, targetX, targetY, pieceDimension, texU0, texV0, texU1, texV1) {
                 this.x = startX;
                 this.y = startY;
@@ -461,13 +493,12 @@
                     texU0, texV1, // Bottom-Left
                     texU1, texV0, // Top-Right
                     texU1, texV1  // Bottom-Right
-                ]; // Stored once per piece, relative to atlas
+                ];
 
                 this.vx = 0;
                 this.vy = 0;
                 this.settled = false;
                 this.maxSpeed = 10 * animationSpeed;
-                this.attractionForce = gravityForce * animationSpeed;
                 this.damping = 0.95;
                 this.swirlRadius = Math.random() * 200 + 50;
                 this.swirlAngle = Math.random() * Math.PI * 2;
@@ -498,19 +529,26 @@
                 }
 
                 this.swirlAngle += this.swirlSpeed * animationSpeed;
-                // Corrected: Define swirlOffsetX and swirlOffsetY locally
                 const swirlOffsetX = this.swirlRadius * Math.cos(this.swirlAngle);
                 const swirlOffsetY = this.swirlRadius * Math.sin(this.swirlAngle);
 
-                // Corrected: Define swirlTargetX and swirlTargetY locally
                 const swirlTargetX = this.targetX + swirlOffsetX;
                 const swirlTargetY = this.targetY + swirlOffsetY;
 
                 const swirlDx = swirlTargetX - this.x;
                 const swirlDy = swirlTargetY - this.y;
 
-                this.vx += swirlDx * this.attractionForce;
-                this.vy += swirlDy * this.attractionForce;
+                let effectiveForce = gravityForce * animationSpeed; // Default to attraction
+
+                // Repel logic: if repelForce is active and a random check passes
+                if (repelForce > 0 && repelFrequency > 0) {
+                    if (Math.random() * 10 < repelFrequency) { // Probability check (e.g., 5/10 chance if frequency=5)
+                        effectiveForce = -repelForce; // Negative force means repulsion
+                    }
+                }
+                
+                this.vx += swirlDx * effectiveForce; // Apply the calculated effective force
+                this.vy += swirlDy * effectiveForce;
 
                 this.vx *= this.damping;
                 this.vy *= this.damping;
@@ -552,7 +590,6 @@
         // --- Setup and Rendering ---
 
         function resizeCanvasToImage(img) {
-            // Set canvas dimensions to image dimensions, then let CSS handle scaling
             canvas.width = img.width;
             canvas.height = img.height;
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -567,24 +604,18 @@
             const imgWidth = originalImageObject.width;
             const imgHeight = originalImageObject.height;
             
-            let calculatedMinIndex = 0; // Default to 1x1 (index 0)
+            let calculatedMinIndex = 0;
 
-            // Read the current TARGET_MAX_PIECES from the input box
             const currentTargetMaxPieces = parseInt(maxPiecesInput.value);
 
-            // Iterate through PUZZLE_PIECE_SIZES to find the smallest piece dimension (P)
-            // that results in a total piece count <= currentTargetMaxPieces.
             for (let i = 0; i < PUZZLE_PIECE_SIZES.length; i++) {
                 const p = PUZZLE_PIECE_SIZES[i];
-                // Correct piece count calculation: divide width by P, height by P, then multiply
                 const pieceCountX = Math.ceil(imgWidth / p);
                 const pieceCountY = Math.ceil(imgHeight / p);
                 const totalPieceCount = pieceCountX * pieceCountY;
 
                 if (totalPieceCount <= currentTargetMaxPieces) {
-                    calculatedMinIndex = i; // This 'p' is a valid minimum.
-                                            // Since we iterate from smallest to largest piece size,
-                                            // the first one we find that fits is the ideal minimum.
+                    calculatedMinIndex = i;
                     break; 
                 }
             }
@@ -609,16 +640,13 @@
                 pixelSizeSlider.value = sliderMin;
                 valueChanged = true;
             } else if (sliderVal > sliderMax) {
-                // If the slider value is currently greater than the max (e.g., max was lowered)
                 pixelSizeSlider.value = sliderMax;
                 valueChanged = true;
             }
             
             if (valueChanged) {
-                // If the value changed, trigger the input event manually
                 pixelSizeSlider.dispatchEvent(new Event('input'));
             } else {
-                // Otherwise, just update the display and button states
                 pixelSizeValueSpan.textContent = `${PUZZLE_PIECE_SIZES[pixelSizeSlider.value]}x${PUZZLE_PIECE_SIZES[pixelSizeSlider.value]}`;
                 pixelSizeMinusBtn.disabled = parseInt(pixelSizeSlider.value) <= parseInt(pixelSizeSlider.min);
                 pixelSizePlusBtn.disabled = parseInt(pixelSizeSlider.value) >= parseInt(pixelSizeSlider.max);
@@ -632,18 +660,15 @@
                 animationFrameId = null;
             }
 
-            // Update TARGET_MAX_PIECES from the input box before creating pieces
             let inputValue = parseInt(maxPiecesInput.value);
-            // Input validation: ensure it's at least 4 and truncate decimals
             if (isNaN(inputValue) || inputValue < 4) {
                 inputValue = 4;
                 maxPiecesInput.value = 4;
             } else {
-                maxPiecesInput.value = Math.floor(inputValue); // Truncate decimals
+                maxPiecesInput.value = Math.floor(inputValue);
             }
             TARGET_MAX_PIECES = inputValue;
 
-            // Clean up old main texture if it exists
             if (mainAtlasTexture) {
                 gl.deleteTexture(mainAtlasTexture);
                 mainAtlasTexture = null;
@@ -651,18 +676,14 @@
 
             puzzlePieces = [];
             numVertices = 0;
-            // allPositions and allTexCoords will be initialized after counting pieces
 
             const imgWidth = originalImageObject.width;
             const imgHeight = originalImageObject.height;
             const pieceDim = currentPuzzlePieceSize;
 
-            // Calculate the number of pieces in columns and rows
             const numPiecesX = Math.ceil(imgWidth / pieceDim);
             const numPiecesY = Math.ceil(imgHeight / pieceDim);
 
-            // Determine dimensions for the texture atlas
-            // Each piece will occupy `pieceDim` x `pieceDim` space in the atlas
             const atlasWidth = nextPowerOf2(numPiecesX * pieceDim);
             const atlasHeight = nextPowerOf2(numPiecesY * pieceDim);
 
@@ -670,42 +691,34 @@
             const atlasCtx = atlasCanvas.getContext('2d', { willReadFrequently: true });
             atlasCanvas.width = atlasWidth;
             atlasCanvas.height = atlasHeight;
-            atlasCtx.clearRect(0, 0, atlasWidth, atlasHeight); // Clear the atlas canvas
+            atlasCtx.clearRect(0, 0, atlasWidth, atlasHeight);
 
             let pieceCount = 0;
 
             for (let y = 0; y < imgHeight; y += pieceDim) {
                 for (let x = 0; x < imgWidth; x += pieceDim) {
-                    const currentPieceSrcX = x; // Source X coord in original image
-                    const currentPieceSrcY = y; // Source Y coord in original image
+                    const currentPieceSrcX = x;
+                    const currentPieceSrcY = y;
                     
-                    // Calculate position of this piece within the atlas
                     const atlasCol = Math.floor(currentPieceSrcX / pieceDim);
                     const atlasRow = Math.floor(currentPieceSrcY / pieceDim);
 
                     const atlasDestX = atlasCol * pieceDim;
                     const atlasDestY = atlasRow * pieceDim;
 
-                    // Draw a segment of the original image onto the atlas canvas
                     atlasCtx.drawImage(
                         originalImageObject,
-                        currentPieceSrcX, currentPieceSrcY, pieceDim, pieceDim, // Source rectangle
-                        atlasDestX, atlasDestY, pieceDim, pieceDim              // Destination rectangle on atlas
+                        currentPieceSrcX, currentPieceSrcY, pieceDim, pieceDim,
+                        atlasDestX, atlasDestY, pieceDim, pieceDim
                     );
                     
-                    // Transparency logic removed as per request. All pieces assumed opaque.
-                    // No check for `hasVisiblePixels` needed here, always add the piece.
-
-                    // Calculate normalized texture coordinates for this piece within the atlas
-                    // These are the UVs that the shader will use to sample from mainAtlasTexture
                     const texU0 = atlasDestX / atlasWidth;
                     const texV0 = atlasDestY / atlasHeight;
                     const texU1 = (atlasDestX + pieceDim) / atlasWidth;
                     const texV1 = (atlasDestY + pieceDim) / atlasHeight;
 
-                    // Random starting position for the piece outside the canvas
                     let startX, startY;
-                    const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+                    const edge = Math.floor(Math.random() * 4);
 
                     if (edge === 0) { // Top
                         startX = Math.random() * imgWidth;
@@ -722,29 +735,23 @@
                     }
                     
                     puzzlePieces.push(new PuzzlePiece(startX, startY, x, y, pieceDim, texU0, texV0, texU1, texV1));
-                    numVertices += 6; // Each piece is 2 triangles (1 quad) = 6 vertices
+                    numVertices += 6;
                     pieceCount++;
                 }
             }
 
-            // Create the single main texture atlas
             mainAtlasTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, mainAtlasTexture);
-
-            // Upload the entire atlas canvas to the GPU as one texture
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
             
-            // Set texture parameters for atlas (important for non-power-of-two, if not using nextPowerOf2)
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); // LINEAR for smoother scaling
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-            // Initialize allPositions and allTexCoords to correct size
-            allPositions = new Float32Array(numVertices * 2); // 2 components (x, y) per vertex
-            allTexCoords = new Float32Array(numVertices * 2); // 2 components (u, v) per vertex
+            allPositions = new Float32Array(numVertices * 2);
+            allTexCoords = new Float32Array(numVertices * 2);
 
-            // Populate allTexCoords once (they don't change per frame)
             let texCoordIndex = 0;
             puzzlePieces.forEach(piece => {
                 for (let i = 0; i < piece.texCoords.length; i++) {
@@ -752,17 +759,13 @@
                 }
             });
 
-            // Allocate and upload static texture coordinates once to the GPU.
-            // STATIC_DRAW indicates data won't change often.
             gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, allTexCoords, gl.STATIC_DRAW); // Allocate buffer with data
+            gl.bufferData(gl.ARRAY_BUFFER, allTexCoords, gl.STATIC_DRAW);
 
-            // Allocate the position buffer on the GPU. Its contents will be updated every frame.
-            // DYNAMIC_DRAW hints to WebGL that data will be changed frequently.
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, allPositions.byteLength, gl.DYNAMIC_DRAW); // Allocate space only
+            gl.bufferData(gl.ARRAY_BUFFER, allPositions.byteLength, gl.DYNAMIC_DRAW);
 
-            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with dimension ${pieceDim}x${pieceDim}. Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Atlas size: ${atlasWidth}x${atlasHeight}`);
+            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with dimension ${pieceDim}x${pieceDim}. Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Repel: ${repelForce}, Frequency: ${repelFrequency}. Atlas size: ${atlasWidth}x${atlasHeight}`);
             
             startAnimation();
         }
@@ -773,7 +776,6 @@
             let currentPositionIndex = 0;
             let allSettled = true;
 
-            // Update piece positions and fill the allPositions array for this frame
             puzzlePieces.forEach(piece => {
                 if (!piece.settled) {
                     piece.update();
@@ -785,40 +787,33 @@
                 const x1 = piece.x + piece.dimension;
                 const y1 = piece.y + piece.dimension;
 
-                // Positions for the 2 triangles forming the quad (6 vertices total)
-                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y0; // Top-Left
-                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0; // Top-Right
-                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1; // Bottom-Left
+                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y0;
+                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0;
+                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1;
 
-                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1; // Bottom-Left
-                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0; // Top-Right
-                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y1; // Bottom-Right
+                allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1;
+                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0;
+                allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y1;
             });
 
             const aPositionLoc = gl.getAttribLocation(program, 'a_position');
             const aTexCoordLoc = gl.getAttribLocation(program, 'a_texCoord');
             const uSamplerLoc = gl.getUniformLocation(program, 'u_sampler');
 
-            // --- Single Draw Call Optimization ---
-            // 1. Bind the main atlas texture once for the entire frame
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, mainAtlasTexture);
-            gl.uniform1i(uSamplerLoc, 0); // Tell the shader to use texture unit 0
+            gl.uniform1i(uSamplerLoc, 0);
 
-            // 2. Upload all updated positions to the GPU (DYNAMIC_DRAW as they change every frame)
             gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-            gl.bufferSubData(gl.ARRAY_BUFFER, 0, allPositions); // Use bufferSubData to update existing buffer
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, allPositions);
 
-            // 3. Set up position attribute pointer
             gl.enableVertexAttribArray(aPositionLoc);
             gl.vertexAttribPointer(aPositionLoc, 2, gl.FLOAT, false, 0, 0);
 
-            // 4. Set up texture coordinate attribute pointer (already uploaded as STATIC_DRAW)
-            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer); // Re-bind texCoordBuffer just in case
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
             gl.enableVertexAttribArray(aTexCoordLoc);
             gl.vertexAttribPointer(aTexCoordLoc, 2, gl.FLOAT, false, 0, 0);
 
-            // 5. Draw all pieces in one call!
             gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
             if (!allSettled) {
@@ -840,7 +835,7 @@
                     p.swirlRadius = Math.random() * 200 + 50;
                     p.swirlAngle = Math.random() * Math.PI * 2;
                     p.swirlSpeed = Math.random() * 0.05 + 0.01;
-                    p.vx = 0; // Reset velocities
+                    p.vx = 0;
                     p.vy = 0;
                 });
                 drawScene();
@@ -858,14 +853,15 @@
                     img.onload = () => {
                         originalImageObject = img;
                         resizeCanvasToImage(img);
-                        // Recalculate min piece size based on the new image and current TARGET_MAX_PIECES
+                        
+                        // Store the current pixel size before potentially adjusting for new image/max pieces
+                        lastSetPuzzlePieceSizeIndex = parseInt(pixelSizeSlider.value);
+
                         calculateMinPieceSizeForImage(); 
-
-                        // After calculating the new min piece size, set the slider to this new min
-                        // and trigger its input event to update currentPuzzlePieceSize
-                        pixelSizeSlider.value = currentMinPieceSizeIndex;
+                        
+                        // Set slider to the greater of user's last setting or the new minimum
+                        pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
                         pixelSizeSlider.dispatchEvent(new Event('input')); // This will call createPuzzlePiecesFromImage()
-
                     };
                     img.src = e.target.result;
                 };
@@ -875,8 +871,6 @@
 
         restartButton.addEventListener('click', () => {
             if (originalImageObject) {
-                // When restart is clicked, first update the global TARGET_MAX_PIECES
-                // from the input box, then recalculate min piece size.
                 let inputValue = parseInt(maxPiecesInput.value);
                 if (isNaN(inputValue) || inputValue < 4) {
                     inputValue = 4;
@@ -888,10 +882,8 @@
                 
                 calculateMinPieceSizeForImage(); 
                 
-                // Crucial fix: after recalculating the new minimum piece size
-                // (currentMinPieceSizeIndex), set the slider to this new minimum
-                // so that the image restarts with the correct piece size based on the new max pieces.
-                pixelSizeSlider.value = currentMinPieceSizeIndex;
+                // Set slider to the greater of user's last setting or the new minimum
+                pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
                 pixelSizeSlider.dispatchEvent(new Event('input')); // This will trigger createPuzzlePiecesFromImage()
             } else {
                 alert("Please load an image first!");
@@ -900,13 +892,13 @@
 
         speedSlider.addEventListener('input', (event) => {
             animationSpeed = parseFloat(event.target.value);
-            speedValueSpan.textContent = animationSpeed.toFixed(1); // Update speed value display
+            speedValueSpan.textContent = animationSpeed.toFixed(1);
             puzzlePieces.forEach(p => {
-                p.maxSpeed = 10 * animationSpeed; // Note: 10 here is tied to animationSpeed, not a global variable.
-                p.attractionForce = gravityForce * animationSpeed;
+                p.maxSpeed = 10 * animationSpeed;
+                // No need to update p.attractionForce here, it's calculated in update()
             });
             if (animationFrameId === null && originalImageObject) {
-                 startAnimation(); // Restart animation if it was settled
+                 startAnimation();
             }
         });
 
@@ -914,10 +906,11 @@
             const sliderIndex = parseInt(event.target.value);
             currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[sliderIndex];
             pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
+            lastSetPuzzlePieceSizeIndex = sliderIndex; // Save the current slider index
             if (originalImageObject) {
                 createPuzzlePiecesFromImage(); 
             }
-            updatePieceSizeSliderRange(); // Update button states based on new slider value
+            updatePieceSizeSliderRange();
         });
 
         pixelSizeMinusBtn.addEventListener('click', () => {
@@ -925,7 +918,7 @@
             const minValue = parseInt(pixelSizeSlider.min);
             if (currentValue > minValue) {
                 pixelSizeSlider.value = currentValue - 1;
-                pixelSizeSlider.dispatchEvent(new Event('input')); // Trigger input event to update everything
+                pixelSizeSlider.dispatchEvent(new Event('input'));
             }
         });
 
@@ -934,18 +927,16 @@
             const maxValue = parseInt(pixelSizeSlider.max);
             if (currentValue < maxValue) {
                 pixelSizeSlider.value = currentValue + 1;
-                pixelSizeSlider.dispatchEvent(new Event('input')); // Trigger input event to update everything
+                pixelSizeSlider.dispatchEvent(new Event('input'));
             }
         });
 
         gravitySlider.addEventListener('input', (event) => {
             gravityForce = parseFloat(event.target.value);
-            gravityValueSpan.textContent = gravityForce.toFixed(gravityForce < 0.01 ? 3 : 2); // Show more decimals for small values
-            puzzlePieces.forEach(p => {
-                p.attractionForce = gravityForce * animationSpeed;
-            });
+            gravityValueSpan.textContent = gravityForce.toFixed(gravityForce < 0.01 ? 3 : 2);
+            // PuzzlePiece.update uses gravityForce directly, no need to loop here
             if (animationFrameId === null && originalImageObject) {
-                 startAnimation(); // Restart animation if it was settled
+                 startAnimation();
             }
         });
 
@@ -954,8 +945,25 @@
             snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
         });
 
+        repelSlider.addEventListener('input', (event) => {
+            repelForce = parseFloat(event.target.value);
+            repelValueSpan.textContent = repelForce.toFixed(2); // Display 2 decimal places for repel
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+        frequencySlider.addEventListener('input', (event) => {
+            repelFrequency = parseInt(event.target.value);
+            frequencyValueSpan.textContent = repelFrequency.toString(); // Display as integer
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+
         unlockPieceSizeCheckbox.addEventListener('change', () => {
-            updatePieceSizeSliderRange(); // Adjust slider min based on unlock status
+            updatePieceSizeSliderRange();
         });
 
         unlockFreedomCheckbox.addEventListener('change', (event) => {
@@ -964,16 +972,18 @@
                 gravitySlider.min = UNLOCKED_GRAVITY_MIN;
                 gravitySlider.max = UNLOCKED_GRAVITY_MAX;
                 snapDistanceSlider.max = UNLOCKED_SNAP_MAX;
+                repelSlider.max = UNLOCKED_REPEL_MAX; // Unlocked repel max
             } else {
                 speedSlider.max = DEFAULT_SPEED_MAX;
                 gravitySlider.min = DEFAULT_GRAVITY_MIN;
                 gravitySlider.max = DEFAULT_GRAVITY_MAX;
                 snapDistanceSlider.max = DEFAULT_SNAP_MAX;
+                repelSlider.max = DEFAULT_REPEL_MAX; // Default repel max
             }
             // Ensure values are within new bounds and update display
             speedSlider.value = Math.min(parseFloat(speedSlider.value), parseFloat(speedSlider.max));
             speedSlider.value = Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min));
-            speedSlider.dispatchEvent(new Event('input')); // Trigger to update UI and values
+            speedSlider.dispatchEvent(new Event('input'));
             
             gravitySlider.value = Math.min(parseFloat(gravitySlider.value), parseFloat(gravitySlider.max));
             gravitySlider.value = Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min));
@@ -982,35 +992,38 @@
             snapDistanceSlider.value = Math.min(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.max));
             snapDistanceSlider.value = Math.max(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.min));
             snapDistanceSlider.dispatchEvent(new Event('input'));
+
+            repelSlider.value = Math.min(parseFloat(repelSlider.value), parseFloat(repelSlider.max));
+            repelSlider.value = Math.max(parseFloat(repelSlider.value), parseFloat(repelSlider.min));
+            repelSlider.dispatchEvent(new Event('input'));
         });
 
 
-        // Max Pieces Input validation on blur (when user clicks out or tabs away)
         maxPiecesInput.addEventListener('change', () => {
             let inputValue = parseInt(maxPiecesInput.value);
             if (isNaN(inputValue) || inputValue < 4) {
                 maxPiecesInput.value = 4;
             } else {
-                maxPiecesInput.value = Math.floor(inputValue); // Truncate decimals
+                maxPiecesInput.value = Math.floor(inputValue);
             }
-            // TARGET_MAX_PIECES will be updated on Restart button click
             console.log("Max # of Pieces changed to:", maxPiecesInput.value, "Will apply on Restart.");
         });
 
 
         // App Versioning
-        const APP_VERSION = 1.005;
+        const APP_VERSION = 1.006;
 
         // Initialize on load
         window.onload = () => {
             if (initWebGL()) {
                 // Set initial slider values and text
-                currentPuzzlePieceSize = 64; // Set desired starting size
+                currentPuzzlePieceSize = 64;
                 pixelSizeSlider.value = PUZZLE_PIECE_SIZES.indexOf(currentPuzzlePieceSize);
                 if (pixelSizeSlider.value === -1) { 
-                    pixelSizeSlider.value = 0; // Default to 1x1 if 64 is somehow not found
+                    pixelSizeSlider.value = 0;
                     currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[0];
                 }
+                lastSetPuzzlePieceSizeIndex = parseInt(pixelSizeSlider.value); // Store initial value
 
                 pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
                 
@@ -1019,6 +1032,8 @@
                 gravitySlider.min = DEFAULT_GRAVITY_MIN;
                 gravitySlider.max = DEFAULT_GRAVITY_MAX;
                 snapDistanceSlider.max = DEFAULT_SNAP_MAX;
+                repelSlider.max = DEFAULT_REPEL_MAX; // Set initial repel max
+                frequencySlider.max = 10; // Frequency max is constant
 
                 speedSlider.value = animationSpeed;
                 speedValueSpan.textContent = animationSpeed.toFixed(1);
@@ -1027,14 +1042,19 @@
                 gravityValueSpan.textContent = gravityForce.toFixed(2);
                 snapDistanceSlider.value = snapDistance;
                 snapDistanceValueSpan.textContent = `${snapDistance} pixels`;
+                
+                repelSlider.value = repelForce;
+                repelValueSpan.textContent = repelForce.toFixed(2);
 
-                maxPiecesInput.value = TARGET_MAX_PIECES; // Set initial value of the input box
+                frequencySlider.value = repelFrequency;
+                frequencyValueSpan.textContent = repelFrequency.toString();
 
-                // Initial setup for the piece size slider range and buttons
-                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1; // Set max based on array length
-                updatePieceSizeSliderRange(); // Call this to set initial min and button states
 
-                // Set initial version number and update titlebar
+                maxPiecesInput.value = TARGET_MAX_PIECES;
+
+                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1;
+                updatePieceSizeSliderRange();
+
                 versionNumberSpan.textContent = `Version ${APP_VERSION.toFixed(3)}`;
                 document.title = `Pixel Swirl Version ${APP_VERSION.toFixed(3)}`;
             }
