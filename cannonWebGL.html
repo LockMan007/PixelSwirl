@@ -892,7 +892,7 @@
          * @returns {{x: number, y: number}} The new rotated and scaled coordinates.
          */
         function sortBallPos(x, y) {
-            let rotatedAngle = angle;
+            let rotatedAngle = angle; // Use the original angle for physics calculation
             // Cannon pivot is (cannon.x, cannon.y) in unscaled coordinates (center of barrel)
             const pivotX_unscaled = cannon.x;
             const pivotY_unscaled = cannon.y;
@@ -935,6 +935,7 @@
                 const pivotY_scaled = this.y * window.scaleFactor;
 
                 if (mousePos) {
+                    // Revert to original angle calculation for correct physics
                     angle = Math.atan2(mousePos.y - pivotY_scaled, mousePos.x - pivotX_scaled);
                 }
 
@@ -945,7 +946,7 @@
                     pivotY_scaled - scaledHeight / 2, // Y for top-left corner
                     scaledWidth, scaledHeight,
                     barrelColor,
-                    angle, // Rotation around its center
+                    -angle, // Negate angle for visual rotation to correct for Y-axis inversion
                     pivotX_scaled, pivotY_scaled // Pivot at its center
                 );
 
@@ -953,25 +954,19 @@
                 const tanLength = 15 * window.scaleFactor;
                 const tanColor = hexToRgbA("#F5DEB3"); // Light tan
 
-                // Calculate the position of the tan end relative to the rotated barrel
-                // This requires transforming the local coordinates of the tan end to world coordinates
-                const localTanX = scaledWidth / 2 - tanLength;
-                const localTanY = -scaledHeight / 2; // Top-left of tan part relative to barrel's center
-
-                // Apply barrel's rotation to these local coordinates
-                const rotatedTanX = localTanX * Math.cos(angle) - localTanY * Math.sin(angle);
-                const rotatedTanY = localTanX * Math.sin(angle) + localTanY * Math.cos(angle);
-
-                // Add to barrel's center to get world coordinates
-                const worldTanX = pivotX_scaled + rotatedTanX;
-                const worldTanY = pivotY_scaled + rotatedTanY;
+                // The tan piece's top-left corner, relative to the cannon's pivot (this.x, this.y)
+                // Its left edge should align with the right edge of the barrel (scaledWidth / 2)
+                // Its top edge should align with the barrel's top edge (-scaledHeight / 2)
+                const tanLocalX = scaledWidth / 2;
+                const tanLocalY = -scaledHeight / 2;
 
                 drawRect(
-                    worldTanX, worldTanY,
+                    pivotX_scaled + tanLocalX, // X for top-left corner (relative to pivot, then add pivot)
+                    pivotY_scaled + tanLocalY, // Y for top-left corner (relative to pivot, then add pivot)
                     tanLength, scaledHeight,
                     tanColor,
-                    angle, // Rotate with the barrel
-                    worldTanX + tanLength / 2, worldTanY + scaledHeight / 2 // Pivot at its own center
+                    -angle, // Negate angle for visual rotation to correct for Y-axis inversion
+                    pivotX_scaled, pivotY_scaled // Pivot at the cannon's main center
                 );
             }
 
@@ -999,9 +994,8 @@
         // Cannon width = 100, height = 50 (unscaled)
         // Canvas height = 600, border = 20 (unscaled)
         // Bottom of playable area = 600 - 20 = 580 (unscaled)
-        // Cannon's center Y (this.y) = 580 - (cannon.height / 2) - 6 (gap) = 580 - 25 - 6 = 549 (unscaled)
-        // Initial X remains 130 (center of barrel)
-        let cannon = new Cannon(130, 549);
+        // Cannon's center Y (this.y) = 580 - (cannon.height / 2) - 12 (gap) = 580 - 25 - 12 = 543 (unscaled)
+        let cannon = new Cannon(130, 543);
 
 
         // --- CannonBall Class ---
@@ -1009,7 +1003,7 @@
             constructor(angle, x, y, type = 'normal') { // type can be 'normal', 'mortar', 'bomb'
                 this.radius = 15; // Unscaled radius
                 this.mass = this.radius;
-                this.angle = angle;
+                this.angle = angle; // This angle is the one calculated for physics (Y-down)
                 this.x = x; // Already scaled X
                 this.y = y; // Already scaled Y
                 this.dx = Math.cos(angle) * shotPower * window.scaleFactor; // Scaled velocity based on shotPower
@@ -1605,9 +1599,7 @@
             // Redraw everything to apply new background/border colors
             drawBackground();
             drawBorder();
-            cannon.draw();
-            cannonBalls.forEach(ball => ball.draw());
-            explosionPieces.forEach(piece => piece.draw());
+            // No need to redraw cannon/balls/explosion pieces here, they are redrawn in animate loop
         });
 
 
@@ -1619,8 +1611,7 @@
             if (sizzleBufferSource) {
                 try {
                     sizzleBufferSource.stop();
-                    sizzleBufferSource.disconnect();
-                    sizzleBufferSource = null;
+                    sizzleBufferSource = null; // Set to null after stopping
                 } catch (e) {
                     // Already stopped or disconnected
                 }
