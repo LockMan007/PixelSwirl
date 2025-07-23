@@ -1,0 +1,431 @@
+<html><head><base href="https://websim.ai/"><title>Fullscreen Video-Based Spectrograph Visualizer - websim.ai</title><style>
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background-color: #000;
+  color: #eee;
+}
+
+#visualizer-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
+#visualizer {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+}
+
+#controls-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 20px;
+  background-color: transparent;
+  transition: opacity 0.5s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#controls-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-input-wrapper {
+  display: inline-block;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.file-input-wrapper input[type="file"] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-input-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: rgba(76, 175, 80, 0.7);
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.file-input-button:hover {
+  background-color: rgba(69, 160, 73, 0.9);
+}
+
+#audioControls {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: rgba(76, 175, 80, 0.7);
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: rgba(69, 160, 73, 0.9);
+}
+
+button:disabled {
+  background-color: rgba(85, 85, 85, 0.7);
+  cursor: not-allowed;
+}
+
+#status {
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.control-group {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.slider {
+  width: 200px;
+  margin-bottom: 5px;
+}
+
+.checkbox-group {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 5px;
+}
+
+#sourceVideo {
+  display: none;
+}
+</style></head>
+<body>
+  <div id="visualizer-container">
+    <canvas id="visualizer"></canvas>
+  </div>
+  <video id="sourceVideo" loop muted></video>
+  <div id="controls-overlay">
+    <h1>Fullscreen Video-Based Spectrograph Visualizer</h1>
+    <div class="file-input-wrapper">
+      <button class="file-input-button">Load Audio</button>
+      <input type="file" id="fileInput" accept="audio/*">
+    </div>
+    <div class="file-input-wrapper">
+      <button class="file-input-button">Load Video</button>
+      <input type="file" id="videoInput" accept="video/*">
+    </div>
+    <div id="status">Select an audio file and a video to begin</div>
+    <div id="audioControls">
+      <button id="playPauseButton" disabled>Play</button>
+      <button id="stopButton" disabled>Stop</button>
+    </div>
+    <div class="control-group">
+      <input type="range" id="speedSlider" class="slider" min="1" max="3" value="1" step="0.01">
+      <label for="speedSlider">Speed: <span id="speedValue">1</span></label>
+    </div>
+    <div class="control-group">
+      <input type="range" id="volumeSlider" class="slider" min="0" max="1" value="1" step="0.01">
+      <label for="volumeSlider">Volume: <span id="volumeValue">100%</span></label>
+    </div>
+    <div class="control-group">
+      <input type="range" id="sensitivitySlider" class="slider" min="0.01" max="30" value="1" step="0.01">
+      <label for="sensitivitySlider">Sensitivity: <span id="sensitivityValue">1</span></label>
+    </div>
+    <div class="control-group">
+      <input type="range" id="spectrogramTransparencySlider" class="slider" min="0" max="1" value="1" step="0.01">
+      <label for="spectrogramTransparencySlider">Spectrogram Transparency: <span id="spectrogramTransparencyValue">100%</span></label>
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="mirrorHCheckbox">
+      <label for="mirrorHCheckbox">Mirror H</label>
+    </div>
+  </div>
+
+  <script>
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const gainNode = audioContext.createGain();
+    const visualizerContainer = document.getElementById('visualizer-container');
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    const fileInput = document.getElementById('fileInput');
+    const videoInput = document.getElementById('videoInput');
+    const playPauseButton = document.getElementById('playPauseButton');
+    const stopButton = document.getElementById('stopButton');
+    const statusElement = document.getElementById('status');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeValue = document.getElementById('volumeValue');
+    const sensitivitySlider = document.getElementById('sensitivitySlider');
+    const sensitivityValue = document.getElementById('sensitivityValue');
+    const spectrogramTransparencySlider = document.getElementById('spectrogramTransparencySlider');
+    const spectrogramTransparencyValue = document.getElementById('spectrogramTransparencyValue');
+    const mirrorHCheckbox = document.getElementById('mirrorHCheckbox');
+    const controlsOverlay = document.getElementById('controls-overlay');
+    const sourceVideo = document.getElementById('sourceVideo');
+
+    let isPlaying = false;
+    let audioSource = null;
+    let audioBuffer = null;
+    let spectrogramData;
+    let imageData;
+    let speedFactor = 1;
+    let sensitivityFactor = 1;
+    let spectrogramTransparency = 1;
+    let startTime = 0;
+    let pauseTime = 0;
+    let mouseTimer;
+    let mirrorH = false;
+
+    // Set up analyser
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.minDecibels = -90;
+    analyser.maxDecibels = -10;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      spectrogramData = new Uint8Array(analyser.frequencyBinCount);
+      imageData = ctx.createImageData(canvas.width, canvas.height);
+    }
+
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    document.addEventListener('mousemove', showControls);
+    document.addEventListener('mouseout', hideControls);
+
+    function showControls() {
+      controlsOverlay.classList.remove('hidden');
+      clearTimeout(mouseTimer);
+      mouseTimer = setTimeout(hideControls, 3000);
+    }
+
+    function hideControls() {
+      controlsOverlay.classList.add('hidden');
+    }
+
+    fileInput.addEventListener('change', handleFileSelect);
+    videoInput.addEventListener('change', handleVideoSelect);
+    playPauseButton.addEventListener('click', togglePlayPause);
+    stopButton.addEventListener('click', stopAudio);
+    speedSlider.addEventListener('input', updateSpeed);
+    volumeSlider.addEventListener('input', updateVolume);
+    sensitivitySlider.addEventListener('input', updateSensitivity);
+    spectrogramTransparencySlider.addEventListener('input', updateSpectrogramTransparency);
+    mirrorHCheckbox.addEventListener('change', updateMirrorH);
+
+    function updateSpeed() {
+      speedFactor = parseFloat(speedSlider.value);
+      speedValue.textContent = speedFactor.toFixed(2);
+    }
+
+    function updateVolume() {
+      const volume = parseFloat(volumeSlider.value);
+      gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+      volumeValue.textContent = `${Math.round(volume * 100)}%`;
+    }
+
+    function updateSensitivity() {
+      sensitivityFactor = parseFloat(sensitivitySlider.value);
+      sensitivityValue.textContent = sensitivityFactor.toFixed(2);
+    }
+
+    function updateSpectrogramTransparency() {
+      spectrogramTransparency = parseFloat(spectrogramTransparencySlider.value);
+      spectrogramTransparencyValue.textContent = `${Math.round(spectrogramTransparency * 100)}%`;
+    }
+
+    function updateMirrorH() {
+      mirrorH = mirrorHCheckbox.checked;
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        audioContext.decodeAudioData(e.target.result, function(buffer) {
+          audioBuffer = buffer;
+          updateStatus();
+        }, function(e) {
+          console.error("Error decoding audio data", e);
+          statusElement.textContent = "Error: Unable to decode audio file.";
+        });
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function handleVideoSelect(event) {
+      const file = event.target.files[0];
+      const videoURL = URL.createObjectURL(file);
+      sourceVideo.src = videoURL;
+      sourceVideo.onloadedmetadata = function() {
+        updateStatus();
+      };
+    }
+
+    function updateStatus() {
+      if (audioBuffer && sourceVideo.src) {
+        statusElement.textContent = "Audio and video loaded. Press Play to start visualization.";
+        playPauseButton.disabled = false;
+        stopButton.disabled = false;
+      } else if (audioBuffer) {
+        statusElement.textContent = "Audio loaded. Please select a video.";
+      } else if (sourceVideo.src) {
+        statusElement.textContent = "Video loaded. Please select an audio file.";
+      }
+    }
+
+    function togglePlayPause() {
+      if (isPlaying) {
+        pauseAudio();
+      } else {
+        playAudio();
+      }
+    }
+
+    function playAudio() {
+      if (!audioBuffer || !sourceVideo.src) return;
+
+      if (audioSource) {
+        audioSource.stop();
+      }
+
+      audioSource = audioContext.createBufferSource();
+      audioSource.buffer = audioBuffer;
+      audioSource.loop = true;
+      audioSource.connect(gainNode);
+      gainNode.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      if (pauseTime > 0) {
+        startTime = audioContext.currentTime - pauseTime;
+        audioSource.start(0, pauseTime);
+      } else {
+        startTime = audioContext.currentTime;
+        audioSource.start(0);
+      }
+
+      sourceVideo.currentTime = pauseTime;
+      sourceVideo.play();
+
+      isPlaying = true;
+      playPauseButton.textContent = "Pause";
+      statusElement.textContent = "Visualization started (looping).";
+      draw();
+    }
+
+    function pauseAudio() {
+      if (!audioSource) return;
+
+      pauseTime = (audioContext.currentTime - startTime) % audioBuffer.duration;
+      audioSource.stop();
+      sourceVideo.pause();
+      isPlaying = false;
+      playPauseButton.textContent = "Resume";
+      statusElement.textContent = "Visualization paused.";
+    }
+
+    function stopAudio() {
+      if (audioSource) {
+        audioSource.stop();
+      }
+      sourceVideo.pause();
+      sourceVideo.currentTime = 0;
+      isPlaying = false;
+      playPauseButton.textContent = "Play";
+      statusElement.textContent = "Visualization stopped.";
+      pauseTime = 0;
+    }
+
+    function draw() {
+      if (!isPlaying) return;
+
+      requestAnimationFrame(draw);
+
+      analyser.getByteFrequencyData(spectrogramData);
+
+      drawSpectrograph();
+    }
+
+    function drawSpectrograph() {
+      const centerX = canvas.width / 2;
+      const moveAmount = speedFactor;
+
+      if (mirrorH) {
+        // Move left half to the left
+        ctx.drawImage(canvas, 0, 0, centerX, canvas.height, -moveAmount, 0, centerX, canvas.height);
+        // Move right half to the right
+        ctx.drawImage(canvas, centerX, 0, centerX, canvas.height, centerX + moveAmount, 0, centerX, canvas.height);
+      } else {
+        // Standard left-to-right movement
+        ctx.drawImage(canvas, speedFactor, 0, canvas.width - speedFactor, canvas.height, 0, 0, canvas.width - speedFactor, canvas.height);
+      }
+
+      const avgFrequency = spectrogramData.reduce((sum, value) => sum + value, 0) / spectrogramData.length;
+      const videoWidth = Math.floor(sourceVideo.videoWidth * (avgFrequency / 255) * sensitivityFactor);
+
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCanvas.width = speedFactor;
+      tempCanvas.height = canvas.height;
+
+      tempCtx.drawImage(sourceVideo, 0, 0, videoWidth, sourceVideo.videoHeight, 0, 0, speedFactor, canvas.height);
+
+      for (let y = 0; y < canvas.height; y++) {
+        const freqIndex = Math.floor(y / canvas.height * analyser.frequencyBinCount);
+        const value = spectrogramData[freqIndex];
+        
+        tempCtx.globalAlpha = (value / 255) * spectrogramTransparency;
+        tempCtx.fillStyle = 'white';
+        tempCtx.fillRect(0, canvas.height - y - 1, speedFactor, 1);
+      }
+
+      if (mirrorH) {
+        // Draw mirrored new content
+        ctx.save();
+        ctx.translate(centerX, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(tempCanvas, 0, 0, moveAmount, canvas.height, 0, 0, moveAmount, canvas.height);
+        ctx.restore();
+        ctx.drawImage(tempCanvas, 0, 0, moveAmount, canvas.height, centerX, 0, moveAmount, canvas.height);
+      } else {
+        // Standard drawing of new content
+        ctx.drawImage(tempCanvas, canvas.width - speedFactor, 0);
+      }
+    }
+
+  </script>
+</body></html>
