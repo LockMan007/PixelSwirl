@@ -1,7 +1,13 @@
 View HTML5 projects:
+
 [https://lockman007.github.io/PixelSwirl/](https://lockman007.github.io/PixelSwirl/)
 
 
+----------------------------------------
+----------------------------------------
+----------------------------------------
+----------------------------------------
+----------------------------------------
 ----------------------------------------
 Seems that "WebGL" is what you tell Gemini to use to use GPU.
 It doesn't like to do it, so you have to be forceful.
