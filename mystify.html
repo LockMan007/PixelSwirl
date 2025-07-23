@@ -38,6 +38,13 @@
             color: #fff;
             max-width: 300px;
             z-index: 10; /* Ensure it's above the canvas */
+            transition: opacity 0.3s ease-in-out; /* Add transition for fade effect */
+        }
+
+        /* Class to hide the control panel */
+        .control-panel.hidden-controls {
+            opacity: 0;
+            pointer-events: none; /* Disable interactions when hidden */
         }
 
         .control-group {
@@ -164,6 +171,11 @@
             <label for="individualPrints" class="mb-0">Individual Prints (Hollow)</label>
         </div>
 
+        <div class="control-group flex items-center">
+            <input type="checkbox" id="autoHideControls" class="mr-2">
+            <label for="autoHideControls" class="mb-0">Auto-hide Controls</label>
+        </div>
+
         <div class="control-group">
             <label for="colorPalette">Color Palette:</label>
             <select id="colorPalette">
@@ -180,6 +192,7 @@
         // Get the canvas element and its 2D rendering context
         const canvas = document.getElementById('mystifyCanvas');
         const ctx = canvas.getContext('2d');
+        const controlPanel = document.querySelector('.control-panel'); // Get the control panel element
 
         // Global variables to manage animation and settings
         let objects = []; // Array to hold all animated objects
@@ -195,7 +208,8 @@
             trailMode: 'fade', // New setting: 'fade' or 'individual'
             colorPalette: 'classicAtari', // Default color palette
             initialSpeed: 2, // Base speed for objects (used for initial velocity generation)
-            maxSpeedVariance: 1 // Max random speed added/subtracted
+            maxSpeedVariance: 1, // Max random speed added/subtracted
+            autoHideControls: true // New setting: controls auto-hide by default
         };
 
         // Define Atari-inspired color palettes
@@ -244,11 +258,12 @@
             const numObjectsValueSpan = document.getElementById('numObjectsValue');
             const numNodesInput = document.getElementById('numNodes');
             const numNodesValueSpan = document.getElementById('numNodesValue');
-            const speedControlInput = document.getElementById('speedControl'); // New speed control
-            const speedValueSpan = document.getElementById('speedValue');       // New speed value display
+            const speedControlInput = document.getElementById('speedControl');
+            const speedValueSpan = document.getElementById('speedValue');
             const trailFrequencyInput = document.getElementById('trailFrequency');
             const trailFrequencyValueSpan = document.getElementById('trailFrequencyValue');
             const individualPrintsCheckbox = document.getElementById('individualPrints');
+            const autoHideControlsCheckbox = document.getElementById('autoHideControls'); // New auto-hide checkbox
             const colorPaletteSelect = document.getElementById('colorPalette');
             const resetButton = document.getElementById('resetButton');
 
@@ -257,55 +272,87 @@
             numObjectsValueSpan.textContent = settings.numObjects;
             numNodesInput.value = settings.numNodes;
             numNodesValueSpan.textContent = settings.numNodes;
-            speedControlInput.value = settings.speedMultiplier; // Set initial speed
-            speedValueSpan.textContent = settings.speedMultiplier.toFixed(1); // Display speed with 1 decimal
+            speedControlInput.value = settings.speedMultiplier;
+            speedValueSpan.textContent = settings.speedMultiplier.toFixed(1);
             trailFrequencyInput.value = settings.trailFrequency;
             trailFrequencyValueSpan.textContent = settings.trailFrequency;
             individualPrintsCheckbox.checked = (settings.trailMode === 'individual');
+            autoHideControlsCheckbox.checked = settings.autoHideControls; // Set initial state for auto-hide checkbox
             colorPaletteSelect.value = settings.colorPalette;
 
             // Add event listeners for UI control changes
             numObjectsInput.addEventListener('input', (e) => {
                 settings.numObjects = parseInt(e.target.value);
                 numObjectsValueSpan.textContent = settings.numObjects;
-                resetAnimation(); // Reset animation when number of objects changes
+                resetAnimation();
             });
 
             numNodesInput.addEventListener('input', (e) => {
                 settings.numNodes = parseInt(e.target.value);
                 numNodesValueSpan.textContent = settings.numNodes;
-                resetAnimation(); // Reset animation when number of nodes changes
+                resetAnimation();
             });
 
             speedControlInput.addEventListener('input', (e) => {
                 settings.speedMultiplier = parseFloat(e.target.value);
-                speedValueSpan.textContent = settings.speedMultiplier.toFixed(1); // Update display
-                // No need to reset animation, speed changes apply immediately per frame
+                speedValueSpan.textContent = settings.speedMultiplier.toFixed(1);
             });
 
             trailFrequencyInput.addEventListener('input', (e) => {
                 settings.trailFrequency = parseInt(e.target.value);
                 trailFrequencyValueSpan.textContent = settings.trailFrequency;
-                // Only reset if individual prints mode is active to apply the new trail length immediately
-                // This is needed because changing trailFrequency changes the number of snapshots to store
                 if (settings.trailMode === 'individual') {
-                    // When trail frequency changes, existing snapshots might become too many or too few
-                    // for the new limit, so a reset helps to re-establish the correct trail length.
                     resetAnimation();
                 }
             });
 
             individualPrintsCheckbox.addEventListener('change', (e) => {
                 settings.trailMode = e.target.checked ? 'individual' : 'fade';
-                resetAnimation(); // Reset animation to apply new trail mode
+                resetAnimation();
+            });
+
+            // Event listener for the new auto-hide controls checkbox
+            autoHideControlsCheckbox.addEventListener('change', (e) => {
+                settings.autoHideControls = e.target.checked;
+                // If auto-hide is turned off, ensure controls are visible
+                if (!settings.autoHideControls) {
+                    controlPanel.classList.remove('hidden-controls');
+                } else {
+                    // If auto-hide is turned on, and mouse is not over the body, hide them
+                    // This handles cases where user checks it while mouse is already outside
+                    if (!document.body.matches(':hover')) { // Check if mouse is currently over the body
+                         controlPanel.classList.add('hidden-controls');
+                    }
+                }
             });
 
             colorPaletteSelect.addEventListener('change', (e) => {
                 settings.colorPalette = e.target.value;
-                resetAnimation(); // Reset animation to apply new colors
+                resetAnimation();
             });
 
             resetButton.addEventListener('click', resetAnimation);
+
+            // --- Auto-hide controls logic ---
+            // Initial state: If auto-hide is enabled by default, hide the controls on load.
+            // They will reappear when the mouse enters the document body.
+            if (settings.autoHideControls) {
+                controlPanel.classList.add('hidden-controls');
+            }
+
+            // Event listener for mouse leaving the document body (browser window content area)
+            document.body.addEventListener('mouseleave', () => {
+                if (settings.autoHideControls) {
+                    controlPanel.classList.add('hidden-controls');
+                }
+            });
+
+            // Event listener for mouse entering the document body (browser window content area)
+            document.body.addEventListener('mouseenter', () => {
+                if (settings.autoHideControls) {
+                    controlPanel.classList.remove('hidden-controls');
+                }
+            });
 
             // Start the initial animation
             resetAnimation();
