@@ -150,6 +150,11 @@
         </div>
 
         <div class="control-group">
+            <label for="speedControl">Speed: <span id="speedValue">1.0</span>x</label>
+            <input type="range" id="speedControl" min="0.1" max="10.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="control-group">
             <label for="trailFrequency">Trail Frequency: <span id="trailFrequencyValue">10</span></label>
             <input type="range" id="trailFrequency" min="1" max="50" value="10">
         </div>
@@ -185,10 +190,11 @@
         const settings = {
             numObjects: 5,
             numNodes: 4,
+            speedMultiplier: 1.0, // New setting for overall animation speed
             trailFrequency: 10, // Higher value means more prints visible at once.
             trailMode: 'fade', // New setting: 'fade' or 'individual'
             colorPalette: 'classicAtari', // Default color palette
-            initialSpeed: 2, // Base speed for objects
+            initialSpeed: 2, // Base speed for objects (used for initial velocity generation)
             maxSpeedVariance: 1 // Max random speed added/subtracted
         };
 
@@ -238,6 +244,8 @@
             const numObjectsValueSpan = document.getElementById('numObjectsValue');
             const numNodesInput = document.getElementById('numNodes');
             const numNodesValueSpan = document.getElementById('numNodesValue');
+            const speedControlInput = document.getElementById('speedControl'); // New speed control
+            const speedValueSpan = document.getElementById('speedValue');       // New speed value display
             const trailFrequencyInput = document.getElementById('trailFrequency');
             const trailFrequencyValueSpan = document.getElementById('trailFrequencyValue');
             const individualPrintsCheckbox = document.getElementById('individualPrints');
@@ -249,6 +257,8 @@
             numObjectsValueSpan.textContent = settings.numObjects;
             numNodesInput.value = settings.numNodes;
             numNodesValueSpan.textContent = settings.numNodes;
+            speedControlInput.value = settings.speedMultiplier; // Set initial speed
+            speedValueSpan.textContent = settings.speedMultiplier.toFixed(1); // Display speed with 1 decimal
             trailFrequencyInput.value = settings.trailFrequency;
             trailFrequencyValueSpan.textContent = settings.trailFrequency;
             individualPrintsCheckbox.checked = (settings.trailMode === 'individual');
@@ -267,12 +277,20 @@
                 resetAnimation(); // Reset animation when number of nodes changes
             });
 
+            speedControlInput.addEventListener('input', (e) => {
+                settings.speedMultiplier = parseFloat(e.target.value);
+                speedValueSpan.textContent = settings.speedMultiplier.toFixed(1); // Update display
+                // No need to reset animation, speed changes apply immediately per frame
+            });
+
             trailFrequencyInput.addEventListener('input', (e) => {
                 settings.trailFrequency = parseInt(e.target.value);
                 trailFrequencyValueSpan.textContent = settings.trailFrequency;
                 // Only reset if individual prints mode is active to apply the new trail length immediately
                 // This is needed because changing trailFrequency changes the number of snapshots to store
                 if (settings.trailMode === 'individual') {
+                    // When trail frequency changes, existing snapshots might become too many or too few
+                    // for the new limit, so a reset helps to re-establish the correct trail length.
                     resetAnimation();
                 }
             });
@@ -321,6 +339,7 @@
                 const y = Math.random() * canvas.height;
 
                 // Random initial velocity, ensuring some movement
+                // Initial speed is set here, then scaled by speedMultiplier in animate()
                 const dx = (Math.random() * settings.maxSpeedVariance * 2 - settings.maxSpeedVariance) + (Math.random() < 0.5 ? settings.initialSpeed : -settings.initialSpeed);
                 const dy = (Math.random() * settings.maxSpeedVariance * 2 - settings.maxSpeedVariance) + (Math.random() < 0.5 ? settings.initialSpeed : -settings.initialSpeed);
 
@@ -383,9 +402,9 @@
                 // 1. Update current node positions and handle collisions for all nodes
                 // This block ALWAYS runs to ensure smooth movement, regardless of trail mode or frequency.
                 obj.nodes.forEach((node) => {
-                    // Update node position based on its velocity
-                    node.x += node.dx;
-                    node.y += node.dy;
+                    // Update node position based on its velocity, scaled by the speedMultiplier
+                    node.x += node.dx * settings.speedMultiplier;
+                    node.y += node.dy * settings.speedMultiplier;
 
                     // Boundary collision detection:
                     // If node hits left or right edge, reverse horizontal velocity
@@ -448,10 +467,15 @@
                         ctx.stroke(); // Draw only the outline (hollow)
                     });
 
-                    // Reset globalAlpha to 1 after drawing all prints for this object.
-                    // This is crucial so future drawings (e.g., other objects) are not affected
-                    // by the reduced alpha set for the trail.
-                    ctx.globalAlpha = 1;
+                    // Draw the current animating shape (the "person walking")
+                    ctx.globalAlpha = 1; // Ensure full opacity for the main shape
+                    ctx.strokeStyle = obj.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(obj.nodes[0].x, obj.nodes[0].y);
+                    obj.nodes.forEach(node => ctx.lineTo(node.x, node.y));
+                    ctx.closePath();
+                    ctx.stroke(); // Draw only the outline (hollow) for the main shape too, matching the prints
                 }
             });
         }
