@@ -184,19 +184,22 @@
             background-color: #888;
             border: 1px solid #fff;
             box-shadow: 0 0 5px #0ff, inset 0 0 3px #fff;
-            animation: growPipe 5s linear forwards, movePipe var(--pipe-speed) linear infinite var(--delay);
+            /* Animation properties are now mostly set by JS */
+            opacity: 0; /* Starts hidden, made visible by JS */
             transform-origin: center center;
-            opacity: 0;
+            will-change: transform, opacity;
+        }
+        .pipe-trail {
+            position: absolute;
+            background-color: var(--pipe-color, #00FFFF);
+            opacity: 0.3;
+            animation: fadeOutTrail var(--trail-duration) forwards;
+            pointer-events: none; /* Ensure it doesn't interfere with mouse events */
         }
 
-        @keyframes growPipe {
-            0% { transform: scale(0); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes movePipe {
-            0% { top: var(--startY); left: var(--startX); }
-            100% { top: var(--endY); left: var(--endX); }
+        @keyframes fadeOutTrail {
+            from { opacity: 0.3; }
+            to { opacity: 0; }
         }
 
 
@@ -212,16 +215,9 @@
             box-shadow: 0 0 5px white, 0 0 10px white;
             width: var(--size);
             height: var(--size);
-            transform: translate(var(--x), var(--y)) scale(var(--scale, 0.1));
-            opacity: 0;
-            animation: flyPixelStar var(--duration) linear forwards;
+            /* Transform is set directly by JS for precision */
+            opacity: 0; /* Managed by JS animation */
             image-rendering: pixelated;
-        }
-
-        @keyframes flyPixelStar {
-            0% { opacity: 0; transform: translate(var(--start-x), var(--start-y)) scale(var(--start-scale)); }
-            10% { opacity: 1; }
-            100% { opacity: 0; transform: translate(var(--end-x), var(--end-y)) scale(var(--end-scale)); }
         }
 
         /* Orbit - NEW Implementation (Bouncing Multi-Color Sphere) */
@@ -233,8 +229,7 @@
 
         .bouncing-sphere {
             position: absolute;
-            width: 150px;
-            height: 150px;
+            /* Size and position are set by JS */
             border-radius: 50%;
             background-image: conic-gradient(
                 #f00 0% 16.6%,
@@ -245,22 +240,18 @@
                 #f0f 83.3% 100%
             );
             box-shadow: 0 0 50px rgba(0, 255, 0, 0.7); /* Green glow */
-            animation: rotateSphere 10s linear infinite,
-                       moveSphere var(--move-duration) linear infinite alternate;
+            animation: rotateSphere var(--rotation-duration) linear infinite;
             transform-origin: center center;
             background-size: 200% 200%; /* Make colors larger than sphere */
-            background-position: var(--bg-pos-x, 0%) var(--bg-pos-y, 0%);
+            background-position: var(--bg-pos-x, 0%) var(--bg-pos-y, 0%); /* Controlled by JS */
+            will-change: transform, background-position;
         }
 
         @keyframes rotateSphere {
-            from { transform: rotate(0deg); background-position: 0% 0%; }
-            to { transform: rotate(360deg); background-position: 100% 100%; }
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        @keyframes moveSphere {
-            from { transform: translate(var(--start-x), var(--start-y)); }
-            to { transform: translate(var(--end-x), var(--end-y)); }
-        }
 
         /* Curves (Mystify) */
         #curves.screensaver canvas {
@@ -333,35 +324,35 @@
             100% { transform: translate(var(--endX), var(--endY)) scale(0.5); opacity: 0; }
         }
 
-        /* 3D Text (Simplified) */
+        /* 3D Text (Fake) - Revamped */
         #text3D.screensaver {
             display: flex;
             justify-content: center;
             align-items: center;
             background-color: #000;
-            perspective: 800px; /* For a fake 3D look */
+            perspective: 800px; /* Crucial for CSS 3D */
+            z-index: 1; /* Ensure it's above potential overlay issues */
         }
 
         .text3d {
             font-size: 8em;
             color: #0f0;
-            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0;
-            animation: animateText 10s infinite alternate;
-            transform-style: preserve-3d;
-            /* Using CSS variables for simpler control of fake 3D rotation */
-            transform: rotateX(var(--rotateX, 0deg)) rotateY(var(--rotateY, 0deg)) rotateZ(var(--rotateZ, 0deg));
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0, 0 0 40px #0f0; /* Stronger glow */
+            animation: animateText 10s infinite alternate; /* Duration adjusted by JS */
+            transform-style: preserve-3d; /* Allows child elements to be 3D */
             will-change: transform; /* Optimize animation */
-            text-align: center; /* Ensure text is centered within its own box */
+            text-align: center;
             line-height: 1;
             padding: 20px;
+            white-space: nowrap; /* Prevent text from wrapping */
         }
 
         @keyframes animateText {
-            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
-            25% { transform: rotateX(20deg) rotateY(45deg) rotateZ(10deg); }
-            50% { transform: rotateX(-10deg) rotateY(90deg) rotateZ(-20deg); }
-            75% { transform: rotateX(30deg) rotateY(135deg) rotateZ(0deg); }
-            100% { transform: rotateX(0deg) rotateY(180deg) rotateZ(0deg); }
+            0% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            25% { transform: translateZ(50px) rotateX(20deg) rotateY(45deg) rotateZ(10deg); }
+            50% { transform: translateZ(0px) rotateX(-10deg) rotateY(90deg) rotateZ(-20deg); }
+            75% { transform: translateZ(-50px) rotateX(30deg) rotateY(135deg) rotateZ(0deg); }
+            100% { transform: translateZ(0px) rotateX(0deg) rotateY(180deg) rotateZ(0deg); }
         }
 
         /* Styling for Mystify controls (integrated into settings panel) */
@@ -581,13 +572,7 @@
                         break;
                     case 'text3D':
                         // Ensure the text and its animation are reset/applied
-                        const customText = document.getElementById('custom3DText');
-                        if (customText) {
-                            customText.textContent = document.getElementById('customTextContent').value || "RETRO!";
-                            customText.style.animation = ''; // Clear existing animation to reapply
-                            void customText.offsetWidth; // Trigger reflow
-                            customText.style.animation = `animateText ${parseFloat(document.getElementById('textRotationSpeed').value)}s infinite alternate`;
-                        }
+                        update3DText(); // Call update to ensure text and animation are set
                         break;
                     default:
                         // No specific init for simple CSS ones or conceptual ones
@@ -612,12 +597,21 @@
 
                 // Specific cleanup for canvas-based screensavers
                 if (activeScreensaverId === 'curves') {
-                    const canvas = document.getElementById('mystifyCanvas');
-                    if (canvas && mystifyAnimationId) {
+                    if (mystifyAnimationId) {
                         cancelAnimationFrame(mystifyAnimationId);
                         mystifyAnimationId = null; // Reset animation ID for Mystify
-                        canvas.remove(); // Remove the canvas
                     }
+                    const mystifyCanvasEl = document.getElementById('mystifyCanvas');
+                    if (mystifyCanvasEl) mystifyCanvasEl.remove(); // Remove the canvas
+                }
+                if (activeScreensaverId === 'orbit') {
+                    if (orbitAnimationId) {
+                        cancelAnimationFrame(orbitAnimationId);
+                        orbitAnimationId = null;
+                    }
+                    // Reset orbit position vars so it re-initializes
+                    currentOrbitX = undefined;
+                    currentOrbitY = undefined;
                 }
             }
         }
@@ -708,9 +702,13 @@
                     `;
                     document.getElementById('pipeColor').addEventListener('input', (e) => {
                         document.documentElement.style.setProperty('--pipe-color', e.target.value);
+                        // Also update existing pipes if any
                         document.querySelectorAll('#pipes3D .pipe-segment').forEach(p => {
                             p.style.backgroundColor = e.target.value;
                             p.style.boxShadow = `0 0 5px ${e.target.value}, inset 0 0 3px #fff`;
+                        });
+                        document.querySelectorAll('#pipes3D .pipe-trail').forEach(t => {
+                            t.style.backgroundColor = e.target.value;
                         });
                     });
                     document.getElementById('pipeDensity').addEventListener('input', (e) => {
@@ -750,15 +748,12 @@
                         </div>
                     `;
                     document.getElementById('sphereGlowColor').addEventListener('input', (e) => {
-                        document.querySelector('.bouncing-sphere').style.boxShadow = `0 0 50px ${e.target.value}`;
+                        const sphere = document.querySelector('#orbit .bouncing-sphere');
+                        if (sphere) sphere.style.boxShadow = `0 0 50px ${e.target.value}`;
                     });
                     document.getElementById('sphereSize').addEventListener('input', (e) => {
-                        const size = e.target.value;
-                        const sphere = document.querySelector('.bouncing-sphere');
-                        sphere.style.width = `${size}px`;
-                        sphere.style.height = `${size}px`;
-                        // Re-init to adjust bounce path
-                        initOrbit(size);
+                        const size = parseInt(e.target.value);
+                        initOrbit(size); // Re-init to adjust size and bounce path
                     });
                     break;
                 case 'curves': // Mystify settings
@@ -796,6 +791,12 @@
                             <button id="mystifyResetButton" class="reset-button">Reset Animation</button>
                         </div>
                     `;
+                    // Set default for "Individual Prints (Hollow)"
+                    const individualPrintsCheckbox = document.getElementById('mystifyIndividualPrints');
+                    if (individualPrintsCheckbox) {
+                        individualPrintsCheckbox.checked = true;
+                        mystifySettings.trailMode = 'individual'; // Update internal setting
+                    }
                     // Attach Mystify event listeners
                     attachMystifyEventListeners();
                     break;
@@ -888,14 +889,11 @@
                         const custom3DText = document.getElementById('custom3DText');
                         if (custom3DText) {
                             custom3DText.style.color = color;
-                            custom3DText.style.textShadow = `0 0 10px ${color}, 0 0 20px ${color}, 0 0 30px ${color}`;
+                            custom3DText.style.textShadow = `0 0 10px ${color}, 0 0 20px ${color}, 0 0 30px ${color}, 0 0 40px ${color}`;
                         }
                     });
                     document.getElementById('textRotationSpeed').addEventListener('input', (e) => {
-                        const custom3DText = document.getElementById('custom3DText');
-                        if (custom3DText) {
-                            custom3DText.style.animationDuration = `${e.target.value / parseFloat(globalSpeedSlider.value)}s`;
-                        }
+                        update3DText(); // Call update to re-apply animation with new speed
                     });
                     break;
                 default:
@@ -910,7 +908,13 @@
                 const customTextInput = document.getElementById('customTextContent');
                 const custom3DText = document.getElementById('custom3DText');
                 if (customTextInput && custom3DText) {
-                     custom3DText.textContent = customTextInput.value || "RETRO!";
+                    custom3DText.textContent = customTextInput.value || "RETRO!";
+                    const rotationSpeed = document.getElementById('textRotationSpeed') ? parseFloat(document.getElementById('textRotationSpeed').value) : 10;
+                    const globalSpeed = parseFloat(globalSpeedSlider.value);
+                    
+                    custom3DText.style.animation = 'none'; // Clear existing animation to reapply
+                    void custom3DText.offsetWidth; // Trigger reflow
+                    custom3DText.style.animation = `animateText ${rotationSpeed / globalSpeed}s infinite alternate`;
                 }
             }
         }
@@ -925,96 +929,63 @@
             const starColor = document.getElementById('starColor') ? document.getElementById('starColor').value : '#FFFFFF';
 
             // Stop existing star generation/animation
-            if (currentAnimationIntervals.flyingThroughSpace) {
-                clearInterval(currentAnimationIntervals.flyingThroughSpace);
+            if (currentAnimationIntervals.flyingThroughSpaceSpawn) {
+                clearInterval(currentAnimationIntervals.flyingThroughSpaceSpawn);
             }
 
             const createStar = () => {
+                const displayRect = displayArea.getBoundingClientRect();
+                const centerX = displayRect.width / 2;
+                const centerY = displayRect.height / 2;
+
+                // Random angle for direction
+                const angle = Math.random() * 2 * Math.PI;
+
+                // Spawn 10 pixels away from the absolute center of the display area
+                const spawnRadius = 10;
+                const startX = centerX + spawnRadius * Math.cos(angle);
+                const startY = centerY + spawnRadius * Math.sin(angle);
+
                 const star = document.createElement('div');
                 star.classList.add('pixel-star');
 
-                const startX = Math.random() * window.innerWidth;
-                const startY = Math.random() * window.innerHeight;
-                const size = Math.random() * 5 + 2; // 2-7px initial size
+                const size = Math.random() * 3 + 1; // 1-4px initial size
                 const finalSize = size * (Math.random() * 5 + 3); // Grow significantly
 
-                let endX, endY;
-                const side = Math.floor(Math.random() * 4); // 0:top, 1:right, 2:bottom, 3:left
-
-                // Determine target edge based on initial position
-                if (Math.abs(startX - 0) < Math.abs(startX - window.innerWidth) && Math.abs(startY - 0) < Math.abs(startY - window.innerHeight)) {
-                    // Closer to top-left
-                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
-                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
-                } else if (Math.abs(startX - window.innerWidth) < Math.abs(startY - 0) && Math.abs(startX - window.innerWidth) < Math.abs(startY - window.innerHeight)) {
-                    // Closer to top-right
-                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
-                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
-                } else if (Math.abs(startY - window.innerHeight) < Math.abs(startX - 0) && Math.abs(startY - window.innerHeight) < Math.abs(startX - window.innerWidth)) {
-                    // Closer to bottom-right
-                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
-                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
-                } else {
-                    // Closer to bottom-left
-                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
-                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
-                }
-
-
-                // Set random start/end coordinates for movement towards edges
-                switch (side) {
-                    case 0: // Top
-                        endX = Math.random() * window.innerWidth;
-                        endY = -finalSize;
-                        break;
-                    case 1: // Right
-                        endX = window.innerWidth + finalSize;
-                        endY = Math.random() * window.innerHeight;
-                        break;
-                    case 2: // Bottom
-                        endX = Math.random() * window.innerWidth;
-                        endY = window.innerHeight + finalSize;
-                        break;
-                    case 3: // Left
-                        endX = -finalSize;
-                        endY = Math.random() * window.innerHeight;
-                        break;
-                }
-
-                // If start is in center, make it fly towards a random edge
-                if (startX > window.innerWidth * 0.25 && startX < window.innerWidth * 0.75 &&
-                    startY > window.innerHeight * 0.25 && startY < window.innerHeight * 0.75) {
-                        const randomEdge = Math.floor(Math.random() * 4);
-                        switch(randomEdge) {
-                            case 0: endY = -finalSize; break;
-                            case 1: endX = window.innerWidth + finalSize; break;
-                            case 2: endY = window.innerHeight + finalSize; break;
-                            case 3: endX = -finalSize; break;
-                        }
-                }
-
+                // Calculate an endpoint far outside the screen by extending the line from the center through the spawn point
+                // Use the largest dimension to ensure it goes off-screen
+                const maxDim = Math.max(displayRect.width, displayRect.height);
+                const endX = centerX + (maxDim * 0.7) * Math.cos(angle); // Extend 70% of max dim
+                const endY = centerY + (maxDim * 0.7) * Math.sin(angle);
 
                 const duration = (Math.random() * 5 + 5) / speedMultiplier; // 5-10 seconds
                 const delay = Math.random() * duration * 0.8; // Stagger appearance
 
-                star.style.setProperty('--start-x', `${startX}px`);
-                star.style.setProperty('--start-y', `${startY}px`);
-                star.style.setProperty('--end-x', `${endX}px`);
-                star.style.setProperty('--end-y', `${endY}px`);
-                star.style.setProperty('--start-scale', `${size / finalSize}`);
-                star.style.setProperty('--end-scale', '1'); // Always end at finalSize scale
-                star.style.setProperty('--size', `${finalSize}px`); // Max size in CSS
-                star.style.setProperty('--duration', `${duration}s`);
-                star.style.animationDelay = `${delay}s`;
+                // Set initial position and size for the JS-driven animation
+                star.style.left = `${startX}px`;
+                star.style.top = `${startY}px`;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
                 star.style.backgroundColor = starColor;
                 star.style.boxShadow = `0 0 5px ${starColor}, 0 0 10px ${starColor}`;
+                star.style.opacity = 0; // Start invisible for smooth fade-in
 
                 ss.appendChild(star);
 
-                star.addEventListener('animationend', () => {
+                // Animate using Web Animations API for better control
+                star.animate([
+                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 0, offset: 0 }, // Start centered, small, invisible
+                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 1, offset: 0.1 }, // Fade in
+                    { transform: `translate(${endX - startX - size/2}px, ${endY - startY - size/2}px) scale(${finalSize/size})`, opacity: 0, offset: 1 } // Move outwards, grow, fade out
+                ], {
+                    duration: duration * 1000,
+                    delay: delay * 1000,
+                    easing: 'linear',
+                    fill: 'forwards'
+                }).onfinish = () => {
                     star.remove();
                     createStar(); // Recreate when off-screen
-                }, { once: true });
+                };
             };
 
             for (let i = 0; i < numStars; i++) {
@@ -1022,7 +993,7 @@
             }
 
             // Keep creating new stars over time
-            currentAnimationIntervals.flyingThroughSpace = setInterval(() => {
+            currentAnimationIntervals.flyingThroughSpaceSpawn = setInterval(() => {
                 createStar();
             }, 500 / speedMultiplier); // Adjust interval based on speed
         }
@@ -1030,9 +1001,14 @@
 
         // 3D Pipes (Simplified)
         let pipeGenerationInterval;
+        let activePipes = new Set(); // To keep track of active pipe elements for proper cleanup
+
         function initPipes3D(numPipes = 20) {
             const ss = document.getElementById('pipes3D');
+            // Clear existing pipes and trails
             ss.innerHTML = '';
+            activePipes.clear(); // Clear the set
+
             if (pipeGenerationInterval) clearInterval(pipeGenerationInterval);
 
             const speedMultiplier = parseFloat(globalSpeedSlider.value);
@@ -1041,32 +1017,73 @@
             const createPipe = () => {
                 const pipe = document.createElement('div');
                 pipe.classList.add('pipe-segment');
+                activePipes.add(pipe); // Add to set
 
                 const startX = Math.random() * window.innerWidth;
                 const startY = Math.random() * window.innerHeight;
                 const endX = Math.random() * window.innerWidth;
                 const endY = Math.random() * window.innerHeight;
-                const duration = (Math.random() * 3 + 3) / speedMultiplier; // 3-6s
-                const delay = Math.random() * duration;
-
-                pipe.style.setProperty('--startX', `${startX}px`);
-                pipe.style.setProperty('--startY', `${startY}px`);
-                pipe.style.setProperty('--endX', `${endX}px`);
-                pipe.style.setProperty('--endY', `${endY}px`);
-                pipe.style.setProperty('--pipe-speed', `${duration}s`);
-                pipe.style.setProperty('--delay', `${delay}s`);
+                const duration = (Math.random() * 3 + 3) / speedMultiplier; // 3-6s base duration
 
                 pipe.style.backgroundColor = pipeColor;
                 pipe.style.boxShadow = `0 0 5px ${pipeColor}, inset 0 0 3px #fff`;
+                pipe.style.left = `${startX}px`;
+                pipe.style.top = `${startY}px`;
+                pipe.style.opacity = 1; // Make it visible
 
                 ss.appendChild(pipe);
 
-                pipe.addEventListener('animationend', (e) => {
-                    if (e.animationName === 'movePipe') {
+                let currentX = startX;
+                let currentY = startY;
+                const deltaX = (endX - startX) / (duration * 60); // Assuming 60 frames per second
+                const deltaY = (endY - startY) / (duration * 60);
+
+                let frameCount = 0;
+                const totalFrames = duration * 60; // Total frames for the animation
+
+                const movePipe = () => {
+                    if (!pipe.parentNode || frameCount >= totalFrames) { // Check if pipe is still in DOM or animation finished
                         pipe.remove();
-                        createPipe(); // Create a new one when one finishes
+                        activePipes.delete(pipe); // Remove from set
+                        return; // Stop this animation frame loop
                     }
-                });
+
+                    currentX += deltaX;
+                    currentY += deltaY;
+
+                    pipe.style.left = `${currentX}px`;
+                    pipe.style.top = `${currentY}px`;
+
+                    // Create trail
+                    if (frameCount % 3 === 0) { // Create trail every few frames for less density
+                        const trail = document.createElement('div');
+                        trail.classList.add('pipe-trail');
+                        trail.style.left = `${currentX}px`;
+                        trail.style.top = `${currentY}px`;
+                        trail.style.width = `${pipe.offsetWidth}px`;
+                        trail.style.height = `${pipe.offsetHeight}px`;
+                        trail.style.backgroundColor = pipeColor;
+                        trail.style.setProperty('--trail-duration', `${duration}s`); // Trail fades over pipe duration
+                        ss.appendChild(trail);
+
+                        trail.addEventListener('animationend', () => {
+                            trail.remove();
+                        }, { once: true });
+                    }
+
+                    frameCount++;
+                    currentAnimationIntervals[`pipeAnim-${pipe.id || Math.random()}`] = requestAnimationFrame(movePipe);
+                };
+
+                // Start the animation immediately
+                movePipe();
+
+                // Set a timeout to remove the pipe and create a new one after its duration
+                currentAnimationIntervals[`pipeTimeout-${pipe.id || Math.random()}`] = setTimeout(() => {
+                    if (pipe.parentNode) pipe.remove();
+                    activePipes.delete(pipe);
+                    createPipe(); // Create a new one when one finishes its lifecycle
+                }, duration * 1000);
             };
 
             for (let i = 0; i < numPipes; i++) {
@@ -1074,78 +1091,93 @@
             }
         }
 
+
         // Orbit - NEW Implementation (Bouncing Multi-Color Sphere)
         let orbitSphere;
-        let sphereAnimationTimeout; // To clear bounce animation
+        let orbitAnimationId; // requestAnimationFrame ID for orbit
+        let currentOrbitX, currentOrbitY; // Current position of the sphere
+        let orbitDx, orbitDy; // Direction and speed of the sphere
+        let orbitSphereSize = 150; // Default size
 
-        function initOrbit(sphereSize = 150) {
+        function initOrbit(size = 150) {
+            orbitSphereSize = size; // Update global size variable
             const ss = document.getElementById('orbit');
-            ss.innerHTML = '<div class="bouncing-sphere"></div>'; // Recreate sphere
+            // Check if sphere already exists, if so, just update its properties
             orbitSphere = ss.querySelector('.bouncing-sphere');
+            if (!orbitSphere) {
+                orbitSphere = document.createElement('div');
+                orbitSphere.classList.add('bouncing-sphere');
+                ss.appendChild(orbitSphere);
+            }
 
             const speedMultiplier = parseFloat(globalSpeedSlider.value);
             const glowColor = document.getElementById('sphereGlowColor') ? document.getElementById('sphereGlowColor').value : '#00FF00';
 
-            orbitSphere.style.width = `${sphereSize}px`;
-            orbitSphere.style.height = `${sphereSize}px`;
+            orbitSphere.style.width = `${orbitSphereSize}px`;
+            orbitSphere.style.height = `${orbitSphereSize}px`;
             orbitSphere.style.boxShadow = `0 0 50px ${glowColor}`;
+            orbitSphere.style.setProperty('--rotation-duration', `${10 / speedMultiplier}s`);
 
-            // Reset animation to apply new properties
-            orbitSphere.style.animation = 'none';
-            void orbitSphere.offsetWidth; // Trigger reflow
-            orbitSphere.style.animation = `
-                rotateSphere ${10 / speedMultiplier}s linear infinite,
-                moveSphere ${Math.random() * 8 + 5 / speedMultiplier}s linear infinite alternate
-            `;
 
-            // Initial random position
-            const initialX = Math.random() * (window.innerWidth - sphereSize);
-            const initialY = Math.random() * (window.innerHeight - sphereSize);
-            orbitSphere.style.left = `${initialX}px`;
-            orbitSphere.style.top = `${initialY}px`;
-
-            // Set up random movement vectors for the sphere
-            let dx = (Math.random() < 0.5 ? 1 : -1) * (50 / speedMultiplier); // Initial horizontal velocity
-            let dy = (Math.random() < 0.5 ? 1 : -1) * (50 / speedMultiplier); // Initial vertical velocity
-            const animationDuration = 50; // Milliseconds per frame for movement logic
-
-            if (currentAnimationIntervals.orbit) {
-                clearInterval(currentAnimationIntervals.orbit);
+            // Initialize position only if not already set or if sphere was just created
+            // Or if window was resized (need to re-clamp position)
+            const displayRect = displayArea.getBoundingClientRect();
+            if (currentOrbitX === undefined || currentOrbitY === undefined ||
+                currentOrbitX > displayRect.width - orbitSphereSize || currentOrbitY > displayRect.height - orbitSphereSize ||
+                currentOrbitX < 0 || currentOrbitY < 0 ) {
+                 currentOrbitX = Math.random() * (displayRect.width - orbitSphereSize);
+                 currentOrbitY = Math.random() * (displayRect.height - orbitSphereSize);
+                 orbitDx = (Math.random() < 0.5 ? 1 : -1) * (3 * speedMultiplier); // Adjust base speed
+                 orbitDy = (Math.random() < 0.5 ? 1 : -1) * (3 * speedMultiplier);
+            } else {
+                // Adjust speed based on global multiplier without changing direction
+                 orbitDx = Math.sign(orbitDx) * (3 * speedMultiplier);
+                 orbitDy = Math.sign(orbitDy) * (3 * speedMultiplier);
             }
 
-            let currentX = initialX;
-            let currentY = initialY;
 
-            currentAnimationIntervals.orbit = setInterval(() => {
-                currentX += dx;
-                currentY += dy;
+            // Clear previous animation frame if any
+            if (orbitAnimationId) {
+                cancelAnimationFrame(orbitAnimationId);
+            }
+
+            let rotationAngle = 0; // For internal color movement
+
+            const animateOrbit = () => {
+                const currentDisplayRect = displayArea.getBoundingClientRect();
+
+                // Update position
+                currentOrbitX += orbitDx;
+                currentOrbitY += orbitDy;
 
                 // Bounce off walls
-                if (currentX <= 0) {
-                    currentX = 0;
-                    dx *= -1;
-                } else if (currentX >= window.innerWidth - sphereSize) {
-                    currentX = window.innerWidth - sphereSize;
-                    dx *= -1;
+                if (currentOrbitX <= 0) {
+                    currentOrbitX = 0;
+                    orbitDx = Math.abs(orbitDx); // Ensure positive direction
+                } else if (currentOrbitX >= currentDisplayRect.width - orbitSphereSize) {
+                    currentOrbitX = currentDisplayRect.width - orbitSphereSize;
+                    orbitDx = -Math.abs(orbitDx); // Ensure negative direction
                 }
 
-                if (currentY <= 0) {
-                    currentY = 0;
-                    dy *= -1;
-                } else if (currentY >= window.innerHeight - sphereSize) {
-                    currentY = window.innerHeight - sphereSize;
-                    dy *= -1;
+                if (currentOrbitY <= 0) {
+                    currentOrbitY = 0;
+                    orbitDy = Math.abs(orbitDy); // Ensure positive direction
+                } else if (currentOrbitY >= currentDisplayRect.height - orbitSphereSize) {
+                    currentOrbitY = currentDisplayRect.height - orbitSphereSize;
+                    orbitDy = -Math.abs(orbitDy); // Ensure negative direction
                 }
 
-                orbitSphere.style.transform = `translate(${currentX}px, ${currentY}px) rotateZ(${rotationAngle}deg)`; // Added rotation
-            }, animationDuration);
+                // Apply position and background position
+                orbitSphere.style.left = `${currentOrbitX}px`;
+                orbitSphere.style.top = `${currentOrbitY}px`;
 
-            // Sphere color animation is handled by CSS conic-gradient and rotateSphere
-            let rotationAngle = 0;
-            currentAnimationIntervals.orbitRotation = setInterval(() => {
-                rotationAngle = (rotationAngle + 1) % 360; // Increment rotation for visual effect
-                orbitSphere.style.backgroundPosition = `${rotationAngle * 0.1}% ${rotationAngle * 0.1}%`; // Move gradient
-            }, 50 / speedMultiplier); // Faster interval for color movement
+                rotationAngle = (rotationAngle + 0.5 * speedMultiplier) % 360; // Increment rotation for internal colors
+                orbitSphere.style.backgroundPosition = `${rotationAngle * 0.1}% ${rotationAngle * 0.1}%`;
+
+                orbitAnimationId = requestAnimationFrame(animateOrbit);
+            };
+
+            animateOrbit(); // Start the animation loop
         }
 
 
@@ -1156,7 +1188,7 @@
             numNodes: 4,
             speedMultiplier: 1.0,
             trailFrequency: 10,
-            trailMode: 'fade',
+            trailMode: 'individual', // Default to individual prints
             colorPalette: 'classicAtari',
             initialSpeed: 2,
             maxSpeedVariance: 1,
@@ -1195,22 +1227,21 @@
             mystifyCtx = mystifyCanvas.getContext('2d');
 
             resizeMystifyCanvas();
+            // Ensure only one resize listener for mystifyCanvas
+            window.removeEventListener('resize', resizeMystifyCanvas);
             window.addEventListener('resize', resizeMystifyCanvas);
 
             mystifyResetAnimation();
         }
 
         function resizeMystifyCanvas() {
-            if (mystifyCanvas) {
-                mystifyCanvas.width = mystifyCanvas.offsetWidth;
-                mystifyCanvas.height = mystifyCanvas.offsetHeight;
-                // If the canvas is hidden (e.g., when another screensaver is active),
-                // offsetWidth/Height might be 0. Use parent's dimensions as fallback.
-                if (mystifyCanvas.width === 0 || mystifyCanvas.height === 0) {
-                     mystifyCanvas.width = displayArea.offsetWidth;
-                     mystifyCanvas.height = displayArea.offsetHeight;
+            if (mystifyCanvas && displayArea) { // Ensure displayArea is available
+                mystifyCanvas.width = displayArea.offsetWidth;
+                mystifyCanvas.height = displayArea.offsetHeight;
+                // Only reset animation if it's the active screensaver
+                if (activeScreensaverId === 'curves') {
+                    mystifyResetAnimation();
                 }
-                 mystifyResetAnimation();
             }
         }
 
@@ -1297,7 +1328,7 @@
                 mystifyObjects.push(mystifyGenerateObject());
             }
 
-            if (mystifyCtx) {
+            if (mystifyCtx && mystifyCanvas) {
                 mystifyCtx.clearRect(0, 0, mystifyCanvas.width, mystifyCanvas.height);
             }
             mystifyAnimate();
@@ -1315,10 +1346,12 @@
                 mystifyCtx.clearRect(0, 0, mystifyCanvas.width, mystifyCanvas.height);
             }
 
+            const currentGlobalSpeed = parseFloat(globalSpeedSlider.value); // Get current global speed
+
             mystifyObjects.forEach(obj => {
                 obj.nodes.forEach((node) => {
-                    node.x += node.dx * mystifySettings.speedMultiplier;
-                    node.y += node.dy * mystifySettings.speedMultiplier;
+                    node.x += node.dx * mystifySettings.speedMultiplier * currentGlobalSpeed;
+                    node.y += node.dy * mystifySettings.speedMultiplier * currentGlobalSpeed;
 
                     if (node.x < 0 || node.x > mystifyCanvas.width) {
                         node.dx *= -1;
@@ -1479,7 +1512,9 @@
 
         // Initial setup
         // Activate 3D Text (Fake) by default on load
-        activateScreensaver('text3D');
+        document.addEventListener('DOMContentLoaded', () => {
+            activateScreensaver('text3D');
+        });
 
     </script>
 </body>
