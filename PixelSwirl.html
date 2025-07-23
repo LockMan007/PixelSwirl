@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Swirl Version 1.015</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: stretch;
+            background-color: #222;
+            color: #eee;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .main-content-container {
+            display: flex;
+            flex-direction: row;
+            flex-grow: 1;
+            gap: 20px;
+            align-items: flex-start; /* Aligns canvas container to the top */
+            height: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            /* margin-right will be set by JS */
+        }
+
+        .canvas-container {
+            flex-grow: 1;
+            flex-shrink: 1;
+            display: flex;
+            align-items: center; /* Center canvas vertically if it doesn't fill */
+            justify-content: center; /* Center canvas horizontally if it doesn't fill */
+            overflow: hidden;
+            background-color: #000;
+            /* Width and height will be set by JS */
+        }
+
+        canvas {
+            border: 2px solid #555;
+            background-color: #000;
+            display: block;
+            object-fit: contain;
+            /* cursor: none; */ /* Removed this line to keep the cursor visible */
+        }
+
+        /* New style for the mouse-following gravity field visualizer */
+        .mouse-follower-ball {
+            position: absolute; /* Position relative to the canvas container */
+            background-color: white; /* White square */
+            border-radius: 50%; /* Make it round */
+            pointer-events: none; /* Allow mouse events to pass through */
+            transform: translate(-50%, -50%); /* Center the ball on the cursor */
+            z-index: 999; /* Ensure it's above the canvas */
+            display: none; /* Always hidden now */
+            opacity: 0.0; /* Make it completely transparent */
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            width: 280px; /* Fixed width */
+            min-width: 280px; /* Prevent shrinking below this */
+            flex-shrink: 0; /* Prevent the right panel from shrinking too much */
+            justify-content: flex-start;
+            height: 100%;
+            box-sizing: border-box;
+            background-color: #333;
+            border-radius: 8px;
+
+            position: fixed; /* Docking and Locking to the right */
+            right: 0;
+            top: 0;
+            height: 100vh;
+            z-index: 1000;
+            padding-right: 20px;
+            padding-left: 10px;
+            box-shadow: -5px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .controls-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+            white-space: nowrap;
+            width: 100%;
+        }
+
+        .slider-with-buttons {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 5px;
+            width: 100%;
+        }
+
+        .slider-with-value {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .control-group.piece-size-group {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .control-group.piece-size-group label,
+        .control-group.piece-size-group span {
+            flex-shrink: 0;
+        }
+
+        .control-group.piece-size-group .slider-with-buttons {
+            flex-basis: 100%;
+        }
+
+        input[type="range"] {
+            flex-grow: 1;
+            min-width: 80px;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #eee;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button#defaultsButton {
+            background-color: #dc3545;
+        }
+
+        button#defaultsButton:hover {
+            background-color: #c82333;
+        }
+
+        button#randomizeButton {
+            background-color: #ff00ff;
+        }
+
+        button#randomizeButton:hover {
+            background-color: #cc00cc;
+        }
+
+
+        input[type="file"] {
+            display: none;
+        }
+        .custom-file-upload {
+            border: 1px solid #ccc;
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .custom-file-upload:hover {
+            background-color: #218838;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+        .slider-button {
+            padding: 5px 10px;
+            font-size: 14px;
+            min-width: 30px;
+            width: auto;
+            flex-shrink: 0;
+        }
+
+        .app-info {
+            margin-top: auto;
+            text-align: left;
+            width: 100%;
+            padding-top: 15px;
+            border-top: 1px solid #555;
+            margin-top: 15px;
+        }
+        .app-info h2 {
+            margin-bottom: 5px;
+            margin-top: 0;
+        }
+        .app-info a {
+            color: #8ab4f8;
+            text-decoration: none;
+        }
+        .app-info a:hover {
+            text-decoration: underline;
+        }
+        .not-mobile {
+            font-style: italic;
+            font-size: 0.9em;
+            color: #aaa;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content-container">
+        <div class="canvas-container">
+            <canvas id="pixelCanvas"></canvas>
+            <!-- New HTML element for the mouse-following gravity field visualizer -->
+            <div id="mouseFollowerBall" class="mouse-follower-ball"></div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="imageUpload" class="custom-file-upload">Load Image</label>
+                <input type="file" id="imageUpload" accept="image/*">
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <button id="restartButton">Restart</button>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="maxPiecesInput">Max # of Pieces:</label>
+                <input type="number" id="maxPiecesInput" value="100000" min="4" step="1">
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="speedSlider">Piece Momentum:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="speedSlider" min="0.1" max="5" value="1" step="0.1">
+                    <span id="speedValue">1.0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group piece-size-group">
+                <label>Puzzle Piece Size:</label>
+                <span id="pixelSizeValue">64x64</span>
+                <div class="slider-with-buttons">
+                    <button id="pixelSizeMinus" class="slider-button">-</button>
+                    <input type="range" id="pixelSizeSlider" min="0" max="8" value="6" step="1">
+                    <button id="pixelSizePlus" class="slider-button">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="gravitySlider">Gravity:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="gravitySlider" min="0.01" max="0.5" value="0.05" step="0.001">
+                    <span id="gravityValue">0.050</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="snapDistanceSlider">Snap Distance (pixels):</label>
+                <div class="slider-with-value">
+                    <input type="range" id="snapDistanceSlider" min="0" max="16" value="0" step="1">
+                    <span id="snapDistanceValue">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="repelSlider">Repel:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="repelSlider" min="0" max="1" value="0" step="0.01">
+                    <span id="repelValue">0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label for="frequencySlider">Frequency (seconds):</label>
+                <div class="slider-with-value">
+                    <input type="range" id="frequencySlider" min="0" max="10" value="0" step="1">
+                    <span id="frequencyValue">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="checkbox-group">
+                <input type="checkbox" id="gravityBallCheckbox">
+                <label for="gravityBallCheckbox">Gravity Field (Mouse)</label>
+            </div>
+        </div>
+
+        <!-- New slider for Gravity Field Strength -->
+        <div class="controls-row" id="gravityFieldStrengthGroup">
+            <div class="control-group">
+                <label for="gravityFieldStrengthSlider">Gravity Field Strength:</label>
+                <div class="slider-with-value">
+                    <input type="range" id="gravityFieldStrengthSlider" min="1" max="200" value="1" step="0.1">
+                    <span id="gravityFieldStrengthValue">1.0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="checkbox-group">
+                <input type="checkbox" id="unlockFreedomCheckbox">
+                <label for="unlockFreedomCheckbox">Unlock more freedom</label>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <div class="checkbox-group">
+                <input type="checkbox" id="unlockPieceSizeCheckbox">
+                <label for="unlockPieceSizeCheckbox">Unlock Piece Size (lag)</label>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <button id="defaultsButton">Defaults</button>
+        </div>
+
+        <div class="controls-row">
+            <button id="randomizeButton">Randomize</button>
+        </div>
+
+        <div class="app-info">
+            <h2>Pixel Swirl</h2>
+            <span id="versionNumber">Version 1.015</span>
+            <span class="not-mobile">(Not for Mobile Use)</span>
+            <hr>
+            <br>
+            Check out other cool stuff:<br>
+            <br>
+            <a href="https://pirillo.com/arcade" target="_blank">https://pirillo.com/arcade</a><br>
+            <br>
+            <a href="https://github.com/ChrisPirillo" target="_blank">https://github.com/ChrisPirillo</a>
+            <hr>
+            Vibe Coded with:<br>
+            <a href="https://www.google.com/search?q=%22google+gemini%22" target="_blank">Gemini</a>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pixelCanvas');
+        const imageUpload = document.getElementById('imageUpload');
+        const restartButton = document.getElementById('restartButton');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValueSpan = document.getElementById('speedValue');
+        const pixelSizeSlider = document.getElementById('pixelSizeSlider');
+        const pixelSizeMinusBtn = document.getElementById('pixelSizeMinus');
+        const pixelSizePlusBtn = document.getElementById('pixelSizePlus');
+        const pixelSizeValueSpan = document.getElementById('pixelSizeValue');
+        const gravitySlider = document.getElementById('gravitySlider');
+        const gravityValueSpan = document.getElementById('gravityValue');
+        const snapDistanceSlider = document.getElementById('snapDistanceSlider');
+        const snapDistanceValueSpan = document.getElementById('snapDistanceValue');
+        const repelSlider = document.getElementById('repelSlider');
+        const repelValueSpan = document.getElementById('repelValue');
+        const frequencySlider = document.getElementById('frequencySlider');
+        const frequencyValueSpan = document.getElementById('frequencyValue');
+        const unlockPieceSizeCheckbox = document.getElementById('unlockPieceSizeCheckbox');
+        const unlockFreedomCheckbox = document.getElementById('unlockFreedomCheckbox');
+        const versionNumberSpan = document.getElementById('versionNumber');
+        const maxPiecesInput = document.getElementById('maxPiecesInput');
+        const defaultsButton = document.getElementById('defaultsButton');
+        const randomizeButton = document.getElementById('randomizeButton');
+        const gravityBallCheckbox = document.getElementById('gravityBallCheckbox');
+        const rightPanel = document.querySelector('.right-panel');
+        const mainContentContainer = document.querySelector('.main-content-container');
+        const canvasContainer = document.querySelector('.canvas-container');
+        const mouseFollowerBall = document.getElementById('mouseFollowerBall'); // Reference to the HTML element for the gravity field visualizer
+        const gravityFieldStrengthSlider = document.getElementById('gravityFieldStrengthSlider');
+        const gravityFieldStrengthValueSpan = document.getElementById('gravityFieldStrengthValue');
+        const gravityFieldStrengthGroup = document.getElementById('gravityFieldStrengthGroup');
+
+
+        const PUZZLE_PIECE_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512];
+
+        let TARGET_MAX_PIECES = 100000;
+
+        // Default ranges for sliders (before unlock freedom)
+        const DEFAULT_SPEED_MIN = 0.1;
+        const DEFAULT_SPEED_MAX = 5;
+        const DEFAULT_GRAVITY_MIN = 0.01;
+        const DEFAULT_GRAVITY_MAX = 0.5;
+        const DEFAULT_SNAP_MIN = 0;
+        const DEFAULT_SNAP_MAX = 16;
+        const DEFAULT_REPEL_MIN = 0;
+        const DEFAULT_REPEL_MAX = 1;
+        const DEFAULT_FREQUENCY_MIN = 0;
+        const DEFAULT_FREQUENCY_MAX = 10;
+        const DEFAULT_PIECE_SIZE_INDEX = PUZZLE_PIECE_SIZES.indexOf(16);
+        const DEFAULT_GRAVITY_FIELD_STRENGTH_MIN = 1;
+        const DEFAULT_GRAVITY_FIELD_STRENGTH_MAX = 200;
+
+
+        // Unlocked ranges for sliders
+        const UNLOCKED_SPEED_MIN = 0.1;
+        const UNLOCKED_SPEED_MAX = 10;
+        const UNLOCKED_GRAVITY_MIN = 0.001;
+        const UNLOCKED_GRAVITY_MAX = 0.99;
+        const UNLOCKED_SNAP_MIN = 0;
+        const UNLOCKED_SNAP_MAX = 256;
+        const UNLOCKED_REPEL_MIN = 0;
+        const UNLOCKED_REPEL_MAX = 5;
+        const UNLOCKED_FREQUENCY_MIN = 0;
+        const UNLOCKED_FREQUENCY_MAX = 10;
+        const UNLOCKED_GRAVITY_FIELD_STRENGTH_MIN = 1;
+        const UNLOCKED_GRAVITY_FIELD_STRENGTH_MAX = 2000; // Allow even stronger for "unlocked freedom"
+
+
+        let gl = null;
+        let program = null;
+        let positionBuffer = null;
+        let texCoordBuffer = null;
+        let numVertices = 0;
+        let animationFrameId = null;
+        let originalImageObject = null;
+
+        let currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[10];
+        let animationSpeed = 1;
+        let gravityForce = 0.05;
+        let snapDistance = 0;
+        let repelForce = 0;
+        let repelFrequency = 0;
+
+        // Gravity field variables
+        let gravityBallEnabled = false;
+        let gravityBallX = 0; // Will be mouseX
+        let gravityBallY = 0; // Will be mouseY
+        let gravityBallRadius = 0; // Calculated dynamically (size of the *effect* area)
+        const BASE_GRAVITY_FIELD_FORCE = 0.5; // Base force
+        let gravityFieldStrength = 1.0; // Multiplier for the base force
+
+        // WebGL resources for gravity field visualizer (no longer used for drawing the ball itself)
+        let gravityBallTexture = null;
+        let gravityBallPositionBuffer = null;
+        let gravityBallTexCoordBuffer = null;
+
+        let puzzlePieces = [];
+        let actualCanvasWidth = 0; // Actual width of the WebGL canvas
+        let actualCanvasHeight = 0; // Actual height of the WebGL canvas
+        let currentMinPieceSizeIndex = 0;
+
+        let mainAtlasTexture = null;
+        let allPositions = null;
+        let allTexCoords = null;
+
+        let lastSetPuzzlePieceSizeIndex = PUZZLE_PIECE_SIZES.indexOf(64);
+
+        let lastRepelTriggerCheckTime = 0;
+        let repelTriggeredThisFrame = false;
+
+
+        // --- Shaders ---
+        const vsSource = `
+            attribute vec2 a_position;
+            attribute vec2 a_texCoord;
+            varying vec2 v_texCoord;
+            uniform mat4 u_projectionMatrix;
+
+            void main() {
+                gl_Position = u_projectionMatrix * vec4(a_position, 0.0, 1.0);
+                v_texCoord = a_texCoord;
+            }
+        `;
+
+        const fsSource = `
+            precision mediump float;
+            varying vec2 v_texCoord;
+            uniform sampler2D u_sampler;
+
+            void main() {
+                gl_FragColor = texture2D(u_sampler, v_texCoord);
+            }
+        `;
+
+        // --- WebGL Initialization ---
+        function initWebGL() {
+            gl = canvas.getContext('webgl');
+            if (!gl) {
+                console.error('Unable to initialize WebGL. Your browser or machine may not support it.');
+                console.error('WebGL is not supported in your browser. This simulator requires WebGL.');
+                return false;
+            }
+
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            program = initShaderProgram(gl, vsSource, fsSource);
+            if (!program) return false;
+
+            gl.useProgram(program);
+
+            positionBuffer = gl.createBuffer();
+            texCoordBuffer = gl.createBuffer();
+
+            // WebGL resources for gravity field visualizer are no longer needed for drawing the ball
+            // but the variables are kept for consistency if future WebGL features need them.
+            gravityBallTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, gravityBallTexture);
+            const whitePixel = new Uint8Array([255, 255, 255, 255]); // RGBA white pixel
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, whitePixel);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            return true;
+        }
+
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+                console.error('Vertex Shader Info:', gl.getShaderInfoLog(vertexShader));
+                console.error('Fragment Shader Info:', gl.getShaderInfoLog(fragmentShader));
+                gl.deleteProgram(shaderProgram);
+                return null;
+            }
+            return shaderProgram;
+        }
+
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        function createProjectionMatrix(width, height) {
+            return new Float32Array([
+                2 / width, 0, 0, 0,
+                0, -2 / height, 0, 0,
+                0, 0, 1, 0,
+                -1, 1, 0, 1
+            ]);
+        }
+
+        // --- Core Logic for Particles (Puzzle Pieces) ---
+        class PuzzlePiece {
+            constructor(startX, startY, targetX, targetY, pieceDimension, texU0, texV0, texU1, texV1) {
+                this.x = startX;
+                this.y = startY;
+                this.targetX = targetX;
+                this.targetY = targetY;
+                this.dimension = pieceDimension; // This is the scaled dimension for rendering
+                this.texCoords = [
+                    texU0, texV0, // Top-Left
+                    texU1, texV0, // Top-Right
+                    texU0, texV1, // Bottom-Left
+
+                    texU0, texV1, // Bottom-Left
+                    texU1, texV0, // Top-Right
+                    texU1, texV1  // Bottom-Right
+                ];
+
+                this.vx = 0;
+                this.vy = 0;
+                this.settled = false;
+                this.maxSpeed = 10 * animationSpeed;
+                this.damping = 0.95;
+                this.swirlRadius = Math.random() * 200 + 50;
+                this.swirlAngle = Math.random() * Math.PI * 2;
+                this.swirlSpeed = Math.random() * 0.05 + 0.01;
+            }
+
+            update(deltaTime) {
+                // The gravity field force will apply even if settled, so we remove this check here.
+                // However, the main "gravity" and "swirl" forces still respect the settled state.
+                if (this.settled) {
+                    // If settled, only allow external forces (like gravity field) to move it.
+                    // The internal swirl/target-seeking logic is skipped.
+                    this.vx *= this.damping;
+                    this.vy *= this.damping;
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    // If it moves too far from its target due to external forces,
+                    // it should become unsettled again to return to its target.
+                    const dx = this.targetX - this.x;
+                    const dy = this.targetY - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance > snapDistance + 1) { // A small threshold to prevent constant toggling
+                        this.settled = false;
+                    }
+                    return;
+                }
+
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                const normalizedDistance = Math.min(1, distance / 5.0 / (this.swirlRadius > 0 ? this.swirlRadius : 1));
+                const swirlDampingFactor = 0.99 - (gravityForce * 0.7 * (1 - normalizedDistance));
+                this.swirlRadius *= Math.max(0.7, swirlDampingFactor);
+
+                if (distance <= snapDistance + 0.01) {
+                    this.x = this.targetX;
+                    this.y = this.targetY;
+                    this.vx = 0;
+                    this.vy = 0;
+                    this.settled = true;
+                    this.swirlRadius = 0;
+                    return;
+                }
+
+                this.swirlAngle += this.swirlSpeed * animationSpeed;
+                const swirlOffsetX = this.swirlRadius * Math.cos(this.swirlAngle);
+                const swirlOffsetY = this.swirlRadius * Math.sin(this.swirlAngle);
+
+                const swirlTargetX = this.targetX + swirlOffsetX;
+                const swirlTargetY = this.targetY + swirlOffsetY;
+
+                const swirlDx = swirlTargetX - this.x;
+                const swirlDy = swirlTargetY - this.y;
+
+                let effectiveForce = gravityForce * animationSpeed;
+
+                if (repelForce > 0 && repelFrequency > 0 && repelTriggeredThisFrame) {
+                     effectiveForce = -repelForce;
+                }
+
+                this.vx += swirlDx * effectiveForce;
+                this.vy += swirlDy * effectiveForce;
+
+                this.vx *= this.damping;
+                this.vy *= this.damping;
+
+                const currentSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (currentSpeed > this.maxSpeed) {
+                    const scale = this.maxSpeed / currentSpeed;
+                    this.vx *= scale;
+                    this.vy *= scale;
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (distance < 1 && this.swirlRadius < 5 && Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1) {
+                    this.x = this.targetX;
+                    this.y = this.targetY;
+                    this.settled = true;
+                    this.vx = 0;
+                    this.vy = 0;
+                    this.swirlRadius = 0;
+                }
+            }
+        }
+
+        // Helper to find next power of 2
+        function nextPowerOf2(n) {
+            if (n === 0) return 1;
+            n--;
+            n |= n >> 1;
+            n |= n >> 2;
+            n |= n >> 4;
+            n |= n >> 8;
+            n |= n >> 16;
+            n++;
+            return n;
+        }
+
+        // --- Setup and Rendering ---
+
+        // Function to dynamically size the canvas container and the canvas
+        function resizeCanvasContainerAndCanvas() {
+            const rightPanelWidth = rightPanel.offsetWidth +
+                                    parseFloat(window.getComputedStyle(rightPanel).paddingLeft) +
+                                    parseFloat(window.getComputedStyle(rightPanel).paddingRight);
+            const mainContentPadding = parseFloat(window.getComputedStyle(mainContentContainer).paddingLeft) +
+                                       parseFloat(window.getComputedStyle(mainContentContainer).paddingRight);
+
+            // Calculate available width for the canvas container
+            const availableWidth = window.innerWidth - rightPanelWidth - mainContentPadding;
+            const availableHeight = window.innerHeight - (parseFloat(window.getComputedStyle(mainContentContainer).paddingTop) +
+                                                         parseFloat(window.getComputedStyle(mainContentContainer).paddingBottom));
+
+            // Set the canvas container's dimensions
+            canvasContainer.style.width = `${availableWidth}px`;
+            canvasContainer.style.height = `${availableHeight}px`;
+
+            // Update main content container's margin to account for fixed right panel
+            mainContentContainer.style.marginRight = `${rightPanelWidth + mainContentPadding}px`;
+
+            // If an image is loaded, resize the canvas to fit the image aspect ratio within the new container size
+            if (originalImageObject) {
+                resizeCanvasToImage(originalImageObject);
+            } else {
+                // If no image is loaded, make the canvas fill the container
+                canvas.width = availableWidth;
+                canvas.height = availableHeight;
+                actualCanvasWidth = canvas.width;
+                actualCanvasHeight = canvas.height;
+                gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+                const projectionMatrix = createProjectionMatrix(gl.canvas.width, gl.canvas.height);
+                const uProjectionMatrixLoc = gl.getUniformLocation(program, 'u_projectionMatrix');
+                gl.uniformMatrix4fv(uProjectionMatrixLoc, false, projectionMatrix);
+            }
+
+            // Update gravity ball radius if enabled
+            if (gravityBallEnabled) {
+                gravityBallRadius = Math.min(actualCanvasWidth, actualCanvasHeight) * 0.25; // 25% of smaller dimension for radius
+                // Update the HTML element's size (though it's invisible now)
+                mouseFollowerBall.style.width = `${gravityBallRadius * 2}px`;
+                mouseFollowerBall.style.height = `${gravityBallRadius * 2}px`;
+            }
+        }
+
+        function resizeCanvasToImage(img) {
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = canvasContainer.clientHeight;
+
+            let targetWidth = 0;
+            let targetHeight = 0;
+
+            const imageAspectRatio = img.width / img.height;
+            const containerAspectRatio = containerWidth / containerHeight;
+
+            if (imageAspectRatio > containerAspectRatio) {
+                // Image is wider than container, fit by container width
+                targetWidth = containerWidth;
+                targetHeight = containerWidth / imageAspectRatio;
+            } else {
+                // Image is taller or same aspect ratio as container, fit by container height
+                targetHeight = containerHeight;
+                targetWidth = containerHeight * imageAspectRatio;
+            }
+
+            // Set canvas dimensions to fit the calculated target size, preserving aspect ratio
+            canvas.width = Math.floor(targetWidth);
+            canvas.height = Math.floor(targetHeight);
+
+            // Update actualCanvasWidth/Height based on new canvas dimensions
+            actualCanvasWidth = canvas.width;
+            actualCanvasHeight = canvas.height;
+
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+            const projectionMatrix = createProjectionMatrix(gl.canvas.width, gl.canvas.height);
+            const uProjectionMatrixLoc = gl.getUniformLocation(program, 'u_projectionMatrix');
+            gl.uniformMatrix4fv(uProjectionMatrixLoc, false, projectionMatrix);
+
+            console.log(`Canvas resized to: ${canvas.width}x${canvas.height} for image ${img.width}x${img.height}. Container: ${containerWidth}x${containerHeight}`);
+        }
+
+        function calculateMinPieceSizeForImage() {
+            if (!originalImageObject) return;
+
+            const imgWidth = actualCanvasWidth; // Use actual canvas width
+            const imgHeight = actualCanvasHeight; // Use actual canvas height
+
+            let calculatedMinIndex = 0;
+
+            const currentTargetMaxPieces = parseInt(maxPiecesInput.value);
+
+            for (let i = 0; i < PUZZLE_PIECE_SIZES.length; i++) {
+                const p = PUZZLE_PIECE_SIZES[i];
+                // When calculating piece count, use the original image's aspect ratio to ensure consistent piece distribution,
+                // but scale the piece dimension to the current canvas size
+                const scaledPieceDimension = p * (imgWidth / originalImageObject.width);
+
+                const pieceCountX = Math.ceil(imgWidth / scaledPieceDimension);
+                const pieceCountY = Math.ceil(imgHeight / scaledPieceDimension);
+                const totalPieceCount = pieceCountX * pieceCountY;
+
+                if (totalPieceCount <= currentTargetMaxPieces) {
+                    calculatedMinIndex = i;
+                    break;
+                }
+            }
+            currentMinPieceSizeIndex = calculatedMinIndex;
+            updatePieceSizeSliderRange();
+        }
+
+        function updatePieceSizeSliderRange() {
+            if (unlockPieceSizeCheckbox.checked) {
+                pixelSizeSlider.min = 0;
+            } else {
+                pixelSizeSlider.min = currentMinPieceSizeIndex;
+            }
+
+            let sliderVal = parseInt(pixelSizeSlider.value);
+            const sliderMin = parseInt(pixelSizeSlider.min);
+            const sliderMax = parseInt(pixelSizeSlider.max);
+
+            let valueChanged = false;
+            if (sliderVal < sliderMin) {
+                pixelSizeSlider.value = sliderMin;
+                valueChanged = true;
+            } else if (sliderVal > sliderMax) {
+                pixelSizeSlider.value = sliderMax;
+                valueChanged = true;
+            }
+
+            if (valueChanged) {
+                pixelSizeSlider.dispatchEvent(new Event('input'));
+            } else {
+                pixelSizeValueSpan.textContent = `${PUZZLE_PIECE_SIZES[pixelSizeSlider.value]}x${PUZZLE_PIECE_SIZES[pixelSizeSlider.value]}`;
+                pixelSizeMinusBtn.disabled = parseInt(pixelSizeSlider.value) <= parseInt(pixelSizeSlider.min);
+                pixelSizePlusBtn.disabled = parseInt(pixelSizeSlider.value) >= parseInt(pixelSizeSlider.max);
+            }
+        }
+
+
+        function createPuzzlePiecesFromImage() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+
+            let inputValue = parseInt(maxPiecesInput.value);
+            if (isNaN(inputValue) || inputValue < 4) {
+                inputValue = 4;
+                maxPiecesInput.value = 4;
+            } else {
+                maxPiecesInput.value = Math.floor(inputValue);
+            }
+            TARGET_MAX_PIECES = inputValue;
+
+            if (mainAtlasTexture) {
+                gl.deleteTexture(mainAtlasTexture);
+                mainAtlasTexture = null;
+            }
+
+            puzzlePieces = [];
+            numVertices = 0;
+
+            // These are the dimensions of the original image's pixels that each piece corresponds to
+            const originalPieceDim = currentPuzzlePieceSize;
+
+            // Calculate the scale factor from original image dimensions to current canvas dimensions
+            const scaleFactorX = actualCanvasWidth / originalImageObject.width;
+            const scaleFactorY = actualCanvasHeight / originalImageObject.height;
+
+            // The dimension of the piece when rendered on the canvas
+            // Use the average scale for consistent square pieces visually
+            const pieceDimForRendering = originalPieceDim * Math.min(scaleFactorX, scaleFactorY);
+
+
+            const numPiecesX = Math.ceil(originalImageObject.width / originalPieceDim);
+            const numPiecesY = Math.ceil(originalImageObject.height / originalPieceDim);
+
+            const atlasWidth = nextPowerOf2(numPiecesX * originalPieceDim);
+            const atlasHeight = nextPowerOf2(numPiecesY * originalPieceDim);
+
+            const atlasCanvas = document.createElement('canvas');
+            const atlasCtx = atlasCanvas.getContext('2d', { willReadFrequently: true });
+            atlasCanvas.width = atlasWidth;
+            atlasCanvas.height = atlasHeight;
+            atlasCtx.clearRect(0, 0, atlasWidth, atlasHeight);
+
+            let pieceCount = 0;
+
+            for (let y = 0; y < originalImageObject.height; y += originalPieceDim) {
+                for (let x = 0; x < originalImageObject.width; x += originalPieceDim) {
+                    const currentPieceSrcX = x;
+                    const currentPieceSrcY = y;
+
+                    const atlasCol = Math.floor(currentPieceSrcX / originalPieceDim);
+                    const atlasRow = Math.floor(currentPieceSrcY / originalPieceDim);
+
+                    const atlasDestX = atlasCol * originalPieceDim;
+                    const atlasDestY = atlasRow * originalPieceDim;
+
+                    atlasCtx.drawImage(
+                        originalImageObject,
+                        currentPieceSrcX, currentPieceSrcY, originalPieceDim, originalPieceDim,
+                        atlasDestX, atlasDestY, originalPieceDim, originalPieceDim
+                    );
+
+                    const texU0 = atlasDestX / atlasWidth;
+                    const texV0 = atlasDestY / atlasHeight;
+                    const texU1 = (atlasDestX + originalPieceDim) / atlasWidth;
+                    const texV1 = (atlasDestY + originalPieceDim) / atlasHeight;
+
+                    let startX, startY;
+                    const edge = Math.floor(Math.random() * 4);
+
+                    // These start positions should be relative to the scaled image (actualCanvasWidth/Height)
+                    if (edge === 0) { // Top
+                        startX = Math.random() * actualCanvasWidth;
+                        startY = -Math.random() * 200;
+                    } else if (edge === 1) { // Right
+                        startX = actualCanvasWidth + Math.random() * 200;
+                        startY = Math.random() * actualCanvasHeight;
+                    } else if (edge === 2) { // Bottom
+                        startX = Math.random() * actualCanvasWidth;
+                        startY = actualCanvasHeight + Math.random() * 200;
+                    } else { // Left
+                        startX = -Math.random() * 200;
+                        startY = Math.random() * actualCanvasHeight;
+                    }
+
+                    // Target X and Y must be scaled according to current canvas dimensions
+                    puzzlePieces.push(new PuzzlePiece(startX, startY, x * scaleFactorX, y * scaleFactorY, pieceDimForRendering, texU0, texV0, texU1, texV1));
+                    numVertices += 6;
+                    pieceCount++;
+                }
+            }
+
+            mainAtlasTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, mainAtlasTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            allPositions = new Float32Array(numVertices * 2);
+            allTexCoords = new Float32Array(numVertices * 2);
+
+            let texCoordIndex = 0;
+            puzzlePieces.forEach(piece => {
+                for (let i = 0; i < piece.texCoords.length; i++) {
+                    allTexCoords[texCoordIndex++] = piece.texCoords[i];
+                }
+            });
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, allTexCoords, gl.STATIC_DRAW);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, allPositions.byteLength, gl.DYNAMIC_DRAW);
+
+            console.log(`Created ${pieceCount} puzzle pieces (Total GL vertices: ${numVertices}) with rendering dimension ${pieceDimForRendering.toFixed(2)}x${pieceDimForRendering.toFixed(2)} (original texture piece size: ${originalPieceDim}x${originalPieceDim}). Gravity: ${gravityForce}, Snap Distance: ${snapDistance}. Repel: ${repelForce}, Frequency: ${repelFrequency}. Gravity Field: ${gravityBallEnabled ? (BASE_GRAVITY_FIELD_FORCE * gravityFieldStrength) : 'Off'}. Atlas size: ${atlasWidth}x${atlasHeight}`);
+
+            startAnimation();
+        }
+
+        let previousTimeStamp = 0;
+        let repelInterval = 0;
+        let uSamplerLoc = null; // Declare uSamplerLoc globally or pass it
+
+        function drawScene(currentTimeStamp) {
+            if (!previousTimeStamp) previousTimeStamp = currentTimeStamp;
+            const deltaTime = (currentTimeStamp - previousTimeStamp) / 1000;
+            previousTimeStamp = currentTimeStamp;
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            let currentPositionIndex = 0;
+            let allSettled = true;
+
+            // Get uniform location once
+            if (!uSamplerLoc) {
+                uSamplerLoc = gl.getUniformLocation(program, 'u_sampler');
+            }
+            const aPositionLoc = gl.getAttribLocation(program, 'a_position');
+            const aTexCoordLoc = gl.getAttribLocation(program, 'a_texCoord');
+
+
+            repelTriggeredThisFrame = false;
+            if (repelForce > 0 && repelFrequency > 0) {
+                repelInterval = repelFrequency * 1000;
+
+                if (currentTimeStamp - lastRepelTriggerCheckTime >= repelInterval) {
+                    repelTriggeredThisFrame = true;
+                    lastRepelTriggerCheckTime = currentTimeStamp;
+                }
+            } else {
+                repelTriggeredThisFrame = false;
+            }
+
+            // Apply gravity field force to pieces (now based on mouse position)
+            if (gravityBallEnabled) {
+                puzzlePieces.forEach(piece => {
+                    // Apply force even if settled, to disturb them
+                    const dx = gravityBallX - piece.x;
+                    const dy = gravityBallY - piece.y;
+                    const distanceSq = dx * dx + dy * dy;
+                    const distance = Math.sqrt(distanceSq);
+
+                    if (distance > 0 && distance < gravityBallRadius * 2) { // Affects pieces within 2x radius
+                        const forceMagnitude = (BASE_GRAVITY_FIELD_FORCE * gravityFieldStrength) / distanceSq; // Inverse square law, multiplied by strength
+                        piece.vx += dx * forceMagnitude;
+                        piece.vy += dy * forceMagnitude;
+                    }
+                });
+            }
+
+            // Only attempt to draw puzzle pieces if there are any
+            if (numVertices > 0) {
+                puzzlePieces.forEach(piece => {
+                    if (!piece.settled) {
+                        piece.update(deltaTime);
+                        allSettled = false;
+                    } else {
+                        // If settled, still update to apply external forces and check if it becomes unsettled
+                        piece.update(deltaTime);
+                        // If it became unsettled by external force, then allSettled is false
+                        if (!piece.settled) {
+                            allSettled = false;
+                        }
+                    }
+
+                    const x0 = piece.x;
+                    const y0 = piece.y;
+                    const x1 = piece.x + piece.dimension;
+                    const y1 = piece.y + piece.dimension;
+
+                    allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y0;
+                    allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0;
+                    allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1;
+
+                    allPositions[currentPositionIndex++] = x0; allPositions[currentPositionIndex++] = y1;
+                    allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y0;
+                    allPositions[currentPositionIndex++] = x1; allPositions[currentPositionIndex++] = y1;
+                });
+
+                // Bind and upload position data for the pieces
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0, allPositions); // Use subData here for efficiency
+
+                // Set up vertex attributes for pieces
+                gl.enableVertexAttribArray(aPositionLoc);
+                gl.vertexAttribPointer(aPositionLoc, 2, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+                gl.enableVertexAttribArray(aTexCoordLoc);
+                gl.vertexAttribPointer(aTexCoordLoc, 2, gl.FLOAT, false, 0, 0);
+
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, mainAtlasTexture);
+                gl.uniform1i(uSamplerLoc, 0);
+
+                gl.drawArrays(gl.TRIANGLES, 0, numVertices);
+            }
+
+
+            if (!allSettled || gravityBallEnabled) { // Keep animating if gravity field is active
+                animationFrameId = requestAnimationFrame(drawScene);
+            } else {
+                console.log("All puzzle pieces settled.");
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        function startAnimation() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            // Only start animation if there are puzzle pieces or the gravity ball is enabled
+            if (puzzlePieces.length > 0 || gravityBallEnabled) {
+                puzzlePieces.forEach(p => {
+                    p.settled = false;
+                    p.swirlRadius = Math.random() * 200 + 50;
+                    p.swirlAngle = Math.random() * Math.PI * 2;
+                    p.swirlSpeed = Math.random() * 0.05 + 0.01;
+                    p.vx = 0;
+                    p.vy = 0;
+                });
+                previousTimeStamp = 0;
+                lastRepelTriggerCheckTime = performance.now();
+                drawScene();
+            }
+        }
+
+        // --- Helper for Randomization ---
+        function getRandomValue(min, max, step) {
+            const stepPrecision = (step.toString().split('.')[1] || '').length;
+            const factor = Math.pow(10, stepPrecision);
+
+            const scaledMin = Math.round(min * factor);
+            const scaledMax = Math.round(max * factor);
+            const scaledStep = Math.round(step * factor);
+
+            const numSteps = Math.floor((scaledMax - scaledMin) / scaledStep);
+            const randomStep = Math.round(Math.random() * numSteps);
+            let value = (scaledMin + randomStep * scaledStep) / factor;
+
+            return parseFloat(value.toFixed(stepPrecision));
+        }
+
+        // --- Event Listeners ---
+
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        originalImageObject = img;
+                        resizeCanvasContainerAndCanvas(); // Recalculate container and canvas size
+
+                        // Initialize gravity ball radius when a new image is loaded
+                        gravityBallRadius = Math.min(actualCanvasWidth, actualCanvasHeight) * 0.25;
+                        // Update the HTML element's size (though it's invisible now)
+                        mouseFollowerBall.style.width = `${gravityBallRadius * 2}px`;
+                        mouseFollowerBall.style.height = `${gravityBallRadius * 2}px`;
+
+                        lastSetPuzzlePieceSizeIndex = parseInt(pixelSizeSlider.value);
+
+                        calculateMinPieceSizeForImage();
+
+                        pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
+                        pixelSizeSlider.dispatchEvent(new Event('input'));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        restartButton.addEventListener('click', () => {
+            if (originalImageObject) {
+                let inputValue = parseInt(maxPiecesInput.value);
+                if (isNaN(inputValue) || inputValue < 4) {
+                    inputValue = 4;
+                    maxPiecesInput.value = 4;
+                } else {
+                    maxPiecesInput.value = Math.floor(inputValue);
+                }
+                TARGET_MAX_PIECES = inputValue;
+
+                calculateMinPieceSizeForImage();
+
+                pixelSizeSlider.value = Math.max(lastSetPuzzlePieceSizeIndex, currentMinPieceSizeIndex);
+                pixelSizeSlider.dispatchEvent(new Event('input'));
+            } else {
+                console.error("Please load an image first!");
+            }
+        });
+
+        speedSlider.addEventListener('input', (event) => {
+            animationSpeed = parseFloat(event.target.value);
+            speedValueSpan.textContent = animationSpeed.toFixed(1);
+            puzzlePieces.forEach(p => {
+                p.maxSpeed = 10 * animationSpeed;
+            });
+            if (animationFrameId === null && originalImageObject) {
+                 startAnimation();
+            }
+        });
+
+        pixelSizeSlider.addEventListener('input', (event) => {
+            const sliderIndex = parseInt(event.target.value);
+            currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[sliderIndex];
+            pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
+            lastSetPuzzlePieceSizeIndex = sliderIndex;
+            if (originalImageObject) {
+                createPuzzlePiecesFromImage();
+            }
+            updatePieceSizeSliderRange();
+        });
+
+        pixelSizeMinusBtn.addEventListener('click', () => {
+            const currentValue = parseInt(pixelSizeSlider.value);
+            const minValue = parseInt(pixelSizeSlider.min);
+            if (currentValue > minValue) {
+                pixelSizeSlider.value = currentValue - 1;
+                pixelSizeSlider.dispatchEvent(new Event('input'));
+            }
+        });
+
+        pixelSizePlusBtn.addEventListener('click', () => {
+            const currentValue = parseInt(pixelSizeSlider.value);
+            const maxValue = parseInt(pixelSizeSlider.max);
+            if (currentValue < maxValue) {
+                pixelSizeSlider.value = currentValue + 1;
+                pixelSizeSlider.dispatchEvent(new Event('input'));
+            }
+        });
+
+        gravitySlider.addEventListener('input', (event) => {
+            gravityForce = parseFloat(event.target.value);
+            gravityValueSpan.textContent = gravityForce.toFixed(3);
+            if (animationFrameId === null && originalImageObject) {
+                 startAnimation();
+            }
+        });
+
+        snapDistanceSlider.addEventListener('input', (event) => {
+            snapDistance = parseFloat(event.target.value);
+            snapDistanceValueSpan.textContent = `${snapDistance}`;
+        });
+
+        repelSlider.addEventListener('input', (event) => {
+            repelForce = parseFloat(event.target.value);
+            repelValueSpan.textContent = repelForce.toFixed(2);
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+        frequencySlider.addEventListener('input', (event) => {
+            repelFrequency = parseInt(event.target.value);
+            frequencyValueSpan.textContent = repelFrequency.toString();
+            if (repelFrequency > 0) {
+                 lastRepelTriggerCheckTime = performance.now();
+            }
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+        gravityBallCheckbox.addEventListener('change', (event) => {
+            gravityBallEnabled = event.target.checked;
+            if (gravityBallEnabled) {
+                // Initialize gravity ball radius when enabled, if no image is loaded yet
+                if (!originalImageObject) {
+                    resizeCanvasContainerAndCanvas(); // Ensure canvas has dimensions
+                }
+                gravityBallRadius = Math.min(actualCanvasWidth, actualCanvasHeight) * 0.25;
+                // Update the HTML element's size (though it's invisible now)
+                mouseFollowerBall.style.width = `${gravityBallRadius * 2}px`;
+                mouseFollowerBall.style.height = `${gravityBallRadius * 2}px`;
+                gravityFieldStrengthGroup.style.display = 'flex'; // Show the strength slider
+            } else {
+                // Hide the strength slider
+                gravityFieldStrengthGroup.style.display = 'none';
+                // Move the internal gravity field coordinates off-screen to ensure no lingering effect
+                gravityBallX = -1000;
+                gravityBallY = -1000;
+            }
+
+            if (gravityBallEnabled && animationFrameId === null) { // Start animation if ball enabled and not already running
+                startAnimation();
+            }
+        });
+
+        gravityFieldStrengthSlider.addEventListener('input', (event) => {
+            gravityFieldStrength = parseFloat(event.target.value);
+            gravityFieldStrengthValueSpan.textContent = gravityFieldStrength.toFixed(1);
+            if (animationFrameId === null && originalImageObject) {
+                startAnimation();
+            }
+        });
+
+        // Event listener for mouse movement on the canvas container
+        canvasContainer.addEventListener('mousemove', (event) => {
+            if (gravityBallEnabled) {
+                const rect = canvas.getBoundingClientRect();
+                // Calculate mouse position relative to the canvas
+                gravityBallX = event.clientX - rect.left;
+                gravityBallY = event.clientY - rect.top;
+
+                // Update the HTML element's position (though it's invisible now)
+                mouseFollowerBall.style.left = `${gravityBallX}px`;
+                mouseFollowerBall.style.top = `${gravityBallY}px`;
+            }
+        });
+
+        // Event listener for mouse leaving the canvas container
+        canvasContainer.addEventListener('mouseleave', () => {
+            if (gravityBallEnabled) { // Only hide the effect if the feature is enabled
+                // Move the internal gravity field coordinates off-screen
+                gravityBallX = -1000;
+                gravityBallY = -1000;
+            }
+        });
+
+
+        unlockPieceSizeCheckbox.addEventListener('change', () => {
+            updatePieceSizeSliderRange();
+        });
+
+        unlockFreedomCheckbox.addEventListener('change', (event) => {
+            const checked = event.target.checked;
+
+            speedSlider.min = checked ? UNLOCKED_SPEED_MIN : DEFAULT_SPEED_MIN;
+            speedSlider.max = checked ? UNLOCKED_SPEED_MAX : DEFAULT_SPEED_MAX;
+            gravitySlider.min = checked ? UNLOCKED_GRAVITY_MIN : DEFAULT_GRAVITY_MIN;
+            gravitySlider.max = checked ? UNLOCKED_GRAVITY_MAX : DEFAULT_GRAVITY_MAX;
+            snapDistanceSlider.min = checked ? UNLOCKED_SNAP_MIN : DEFAULT_SNAP_MIN;
+            snapDistanceSlider.max = checked ? UNLOCKED_SNAP_MAX : DEFAULT_SNAP_MAX;
+            repelSlider.min = checked ? UNLOCKED_REPEL_MIN : DEFAULT_REPEL_MIN;
+            repelSlider.max = checked ? UNLOCKED_REPEL_MAX : DEFAULT_REPEL_MAX;
+            frequencySlider.min = checked ? UNLOCKED_FREQUENCY_MIN : DEFAULT_FREQUENCY_MIN;
+            frequencySlider.max = checked ? UNLOCKED_FREQUENCY_MAX : DEFAULT_FREQUENCY_MAX;
+            gravityFieldStrengthSlider.min = checked ? UNLOCKED_GRAVITY_FIELD_STRENGTH_MIN : DEFAULT_GRAVITY_FIELD_STRENGTH_MIN;
+            gravityFieldStrengthSlider.max = checked ? UNLOCKED_GRAVITY_FIELD_STRENGTH_MAX : DEFAULT_GRAVITY_FIELD_STRENGTH_MAX;
+
+
+            speedSlider.value = Math.min(Math.max(parseFloat(speedSlider.value), parseFloat(speedSlider.min)), parseFloat(speedSlider.max));
+            speedSlider.dispatchEvent(new Event('input'));
+
+            gravitySlider.value = Math.min(Math.max(parseFloat(gravitySlider.value), parseFloat(gravitySlider.min)), parseFloat(gravitySlider.max));
+            gravitySlider.dispatchEvent(new Event('input'));
+
+            snapDistanceSlider.value = Math.min(Math.max(parseFloat(snapDistanceSlider.value), parseFloat(snapDistanceSlider.min)), parseFloat(snapDistanceSlider.max));
+            snapDistanceSlider.dispatchEvent(new Event('input'));
+
+            repelSlider.value = Math.min(Math.max(parseFloat(repelSlider.value), parseFloat(repelSlider.min)), parseFloat(repelSlider.max));
+            repelSlider.dispatchEvent(new Event('input'));
+
+            frequencySlider.value = Math.min(Math.max(parseFloat(frequencySlider.value), parseFloat(frequencySlider.min)), parseFloat(frequencySlider.max));
+            frequencySlider.dispatchEvent(new Event('input'));
+
+            gravityFieldStrengthSlider.value = Math.min(Math.max(parseFloat(gravityFieldStrengthSlider.value), parseFloat(gravityFieldStrengthSlider.min)), parseFloat(gravityFieldStrengthSlider.max));
+            gravityFieldStrengthSlider.dispatchEvent(new Event('input'));
+        });
+
+
+        maxPiecesInput.addEventListener('change', () => {
+            let inputValue = parseInt(maxPiecesInput.value);
+            if (isNaN(inputValue) || inputValue < 4) {
+                maxPiecesInput.value = 4;
+            } else {
+                maxPiecesInput.value = Math.floor(inputValue);
+            }
+            console.log("Max # of Pieces changed to:", maxPiecesInput.value, "Will apply on Restart.");
+        });
+
+        defaultsButton.addEventListener('click', () => {
+            speedSlider.value = 1.0;
+            gravitySlider.value = DEFAULT_GRAVITY_MIN;
+            snapDistanceSlider.value = DEFAULT_SNAP_MIN;
+            repelSlider.value = DEFAULT_REPEL_MIN;
+            frequencySlider.value = DEFAULT_FREQUENCY_MIN;
+            gravityFieldStrengthSlider.value = DEFAULT_GRAVITY_FIELD_STRENGTH_MIN; // Reset gravity field strength
+            maxPiecesInput.value = 100000;
+            pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
+            lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX;
+
+            unlockFreedomCheckbox.checked = false;
+            unlockPieceSizeCheckbox.checked = false;
+            gravityBallCheckbox.checked = false;
+
+            unlockFreedomCheckbox.dispatchEvent(new Event('change'));
+            speedSlider.dispatchEvent(new Event('input'));
+            gravitySlider.dispatchEvent(new Event('input'));
+            snapDistanceSlider.dispatchEvent(new Event('input'));
+            repelSlider.dispatchEvent(new Event('input'));
+            frequencySlider.dispatchEvent(new Event('input'));
+            gravityFieldStrengthSlider.dispatchEvent(new Event('input')); // Dispatch event for new slider
+            maxPiecesInput.dispatchEvent(new Event('change'));
+            pixelSizeSlider.dispatchEvent(new Event('input'));
+            unlockPieceSizeCheckbox.dispatchEvent(new Event('change'));
+            gravityBallCheckbox.dispatchEvent(new Event('change')); // This will hide the strength slider group
+
+            console.log("All settings reset to defaults.");
+        });
+
+        randomizeButton.addEventListener('click', () => {
+            speedSlider.value = getRandomValue(parseFloat(speedSlider.min), parseFloat(speedSlider.max), parseFloat(speedSlider.step));
+            speedSlider.dispatchEvent(new Event('input'));
+
+            pixelSizeSlider.value = getRandomValue(parseInt(pixelSizeSlider.min), parseInt(pixelSizeSlider.max), parseInt(pixelSizeSlider.step));
+            pixelSizeSlider.dispatchEvent(new Event('input'));
+
+            gravitySlider.value = getRandomValue(parseFloat(gravitySlider.min), parseFloat(gravitySlider.max), parseFloat(gravitySlider.step));
+            gravitySlider.dispatchEvent(new Event('input'));
+
+            snapDistanceSlider.value = getRandomValue(parseFloat(snapDistanceSlider.min), parseFloat(snapDistanceSlider.max), parseFloat(snapDistanceSlider.step));
+            snapDistanceSlider.dispatchEvent(new Event('input'));
+
+            repelSlider.value = getRandomValue(parseFloat(repelSlider.min), parseFloat(repelSlider.max), parseFloat(repelSlider.step));
+            repelSlider.dispatchEvent(new Event('input'));
+
+            frequencySlider.value = getRandomValue(parseFloat(frequencySlider.min), parseFloat(frequencySlider.max), parseFloat(frequencySlider.step));
+            frequencySlider.dispatchEvent(new Event('input'));
+
+            gravityBallCheckbox.checked = Math.random() < 0.5;
+            gravityBallCheckbox.dispatchEvent(new Event('change'));
+            if (gravityBallCheckbox.checked) { // Only randomize strength if gravity field is enabled
+                gravityFieldStrengthSlider.value = getRandomValue(parseFloat(gravityFieldStrengthSlider.min), parseFloat(gravityFieldStrengthSlider.max), parseFloat(gravityFieldStrengthSlider.step));
+                gravityFieldStrengthSlider.dispatchEvent(new Event('input'));
+            }
+
+            console.log("Sliders randomized!");
+        });
+
+        window.addEventListener('resize', () => {
+            resizeCanvasContainerAndCanvas();
+            if (originalImageObject) {
+                createPuzzlePiecesFromImage();
+            }
+        });
+
+        // App Versioning
+        const APP_VERSION = 1.015;
+
+        // Initialize on load
+        window.onload = () => {
+            if (initWebGL()) {
+                resizeCanvasContainerAndCanvas();
+
+                unlockFreedomCheckbox.checked = false;
+                unlockFreedomCheckbox.dispatchEvent(new Event('change'));
+
+                animationSpeed = 1.0;
+                speedSlider.value = animationSpeed;
+                speedValueSpan.textContent = animationSpeed.toFixed(1);
+
+                currentPuzzlePieceSize = PUZZLE_PIECE_SIZES[DEFAULT_PIECE_SIZE_INDEX];
+                pixelSizeSlider.value = DEFAULT_PIECE_SIZE_INDEX;
+                lastSetPuzzlePieceSizeIndex = DEFAULT_PIECE_SIZE_INDEX;
+                pixelSizeValueSpan.textContent = `${currentPuzzlePieceSize}x${currentPuzzlePieceSize}`;
+                pixelSizeSlider.max = PUZZLE_PIECE_SIZES.length - 1;
+                updatePieceSizeSliderRange();
+
+                gravityForce = DEFAULT_GRAVITY_MIN;
+                gravitySlider.value = gravityForce;
+                gravityValueSpan.textContent = gravityForce.toFixed(3);
+
+                snapDistance = DEFAULT_SNAP_MIN;
+                snapDistanceSlider.value = snapDistance;
+                snapDistanceValueSpan.textContent = `${snapDistance}`;
+
+                repelForce = DEFAULT_REPEL_MIN;
+                repelSlider.value = repelForce;
+                repelValueSpan.textContent = repelForce.toFixed(2);
+
+                repelFrequency = DEFAULT_FREQUENCY_MIN;
+                frequencySlider.value = repelFrequency;
+                frequencyValueSpan.textContent = repelFrequency.toString();
+
+                gravityBallEnabled = false;
+                gravityBallCheckbox.checked = false;
+                gravityFieldStrength = DEFAULT_GRAVITY_FIELD_STRENGTH_MIN; // Initialize strength
+                gravityFieldStrengthSlider.value = gravityFieldStrength;
+                gravityFieldStrengthValueSpan.textContent = gravityFieldStrength.toFixed(1);
+                gravityFieldStrengthGroup.style.display = 'none'; // Hide by default
+
+
+                maxPiecesInput.value = TARGET_MAX_PIECES;
+
+                versionNumberSpan.textContent = `Version ${APP_VERSION.toFixed(3)}`;
+                document.title = `Pixel Swirl Version ${APP_VERSION.toFixed(3)}`;
+
+                lastRepelTriggerCheckTime = performance.now();
+            }
+        };
+
+    </script>
+</body>
+</html>
