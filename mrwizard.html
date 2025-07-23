@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr. Wizard Atari Drawing (HTML5) - Enhanced</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Press Start 2P', cursive; /* Optional: for a retro feel */
+            color: lime; /* For menu text */
+            flex-direction: column;
+            user-select: none; /* Prevent text selection */
+        }
+        canvas {
+            border: 2px solid #333;
+            background-color: #000;
+            cursor: crosshair;
+        }
+        #menu {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border: 1px solid #555;
+            color: lime;
+            font-size: 14px;
+            line-height: 1.6;
+            z-index: 10; /* Ensure menu is on top */
+        }
+        #menu p {
+            margin: 0;
+        }
+        #menu p span {
+            color: #FFFF00; /* Highlighted text */
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap; /* Allow controls to wrap */
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid #555;
+        }
+        #controls button, #controls label, #controls input[type="range"], #controls input[type="number"] {
+            background-color: #333;
+            color: lime;
+            border: 1px solid #555;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        #controls button:hover {
+            background-color: #555;
+        }
+        #controls label {
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            margin-right: 5px;
+        }
+        #controls input[type="range"] {
+            width: 120px;
+            height: 25px; /* Adjust height for better appearance */
+            -webkit-appearance: none;
+            background: #555;
+            outline: none;
+            border-radius: 5px;
+            border: 1px solid #777;
+        }
+        #controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: lime;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #controls input[type="number"] {
+            width: 60px;
+            text-align: center;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="menu">
+        <p>MAIN</p>
+        <p><span id="lineMenuText">LINE</span></p>
+        <p>POINT</p>
+        <p>COLOR</p>
+        <p>DRAWING</p>
+        <p>QUAD</p>
+        <p><span id="clearMenuText">CLEAR</span></p>
+        <p><span id="startMenuText">START</span></p>
+        <p><span id="eraseMenuText">ERASE</span></p>
+        <p>PAINTING 1</p>
+        <p>TYPE A RETURN AFTER</p>
+        <p>ALL COMMANDS</p>
+        <p>COPYRIGHT ATARI 1979</p>
+    </div>
+
+    <canvas id="atariCanvas"></canvas>
+
+    <div id="controls">
+        <button id="clearBtn">CLEAR</button>
+        <button id="toggleAnimationBtn">PAUSE ANIMATION</button>
+        <button id="eraseBtn">ERASE</button>
+        <button id="lineBtn">LINE</button>
+        <button id="autoDrawBtn">AUTO DRAW</button>
+
+        <label for="colorSpeed">Color Speed:</label>
+        <input type="range" id="colorSpeed" min="1" max="100" value="50">
+
+        <label for="numShapes">Auto Shapes:</label>
+        <input type="number" id="numShapes" min="1" max="10" value="3">
+
+        <label for="numTrails">Auto Trails:</label>
+        <input type="number" id="numTrails" min="10" max="200" value="50">
+    </div>
+
+    <script>
+        const canvas = document.getElementById('atariCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = 640;
+        canvas.height = 480;
+
+        let drawing = false;
+        let erasing = false;
+        let autoDrawing = false;
+        let lastX, lastY;
+        let drawnSegments = []; // Stores { startX, startY, endX, endY, baseColorIndex, type: 'line'/'erase' }
+        let animationActive = true;
+        let animationFrameCount = 0;
+        let animationSpeedFactor = 1; // 1 to 100, maps to 100/value for frame skip
+
+        const colorPalette = [
+            '#FF00FF', // Magenta
+            '#00FFFF', // Cyan
+            '#FFFF00', // Yellow
+            '#00FF00', // Green
+            '#FF8000', // Orange
+            '#8000FF', // Purple
+            '#0080FF', // Sky Blue
+            '#FF0080'  // Hot Pink
+        ];
+        let colorCycleOffset = 0;
+        const numSectors = 8; // For kaleidoscope symmetry
+
+        // Auto Drawing specific variables
+        let autoShapesToDraw = 3;
+        let autoTrailsPerShape = 50;
+        let currentAutoShape = 0;
+        let currentAutoTrail = 0;
+        let autoStartPoint = { x: 0, y: 0 };
+        let autoEndPoint = { x: 0, y: 0 };
+        let autoTargetPoint = { x: 0, y: 0 };
+        let autoColorIndex = 0;
+
+        // --- DOM Elements ---
+        const clearBtn = document.getElementById('clearBtn');
+        const toggleAnimationBtn = document.getElementById('toggleAnimationBtn');
+        const eraseBtn = document.getElementById('eraseBtn');
+        const lineBtn = document.getElementById('lineBtn');
+        const autoDrawBtn = document.getElementById('autoDrawBtn');
+        const colorSpeedSlider = document.getElementById('colorSpeed');
+        const numShapesInput = document.getElementById('numShapes');
+        const numTrailsInput = document.getElementById('numTrails');
+
+        // Menu text elements for highlighting
+        const lineMenuText = document.getElementById('lineMenuText');
+        const clearMenuText = document.getElementById('clearMenuText');
+        const startMenuText = document.getElementById('startMenuText');
+        const eraseMenuText = document.getElementById('eraseMenuText');
+
+
+        // --- Functions ---
+
+        function drawSymmetricLine(x1, y1, x2, y2, colorIdx, isErasing = false) {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            for (let i = 0; i < numSectors; i++) {
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(i * (Math.PI * 2 / numSectors)); // Rotate by sector angle
+
+                if (isErasing) {
+                    ctx.strokeStyle = 'black'; // Erase by drawing in background color
+                    ctx.lineWidth = 10; // Thicker for erasing
+                    ctx.lineCap = 'round';
+                } else {
+                    ctx.strokeStyle = colorPalette[(colorIdx + colorCycleOffset) % colorPalette.length];
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'butt';
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(x1 - centerX, y1 - centerY);
+                ctx.lineTo(x2 - centerX, y2 - centerY);
+                ctx.stroke();
+
+                // Draw mirrored line across Y-axis within this sector for double symmetry
+                ctx.beginPath();
+                ctx.moveTo(-(x1 - centerX), y1 - centerY);
+                ctx.lineTo(-(x2 - centerX), y2 - centerY);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        function setDrawingMode(mode) {
+            erasing = (mode === 'erase');
+            autoDrawing = (mode === 'auto');
+            drawing = false; // Disable manual drawing when changing modes
+
+            // Update button styles
+            lineBtn.style.backgroundColor = (mode === 'line') ? '#555' : '#333';
+            eraseBtn.style.backgroundColor = (mode === 'erase') ? '#555' : '#333';
+            autoDrawBtn.style.backgroundColor = (mode === 'auto') ? '#555' : '#333';
+
+            // Update cursor
+            if (erasing) {
+                canvas.style.cursor = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\'><rect x=\'0\' y=\'0\' width=\'24\' height=\'24\' fill=\'white\' stroke=\'black\' stroke-width=\'1\'/></svg>") 12 12, default';
+            } else if (autoDrawing) {
+                canvas.style.cursor = 'default';
+            } else { // line mode
+                canvas.style.cursor = 'crosshair';
+            }
+
+            // Update menu text highlights
+            lineMenuText.style.color = (mode === 'line') ? '#FFFF00' : 'lime';
+            eraseMenuText.style.color = (mode === 'erase') ? '#FFFF00' : 'lime';
+            // No direct menu item for auto draw, so we'll highlight 'START' for it
+            startMenuText.style.color = (mode === 'auto') ? '#FFFF00' : 'lime';
+
+            // Reset auto drawing state if switching away from it
+            if (!autoDrawing) {
+                currentAutoShape = 0;
+                currentAutoTrail = 0;
+            } else {
+                // Initialize for auto-draw
+                resetAutoDrawState();
+            }
+        }
+
+        function resetAutoDrawState() {
+            currentAutoShape = 0;
+            currentAutoTrail = 0;
+            autoStartPoint = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
+            autoTargetPoint = { x: Math.random() * canvas.width, y: Math.random() * canvas.height };
+            autoColorIndex = Math.floor(Math.random() * colorPalette.length);
+        }
+
+        function handleAutoDrawing() {
+            if (currentAutoShape >= autoShapesToDraw) {
+                // All shapes drawn, stop auto drawing
+                setDrawingMode('line'); // Revert to manual line drawing
+                return;
+            }
+
+            if (currentAutoTrail >= autoTrailsPerShape) {
+                // Move to next shape
+                currentAutoShape++;
+                currentAutoTrail = 0;
+                resetAutoDrawState(); // New random start/target for next shape
+                return;
+            }
+
+            // Interpolate points for the "trail" effect
+            const ratio = currentAutoTrail / autoTrailsPerShape;
+            const x = autoStartPoint.x + (autoTargetPoint.x - autoStartPoint.x) * ratio;
+            const y = autoStartPoint.y + (autoTargetPoint.y - autoStartPoint.y) * ratio;
+
+            // Store the segment
+            if (currentAutoTrail > 0) { // Only draw lines after the first point
+                 drawnSegments.push({
+                    startX: autoEndPoint.x, // Previous end point
+                    startY: autoEndPoint.y,
+                    endX: x,
+                    endY: y,
+                    baseColorIndex: autoColorIndex,
+                    type: 'line'
+                });
+            }
+
+            autoEndPoint = { x: x, y: y }; // Update current end point
+            currentAutoTrail++;
+        }
+
+
+        function animate() {
+            // Control animation speed by skipping frames
+            if (animationActive) {
+                animationFrameCount++;
+                if (animationFrameCount % Math.floor(101 - animationSpeedFactor) !== 0) {
+                    requestAnimationFrame(animate);
+                    return;
+                }
+            }
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the whole canvas
+
+            if (animationActive) {
+                colorCycleOffset = (colorCycleOffset + 1) % colorPalette.length; // Cycle colors
+            }
+
+            if (autoDrawing) {
+                handleAutoDrawing();
+            }
+
+            // Redraw all stored segments with updated colors
+            drawnSegments.forEach(segment => {
+                drawSymmetricLine(segment.startX, segment.startY, segment.endX, segment.endY, segment.baseColorIndex, segment.type === 'erase');
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // --- Event Listeners ---
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!autoDrawing) { // Only allow manual drawing if not in auto mode
+                drawing = true;
+                lastX = e.offsetX;
+                lastY = e.offsetY;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+
+            const currentX = e.offsetX;
+            const currentY = e.offsetY;
+
+            const angle = Math.atan2(currentY - lastY, currentX - lastX);
+            const baseColorIndex = Math.floor((angle / (Math.PI * 2) + 0.5) * colorPalette.length) % colorPalette.length;
+
+            drawnSegments.push({
+                startX: lastX,
+                startY: lastY,
+                endX: currentX,
+                endY: currentY,
+                baseColorIndex: baseColorIndex,
+                type: erasing ? 'erase' : 'line'
+            });
+
+            lastX = currentX;
+            lastY = currentY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            drawing = false;
+        });
+
+        // --- Control Button Event Listeners ---
+        clearBtn.addEventListener('click', () => {
+            drawnSegments = []; // Clear all segments
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Immediately clear canvas
+            clearMenuText.style.color = '#FFFF00'; // Highlight
+            setTimeout(() => clearMenuText.style.color = 'lime', 200); // Unhighlight
+        });
+
+        toggleAnimationBtn.addEventListener('click', () => {
+            animationActive = !animationActive;
+            toggleAnimationBtn.textContent = animationActive ? 'PAUSE ANIMATION' : 'RESUME ANIMATION';
+        });
+
+        eraseBtn.addEventListener('click', () => setDrawingMode('erase'));
+        lineBtn.addEventListener('click', () => setDrawingMode('line'));
+        autoDrawBtn.addEventListener('click', () => setDrawingMode('auto'));
+
+        colorSpeedSlider.addEventListener('input', (e) => {
+            animationSpeedFactor = parseInt(e.target.value, 10);
+        });
+
+        numShapesInput.addEventListener('change', (e) => {
+            autoShapesToDraw = parseInt(e.target.value, 10);
+            if (autoDrawing) { // Restart auto-draw if values change while active
+                resetAutoDrawState();
+            }
+        });
+
+        numTrailsInput.addEventListener('change', (e) => {
+            autoTrailsPerShape = parseInt(e.target.value, 10);
+            if (autoDrawing) { // Restart auto-draw if values change while active
+                resetAutoDrawState();
+            }
+        });
+
+        // Initialize default mode
+        setDrawingMode('line'); // Start in manual line drawing mode
+
+        // Start the animation loop
+        animate();
+    </script>
+</body>
+</html>
