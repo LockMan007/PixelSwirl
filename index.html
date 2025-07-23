@@ -1,39 +1,111 @@
-<html>
-<body style="background-color:black;">
-<br><br>
-<center>
-<style>
-    a:link {
-      color: white;
-    }
-    a:visited {
-      color: white;
-    }
-    a:hover {
-      color: red;
-    }
-    a:active {
-      color: yellow;
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>https://lockman007.github.io/PixelSwirl/</title>
+    <style>
+        /* Basic Reset & Body Styling */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: black;
+            color: white; /* Default text color */
+            font-family: Arial, sans-serif; /* Modern, readable font */
+            display: flex; /* Use flexbox for centering content */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            text-align: center; /* Center text within the main container */
+        }
+
+        /* Container for all content */
+        .container {
+            max-width: 800px; /* Limit content width for readability */
+            padding: 20px;
+            background-color: #1a1a1a; /* Slightly lighter black for contrast */
+            border-radius: 8px; /* Rounded corners for a softer look */
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+        }
+
+        /* Headings */
+        h1 {
+            color: yellow;
+            font-size: 2.5em; /* Larger heading */
+            margin-bottom: 30px;
+        }
+
+        /* Links Styling */
+        a {
+            color: white; /* Default link color */
+            text-decoration: none; /* Remove underline */
+            transition: color 0.3s ease; /* Smooth color transition on hover */
+            font-weight: bold;
+            font-size: 1.2em; /* Slightly larger link text */
+            display: block; /* Each link on its own line */
+            padding: 10px 0; /* Vertical spacing for links */
+        }
+
+        a:hover {
+            color: red; /* Hover color */
+            text-decoration: underline; /* Underline on hover for better UX */
+        }
+
+        a:visited {
+            color: white; /* Retain white for visited links */
+        }
+
+        a:active {
+            color: yellow; /* Active link color */
+        }
+
+        /* Paragraphs */
+        p {
+            color: white; /* Default paragraph color */
+            line-height: 1.6; /* Improve readability */
+            margin-bottom: 15px;
+        }
+
+        /* Specific yellow text for copyright/footer */
+        .footer-text-yellow {
+            color: yellow;
+            font-size: 0.9em;
+            margin-top: 30px;
+        }
+
+        /* Green text for "feel free to use" */
+        .footer-text-lime {
+            color: lime;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+
+        /* Horizontal Rules */
+        hr {
+            border: none;
+            border-top: 2px solid #333; /* Thicker, subtle grey line */
+            margin: 40px auto; /* More vertical space and center it */
+            width: 50%; /* Shorter line */
+        }
     </style>
-<p style="color:yellow;">
-<big><big>
-<a href="https://lockman007.github.io/PixelSwirl/PixelSwirl.html">PixelSwirl.html</a> : image animation
-<br><br>
-<a href="https://lockman007.github.io/PixelSwirl/cannon.html">cannon.html</a> : cannon shooter, basic
-<br><br>
-<a href="https://lockman007.github.io/PixelSwirl/mrwizard.html">mrwizard.html</a> : kaleidoscope drawing
-<br><br>
-<a href="https://lockman007.github.io/PixelSwirl/mystify.html">mystify.html</a> : win95 screensaver mystify your mind
-<br><br>
-<br><br>
-<hr>
-<hr>
-<p style="color:yellow;">
-<a href="https://github.com/LockMan007/PixelSwirl">Github</a> : 2025 - ?
-<br>
-<p style="color:lime;">
-Feel free to use any of the source code for your own projects.
-</center>
-</p>
-<html>
+</head>
+<body>
+    <div class="container">
+        <h1>LockMan007's Projects</h1>
+
+        <a href="https://lockman007.github.io/PixelSwirl/PixelSwirl.html">PixelSwirl.html : image animation</a>
+        <a href="https://lockman007.github.io/PixelSwirl/cannon.html">cannon.html : cannon shooter, basic</a>
+        <a href="https://lockman007.github.io/PixelSwirl/mrwizard.html">mrwizard.html : kaleidoscope drawing</a>
+        <a href="https://lockman007.github.io/PixelSwirl/mystify.html">mystify.html : win95 screensaver mystify your mind</a>
+
+        <hr>
+
+        <p class="footer-text-yellow">
+            <a href="https://github.com/LockMan007/PixelSwirl">Github</a> : 2025 - ?
+        </p>
+        <p class="footer-text-lime">
+            Feel free to use any of the source code for your own projects.
+        </p>
+    </div>
+</body>
+</html>
