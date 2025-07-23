@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Maze Raycaster (Smart Auto-Play)</title>
+    <style>
+        body { margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #333; }
+        canvas { border: 1px solid #000; background-color: #000; }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="raycasterCanvas"></canvas>
+    <div id="instructions">
+        <h2>3D Maze Raycaster</h2>
+        <p>Use WASD or Arrow Keys to move (manual mode).</p>
+        <p>Mouse to look around (manual mode).</p>
+        <p>Press 'M' to toggle minimap and controls.</p>
+        <p>Press 'P' to toggle auto-play mode.</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('raycasterCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game settings
+        const FOV = Math.PI / 3; // Field of View (60 degrees)
+        const WALL_HEIGHT = 32; // Height of the walls in "world units"
+        const TILE_SIZE = 64;   // Size of a tile in "world units" (e.g., 64x64 pixels on a 2D map)
+        const RENDER_DISTANCE = 8 * TILE_SIZE; // Max distance to render walls
+
+        // Player settings
+        let playerX, playerY, playerAngle; // Will be set by respawn
+        const playerSpeed = 3;
+        const playerTurnSpeed = 0.04; // Manual turn speed
+
+        // Auto-play settings
+        let autoPlay = true; // Enabled by default
+        const AI_TURN_AMOUNT = Math.PI / 2; // AI turns 90 degrees (or 180)
+        const AI_ALIGN_SPEED = 0.05; // How quickly AI aligns to center
+        const AI_LOOK_AHEAD_DISTANCE = TILE_SIZE * 0.7; // How far AI looks for walls to make decisions
+        const STUCK_THRESHOLD = 120; // Increased threshold for AI being stuck before respawn
+        let stuckCounter = 0;
+        let lastPlayerX = 0;
+        let lastPlayerY = 0;
+
+        let aiState = 'moving'; // 'moving', 'turning'
+        let aiTargetAngle = 0; // The angle AI is trying to reach when turning
+        const AI_TURN_TOLERANCE = 0.01; // How close to target angle AI needs to be
+
+        // Mouse look (only for manual mode)
+        let mouseX = 0;
+        let isMouseDown = false;
+        let prevMouseX = null;
+
+        // Keyboard state
+        const keys = {
+            w: false, s: false, a: false, d: false,
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+            m: false, // Minimap and controls toggle
+            p: false  // Auto-play toggle
+        };
+
+        let showMinimap = true;
+        let showInstructions = true; // Controls visibility of the instructions div
+        const instructionsDiv = document.getElementById('instructions');
+
+        // Maze map (0 = empty, 1 = wall, etc. for different wall types)
+        const MAP_WIDTH = 25;
+        const MAP_HEIGHT = 25;
+        const map = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,1],
+            [1,0,1,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0,1,0,0,1],
+            [1,0,1,0,1,1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,1],
+            [1,0,1,0,1,0,0,0,0,1,0,0,0,1,0,1,0,1,0,1,0,1,0,1,1],
+            [1,0,1,0,1,1,1,1,0,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,1],
+            [1,0,0,0,0,0,0,1,0,0,0,1,0,1,0,1,0,0,0,1,0,0,0,1,1],
+            [1,1,1,1,1,1,0,1,1,1,0,1,0,1,0,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,1,1],
+            [1,0,1,1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1],
+            [1,0,0,1,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+            [1,0,0,1,1,1,0,1,0,0,0,0,0,1,0,1,1,1,0,1,1,1,0,1,1], /* Player spawn at (12,12) */
+            [1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,1],
+            [1,1,1,1,0,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1],
+            [1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1,1],
+            [1,0,1,1,1,1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,0,1,1],
+            [1,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1],
+            [1,0,1,0,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,1,1],
+            [1,1,1,0,1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,1,0,1,0,1,1],
+            [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,1],
+            [1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,1,1,0,1,1,1,0,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        // Respawn point (near middle of the map in an open space)
+        const SPAWN_TILE_X = 12; // Adjusted to an open spot
+        const SPAWN_TILE_Y = 12; // Adjusted to an open spot
+        const SPAWN_X = SPAWN_TILE_X * TILE_SIZE + TILE_SIZE / 2;
+        const SPAWN_Y = SPAWN_TILE_Y * TILE_SIZE + TILE_SIZE / 2;
+        const SPAWN_ANGLE = 0; // Starting angle (facing right)
+
+        // Create a simple brick pattern for the walls
+        let brickPattern;
+        function createBrickPattern() {
+            const patternCanvas = document.createElement('canvas');
+            patternCanvas.width = 16;
+            patternCanvas.height = 16;
+            const pctx = patternCanvas.getContext('2d');
+
+            // Dark brick color
+            pctx.fillStyle = '#666';
+            pctx.fillRect(0, 0, 16, 16);
+
+            // Mortar lines (lighter color)
+            pctx.strokeStyle = '#333';
+            pctx.lineWidth = 1;
+
+            // Horizontal mortar
+            pctx.beginPath();
+            pctx.moveTo(0, 8);
+            pctx.lineTo(16, 8);
+            pctx.stroke();
+
+            // Vertical mortar (offset for brick pattern)
+            pctx.beginPath();
+            pctx.moveTo(8, 0);
+            pctx.lineTo(8, 8);
+            pctx.stroke();
+
+            pctx.beginPath();
+            pctx.moveTo(0, 8);
+            pctx.lineTo(0, 16);
+            pctx.stroke();
+
+            pctx.beginPath();
+            pctx.moveTo(16, 8);
+            pctx.lineTo(16, 16);
+            pctx.stroke();
+
+            brickPattern = ctx.createPattern(patternCanvas, 'repeat');
+        }
+        // Call it once to create the pattern
+        createBrickPattern();
+
+
+        function respawnPlayer() {
+            playerX = SPAWN_X;
+            playerY = SPAWN_Y;
+            playerAngle = SPAWN_ANGLE;
+            stuckCounter = 0; // Reset stuck counter
+            lastPlayerX = playerX;
+            lastPlayerY = playerY;
+            aiState = 'moving'; // Reset AI state on respawn
+            console.log("Player respawned!");
+        }
+
+        // Call respawn at start
+        respawnPlayer();
+
+        // Resize canvas to fit window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game loop
+        function gameLoop() {
+            if (autoPlay) {
+                updatePlayerAI();
+            } else {
+                updatePlayerManual();
+            }
+            drawScene();
+            checkAndRespawn();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updatePlayerManual() {
+            let dx = 0, dy = 0;
+            let turnAmount = 0;
+
+            if (keys.w || keys.ArrowUp) {
+                dx += Math.cos(playerAngle) * playerSpeed;
+                dy += Math.sin(playerAngle) * playerSpeed;
+            }
+            if (keys.s || keys.ArrowDown) {
+                dx -= Math.cos(playerAngle) * playerSpeed;
+                dy -= Math.sin(playerAngle) * playerSpeed;
+            }
+            if (keys.a) { // Strafe left
+                dx += Math.cos(playerAngle - Math.PI / 2) * playerSpeed;
+                dy += Math.sin(playerAngle - Math.PI / 2) * playerSpeed;
+            }
+            if (keys.d) { // Strafe right
+                dx += Math.cos(playerAngle + Math.PI / 2) * playerSpeed;
+                dy += Math.sin(playerAngle + Math.PI / 2) * playerSpeed;
+            }
+
+            if (keys.ArrowLeft) { // Turn left
+                turnAmount -= playerTurnSpeed;
+            }
+            if (keys.ArrowRight) { // Turn right
+                turnAmount += playerTurnSpeed;
+            }
+
+            // Apply mouse look
+            if (isMouseDown && prevMouseX !== null) {
+                turnAmount += (mouseX - prevMouseX) * 0.005; // Adjust sensitivity
+            }
+            prevMouseX = mouseX;
+
+            playerAngle += turnAmount;
+            applyMovement(dx, dy);
+        }
+
+        // Helper to check if a world coordinate is inside a wall
+        function isWallAt(x, y) {
+            const tileX = Math.floor(x / TILE_SIZE);
+            const tileY = Math.floor(y / TILE_SIZE);
+            if (tileX < 0 || tileX >= MAP_WIDTH || tileY < 0 || tileY >= MAP_HEIGHT) {
+                return true; // Treat out of bounds as a wall
+            }
+            return map[tileY] && map[tileY][tileX] === 1;
+        }
+
+        // Helper to normalize an angle to be within 0 and 2*PI
+        function normalizeAngle(angle) {
+            angle = angle % (Math.PI * 2);
+            if (angle < 0) {
+                angle += Math.PI * 2;
+            }
+            return angle;
+        }
+
+        function updatePlayerAI() {
+            let dx = 0, dy = 0;
+            let turnAmount = 0;
+
+            const currentTileX = Math.floor(playerX / TILE_SIZE);
+            const currentTileY = Math.floor(playerY / TILE_SIZE);
+            const tileCenterX = currentTileX * TILE_SIZE + TILE_SIZE / 2;
+            const tileCenterY = currentTileY * TILE_SIZE + TILE_SIZE / 2;
+
+            // Step 1: Align to center of corridor (if not turning)
+            if (aiState === 'moving') {
+                const angleToCenterX = Math.atan2(tileCenterY - playerY, tileCenterX - playerX);
+                const distanceToCenterX = Math.sqrt(Math.pow(tileCenterX - playerX, 2) + Math.pow(tileCenterY - playerY, 2));
+
+                // Determine if we need to align on X or Y axis based on player's current direction
+                const snappedAngle = normalizeAngle(Math.round(playerAngle / (Math.PI / 2)) * (Math.PI / 2));
+                const angleDiffFromSnapped = Math.abs(normalizeAngle(playerAngle - snappedAngle));
+
+                let alignTargetX = playerX;
+                let alignTargetY = playerY;
+
+                // If player is roughly aligned horizontally (0 or PI)
+                if (angleDiffFromSnapped < Math.PI / 4 || angleDiffFromSnapped > 3 * Math.PI / 4) {
+                    alignTargetY = tileCenterY; // Align Y
+                } else { // Player is roughly aligned vertically (PI/2 or 3*PI/2)
+                    alignTargetX = tileCenterX; // Align X
+                }
+
+                const distToAlignX = alignTargetX - playerX;
+                const distToAlignY = alignTargetY - playerY;
+
+                if (Math.abs(distToAlignX) > 1 || Math.abs(distToAlignY) > 1) {
+                    playerX += distToAlignX * AI_ALIGN_SPEED;
+                    playerY += distToAlignY * AI_ALIGN_SPEED;
+                }
+            }
+
+
+            // Step 2: Decision making for movement/turning
+            if (aiState === 'moving') {
+                // Check for walls in different directions
+                const wallAhead = isWallAt(playerX + Math.cos(playerAngle) * AI_LOOK_AHEAD_DISTANCE,
+                                          playerY + Math.sin(playerAngle) * AI_LOOK_AHEAD_DISTANCE);
+
+                const wallLeft = isWallAt(playerX + Math.cos(playerAngle - AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE,
+                                         playerY + Math.sin(playerAngle - AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE);
+
+                const wallRight = isWallAt(playerX + Math.cos(playerAngle + AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE,
+                                          playerY + Math.sin(playerAngle + AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE);
+
+                // Priority: Turn Left/Right > Move Forward > Turn 180 (Dead End)
+
+                if (!wallLeft && !wallRight) {
+                    // Open to both sides, prioritize straight or a random turn
+                    if (wallAhead) { // Blocked straight, but open left/right (a T-intersection)
+                        if (Math.random() < 0.5) { // 50/50 chance to turn
+                            aiState = 'turning';
+                            aiTargetAngle = normalizeAngle(playerAngle + AI_TURN_AMOUNT); // Turn right
+                        } else {
+                            aiState = 'turning';
+                            aiTargetAngle = normalizeAngle(playerAngle - AI_TURN_AMOUNT); // Turn left
+                        }
+                    } else {
+                         // Go straight if possible, but allow for turns at crossroads
+                         dx = Math.cos(playerAngle) * playerSpeed;
+                         dy = Math.sin(playerAngle) * playerSpeed;
+                    }
+                } else if (!wallLeft && wallRight && wallAhead) {
+                    // Only left is open (a corner or T-intersection)
+                    aiState = 'turning';
+                    aiTargetAngle = normalizeAngle(playerAngle - AI_TURN_AMOUNT); // Turn left
+                } else if (wallLeft && !wallRight && wallAhead) {
+                    // Only right is open (a corner or T-intersection)
+                    aiState = 'turning';
+                    aiTargetAngle = normalizeAngle(playerAngle + AI_TURN_AMOUNT); // Turn right
+                } else if (wallLeft && wallRight && wallAhead) {
+                    // Dead end
+                    aiState = 'turning';
+                    aiTargetAngle = normalizeAngle(playerAngle + Math.PI); // Turn 180 degrees
+                } else if (!wallAhead) {
+                    // Can move straight ahead
+                    dx = Math.cos(playerAngle) * playerSpeed;
+                    dy = Math.sin(playerAngle) * playerSpeed;
+                } else {
+                    // All paths seem blocked or ambiguous, try a random turn to get unstuck (fallback)
+                    aiState = 'turning';
+                    aiTargetAngle = normalizeAngle(playerAngle + (Math.random() < 0.5 ? AI_TURN_AMOUNT : -AI_TURN_AMOUNT));
+                }
+
+            } else if (aiState === 'turning') {
+                // Keep turning until target angle is reached
+                const angleDiff = normalizeAngle(aiTargetAngle - playerAngle);
+
+                if (Math.abs(angleDiff) < AI_TURN_TOLERANCE || Math.abs(angleDiff) > (Math.PI * 2) - AI_TURN_TOLERANCE) {
+                    playerAngle = aiTargetAngle; // Snap to target angle
+                    aiState = 'moving'; // Done turning, start moving
+                } else {
+                    // Turn towards the target angle
+                    if (angleDiff > Math.PI) { // Adjust for shortest turn direction
+                        turnAmount = -AI_TURN_TOLERANCE;
+                    } else {
+                        turnAmount = AI_TURN_TOLERANCE;
+                    }
+                    playerAngle += turnAmount;
+                }
+            }
+
+            applyMovement(dx, dy);
+        }
+
+        function applyMovement(dx, dy) {
+            // Collision detection (simple square collision)
+            let newPlayerX = playerX + dx;
+            let newPlayerY = playerY + dy;
+
+            let currentTileX = Math.floor(playerX / TILE_SIZE);
+            let currentTileY = Math.floor(playerY / TILE_SIZE);
+
+            let newTileX = Math.floor(newPlayerX / TILE_SIZE);
+            let newTileY = Math.floor(newPlayerY / TILE_SIZE);
+
+            // Check X-axis movement
+            // Check if the target cell is a wall. Also check the current cell in the new axis to allow sliding.
+            if (newTileX >= 0 && newTileX < MAP_WIDTH && map[currentTileY] && map[currentTileY][newTileX] === 0) {
+                playerX = newPlayerX;
+            } else {
+                // Attempt to slide if moving into a corner but the 'side' is clear
+                if (dx > 0 && map[currentTileY][Math.floor((playerX + TILE_SIZE/2) / TILE_SIZE)] === 0 && map[currentTileY][Math.floor((playerX + TILE_SIZE/2 + dx) / TILE_SIZE)] === 0) {
+                    playerX = newPlayerX;
+                } else if (dx < 0 && map[currentTileY][Math.floor((playerX - TILE_SIZE/2) / TILE_SIZE)] === 0 && map[currentTileY][Math.floor((playerX - TILE_SIZE/2 + dx) / TILE_SIZE)] === 0) {
+                    playerX = newPlayerX;
+                }
+            }
+
+            // Check Y-axis movement
+            if (newTileY >= 0 && newTileY < MAP_HEIGHT && map[newTileY] && map[newTileY][currentTileX] === 0) {
+                playerY = newPlayerY;
+            } else {
+                // Attempt to slide if moving into a corner but the 'side' is clear
+                if (dy > 0 && map[Math.floor((playerY + TILE_SIZE/2) / TILE_SIZE)] && map[Math.floor((playerY + TILE_SIZE/2) / TILE_SIZE)][currentTileX] === 0 && map[Math.floor((playerY + TILE_SIZE/2 + dy) / TILE_SIZE)][currentTileX] === 0) {
+                    playerY = newPlayerY;
+                } else if (dy < 0 && map[Math.floor((playerY - TILE_SIZE/2) / TILE_SIZE)] && map[Math.floor((playerY - TILE_SIZE/2) / TILE_SIZE)][currentTileX] === 0 && map[Math.floor((playerY - TILE_SIZE/2 + dy) / TILE_SIZE)][currentTileX] === 0) {
+                    playerY = newPlayerY;
+                }
+            }
+        }
+
+        function checkAndRespawn() {
+            let currentTileX = Math.floor(playerX / TILE_SIZE);
+            let currentTileY = Math.floor(playerY / TILE_SIZE);
+
+            // 1. Check if outside map boundaries
+            if (currentTileX < 0 || currentTileX >= MAP_WIDTH || currentTileY < 0 || currentTileY >= MAP_HEIGHT) {
+                console.warn("Player outside map bounds. Respawning.");
+                respawnPlayer();
+                return;
+            }
+
+            // 2. Check if stuck inside a wall (glitch spot)
+            if (map[currentTileY] && map[currentTileY][currentTileX] === 1) {
+                console.warn("Player inside a wall. Respawning.");
+                respawnPlayer();
+                return;
+            }
+
+            // 3. Check for being stuck (no significant movement)
+            // Only check for stuck if AI is in 'moving' state to avoid false positives during turns
+            if (aiState === 'moving' && Math.abs(playerX - lastPlayerX) < 1 && Math.abs(playerY - lastPlayerY) < 1) {
+                stuckCounter++;
+                if (stuckCounter > STUCK_THRESHOLD) {
+                    console.warn("Player stuck. Respawning.");
+                    respawnPlayer();
+                }
+            } else if (aiState === 'moving') { // Reset if moving
+                stuckCounter = 0;
+            }
+
+
+            lastPlayerX = playerX;
+            lastPlayerY = playerY;
+        }
+
+
+        function drawScene() {
+            // Clear screen (sky and floor)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#87CEEB'; // Sky blue
+            ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+            ctx.fillStyle = '#654321'; // Brown floor
+            ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+            // Raycasting loop
+            for (let i = 0; i < canvas.width; i++) {
+                // Calculate ray angle for this column
+                let rayAngle = (playerAngle - FOV / 2) + (i / canvas.width) * FOV;
+
+                let hitWall = false;
+                let wallX = 0, wallY = 0;
+                let distance = 0;
+                let hitHorizontal = false; // To determine shading
+
+                // Step 1: Check horizontal lines (Y-intersections)
+                let yIntersect, xIntersect;
+                let yStep, xStep;
+
+                // Determine step direction for Y
+                if (rayAngle > 0 && rayAngle < Math.PI) { // Ray is pointing down
+                    yIntersect = Math.floor(playerY / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+                    yStep = TILE_SIZE;
+                } else { // Ray is pointing up
+                    yIntersect = Math.floor(playerY / TILE_SIZE) * TILE_SIZE - 0.0001; // Subtract small value to hit tile above
+                    yStep = -TILE_SIZE;
+                }
+
+                xStep = TILE_SIZE / Math.tan(rayAngle);
+                xIntersect = playerX + (yIntersect - playerY) / Math.tan(rayAngle);
+
+                let wallXHoriz = 0, wallYHoriz = 0, distHoriz = Infinity;
+
+                for (let j = 0; j < MAP_HEIGHT; j++) { // Limit search distance
+                    let mapX = Math.floor(xIntersect / TILE_SIZE);
+                    let mapY = Math.floor(yIntersect / TILE_SIZE);
+
+                    if (mapY >= 0 && mapY < MAP_HEIGHT && mapX >= 0 && mapX < MAP_WIDTH && map[mapY] && map[mapY][mapX] === 1) {
+                        distHoriz = Math.sqrt(Math.pow(xIntersect - playerX, 2) + Math.pow(yIntersect - playerY, 2));
+                        wallXHoriz = xIntersect;
+                        wallYHoriz = yIntersect;
+                        break;
+                    } else {
+                        yIntersect += yStep;
+                        xIntersect += xStep;
+                        if (Math.abs(xIntersect - playerX) > RENDER_DISTANCE || Math.abs(yIntersect - playerY) > RENDER_DISTANCE) {
+                            break; // Stop if too far
+                        }
+                    }
+                }
+
+                // Step 2: Check vertical lines (X-intersections)
+                let xIntersectVert, yIntersectVert;
+                let xStepVert, yStepVert;
+
+                // Determine step direction for X
+                if (rayAngle < Math.PI / 2 || rayAngle > 3 * Math.PI / 2) { // Ray is pointing right
+                    xIntersectVert = Math.floor(playerX / TILE_SIZE) * TILE_SIZE + TILE_SIZE;
+                    xStepVert = TILE_SIZE;
+                } else { // Ray is pointing left
+                    xIntersectVert = Math.floor(playerX / TILE_SIZE) * TILE_SIZE - 0.0001;
+                    xStepVert = -TILE_SIZE;
+                }
+
+                yStepVert = TILE_SIZE * Math.tan(rayAngle);
+                yIntersectVert = playerY + (xIntersectVert - playerX) * Math.tan(rayAngle);
+
+                let wallXVert = 0, wallYVert = 0, distVert = Infinity;
+
+                for (let j = 0; j < MAP_WIDTH; j++) { // Limit search distance
+                    let mapX = Math.floor(xIntersectVert / TILE_SIZE);
+                    let mapY = Math.floor(yIntersectVert / TILE_SIZE);
+
+                    if (mapY >= 0 && mapY < MAP_HEIGHT && mapX >= 0 && mapX < MAP_WIDTH && map[mapY] && map[mapY][mapX] === 1) {
+                        distVert = Math.sqrt(Math.pow(xIntersectVert - playerX, 2) + Math.pow(yIntersectVert - playerY, 2));
+                        wallXVert = xIntersectVert;
+                        wallYVert = yIntersectVert;
+                        break;
+                    } else {
+                        xIntersectVert += xStepVert;
+                        yIntersectVert += yStepVert;
+                        if (Math.abs(xIntersectVert - playerX) > RENDER_DISTANCE || Math.abs(yIntersectVert - playerY) > RENDER_DISTANCE) {
+                            break; // Stop if too far
+                        }
+                    }
+                }
+
+                // Choose the closer wall hit
+                if (distHoriz < distVert) {
+                    distance = distHoriz;
+                    wallX = wallXHoriz;
+                    wallY = wallYHoriz;
+                    hitWall = true;
+                    hitHorizontal = true;
+                } else {
+                    distance = distVert;
+                    wallX = wallXVert;
+                    wallY = wallYVert;
+                    hitWall = true;
+                    hitHorizontal = false;
+                }
+
+                // Correct for "fish-eye" effect
+                distance = distance * Math.cos(playerAngle - rayAngle);
+
+                // Calculate wall height on screen
+                let wallSliceHeight = (WALL_HEIGHT / distance) * (canvas.height / 2); // Factor to scale height
+
+                // Determine vertical position to draw wall (centered)
+                let drawStart = canvas.height / 2 - wallSliceHeight / 2;
+                let drawEnd = canvas.height / 2 + wallSliceHeight / 2;
+
+                // Draw the wall slice
+                if (hitWall) {
+                    // Apply texture
+                    ctx.fillStyle = brickPattern;
+                    ctx.fillRect(i, drawStart, 1, wallSliceHeight);
+
+                    // Add a slight darkening for horizontal walls for shading
+                    if (hitHorizontal) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.3)'; // Darken by 30%
+                        ctx.fillRect(i, drawStart, 1, wallSliceHeight);
+                    }
+                }
+            }
+
+            if (showMinimap) {
+                drawMinimap();
+            }
+        }
+
+        function drawMinimap() {
+            const minimapSize = 150; // Size of the minimap square
+            const minimapTileSize = minimapSize / Math.max(MAP_WIDTH, MAP_HEIGHT);
+            const minimapX = 10;
+            const minimapY = canvas.height - minimapSize - 10;
+
+            ctx.save();
+            ctx.globalAlpha = 0.7; // Make minimap semi-transparent
+
+            // Draw map background
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
+
+            // Draw map walls
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (map[y][x] === 1) {
+                        ctx.fillStyle = 'rgba(150,150,150,1)';
+                        ctx.fillRect(minimapX + x * minimapTileSize, minimapY + y * minimapTileSize, minimapTileSize, minimapTileSize);
+                    }
+                }
+            }
+
+            // Draw player on minimap
+            ctx.fillStyle = autoPlay ? 'blue' : 'red'; // Blue for AI, Red for Manual
+            let playerMapX = minimapX + (playerX / TILE_SIZE) * minimapTileSize;
+            let playerMapY = minimapY + (playerY / TILE_SIZE) * minimapTileSize;
+            ctx.beginPath();
+            ctx.arc(playerMapX, playerMapY, minimapTileSize / 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw player direction
+            ctx.strokeStyle = autoPlay ? 'blue' : 'red';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(playerMapX, playerMapY);
+            ctx.lineTo(playerMapX + Math.cos(playerAngle) * minimapTileSize * 0.8,
+                       playerMapY + Math.sin(playerAngle) * minimapTileSize * 0.8);
+            ctx.stroke();
+
+            // Draw AI's look-ahead points for debugging (optional)
+            /*
+            if (autoPlay) {
+                ctx.fillStyle = 'lime';
+                ctx.beginPath();
+                ctx.arc(minimapX + (playerX + Math.cos(playerAngle) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapY + (playerY + Math.sin(playerAngle) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapTileSize / 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'orange';
+                ctx.beginPath();
+                ctx.arc(minimapX + (playerX + Math.cos(playerAngle - AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapY + (playerY + Math.sin(playerAngle - AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapTileSize / 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(minimapX + (playerX + Math.cos(playerAngle + AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapY + (playerY + Math.sin(playerAngle + AI_TURN_AMOUNT) * AI_LOOK_AHEAD_DISTANCE) / TILE_SIZE * minimapTileSize,
+                        minimapTileSize / 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            */
+
+            ctx.restore();
+        }
+
+        // Event Listeners
+        window.addEventListener('keydown', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = true;
+            } else if (keys.hasOwnProperty(e.key.toLowerCase())) {
+                 keys[e.key.toLowerCase()] = true;
+            }
+
+            if ((e.key === 'm' || e.key === 'M') && !keys.m_pressed) { // Debounce 'M' key
+                keys.m_pressed = true;
+                showMinimap = !showMinimap;
+                showInstructions = !showInstructions;
+                instructionsDiv.style.display = showInstructions ? 'block' : 'none';
+            }
+
+            if ((e.key === 'p' || e.key === 'P') && !keys.p_pressed) { // Debounce 'P' key
+                keys.p_pressed = true;
+                autoPlay = !autoPlay;
+                console.log("Auto-play toggled:", autoPlay ? "ON" : "OFF");
+                // When switching to auto-play, disable mouse lock
+                if (autoPlay) {
+                    document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+                    document.exitPointerLock();
+                    isMouseDown = false;
+                    aiState = 'moving'; // Reset AI state on toggle
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (keys.hasOwnProperty(e.key)) {
+                keys[e.key] = false;
+            } else if (keys.hasOwnProperty(e.key.toLowerCase())) {
+                 keys[e.key.toLowerCase()] = false;
+            }
+            if (e.key === 'm' || e.key === 'M') {
+                keys.m_pressed = false;
+            }
+            if (e.key === 'p' || e.key === 'P') {
+                keys.p_pressed = false;
+            }
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (!autoPlay) { // Only allow mouse interaction in manual mode
+                isMouseDown = true;
+                prevMouseX = e.clientX;
+                canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+                canvas.requestPointerLock();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!autoPlay) {
+                isMouseDown = false;
+                document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+                document.exitPointerLock();
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!autoPlay && (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas)) {
+                mouseX = e.movementX || e.mozMovementX || 0;
+            }
+        });
+
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+</html>
