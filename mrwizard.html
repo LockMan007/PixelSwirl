@@ -117,13 +117,13 @@
 
     <div id="controls">
         <button id="clearBtn">CLEAR</button>
-        <button id="toggleAnimationBtn">PAUSE ANIMATION</button>
+        <button id="toggleAnimationBtn">RESUME ANIMATION</button>
         <button id="eraseBtn">ERASE</button>
         <button id="lineBtn">LINE</button>
         <button id="autoDrawBtn">AUTO DRAW</button>
 
         <label for="colorSpeed">Color Speed:</label>
-        <input type="range" id="colorSpeed" min="1" max="100" value="50">
+        <input type="range" id="colorSpeed" min="1" max="100" value="100">
 
         <label for="numShapes">Auto Shapes:</label>
         <input type="number" id="numShapes" min="1" max="10" value="3">
@@ -144,9 +144,9 @@
         let autoDrawing = false;
         let lastX, lastY;
         let drawnSegments = []; // Stores { startX, startY, endX, endY, baseColorIndex, type: 'line'/'erase' }
-        let animationActive = true;
+        let animationActive = false; // Changed: Animation is paused by default
         let animationFrameCount = 0;
-        let animationSpeedFactor = 1; // 1 to 100, maps to 100/value for frame skip
+        let animationSpeedFactor = 100; // Changed: Default to max speed (100)
 
         const colorPalette = [
             '#FF00FF', // Magenta
@@ -308,7 +308,9 @@
             // Control animation speed by skipping frames
             if (animationActive) {
                 animationFrameCount++;
-                if (animationFrameCount % Math.floor(101 - animationSpeedFactor) !== 0) {
+                // Invert the speed logic: 100 means skip 0 frames, 1 means skip 99 frames
+                const skipFrames = Math.floor(100 - animationSpeedFactor);
+                if (skipFrames > 0 && animationFrameCount % (skipFrames + 1) !== 0) {
                     requestAnimationFrame(animate);
                     return;
                 }
@@ -317,7 +319,7 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the whole canvas
 
-            if (animationActive) {
+            if (animationActive) { // Only cycle colors if animation is active
                 colorCycleOffset = (colorCycleOffset + 1) % colorPalette.length; // Cycle colors
             }
 
@@ -408,8 +410,10 @@
             }
         });
 
-        // Initialize default mode
+        // Initialize default mode and settings
         setDrawingMode('line'); // Start in manual line drawing mode
+        // Set initial slider value
+        colorSpeedSlider.value = animationSpeedFactor;
 
         // Start the animation loop
         animate();
