@@ -881,7 +881,7 @@
                             <label for="objectSource">Object Source</label>
                             <select id="objectSource">
                                 <option value="ascii">ASCII Symbols</option>
-                                <option value="emoji">Emojis</option>
+                                <option value="emoji" selected>Emojis</option>
                                 <option value="image">Custom Image URL</option>
                             </select>
                         </div>
@@ -961,8 +961,11 @@
 
                     // Reapply animation to ensure speed changes and it stays visible
                     const effectiveDuration = rotationSpeed / globalSpeed;
-                    custom3DText.style.animationDuration = `${effectiveDuration}s`;
-                    custom3DText.style.animationPlayState = 'running'; // Ensure it's running
+
+                    custom3DText.style.animation = 'none'; // Temporarily clear existing animation
+                    custom3DText.offsetHeight; // Trigger reflow to apply 'none'
+                    custom3DText.style.animation = `animateText ${effectiveDuration}s infinite alternate`; // Reapply animation
+                    custom3DText.style.animationPlayState = 'running';
                     custom3DText.style.opacity = 1; // Ensure it's not transparent from previous state
                     custom3DText.style.display = 'inline-block'; // Ensure it's not hidden
                 }
