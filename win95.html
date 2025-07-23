@@ -339,7 +339,7 @@
             color: #0f0;
             text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0, 0 0 40px #0f0; /* Stronger glow */
             animation: animateText 10s infinite alternate; /* Duration adjusted by JS */
-            transform-style: preserve-3d; /* Allows child elements to be 3D */
+            transform-style: preserve-3d; /* CRITICAL for 3D appearance */
             will-change: transform; /* Optimize animation */
             text-align: center;
             line-height: 1;
@@ -470,75 +470,79 @@
 
         let activeScreensaverId = null; // To keep track of the currently active screensaver
         let currentAnimationIntervals = {}; // To store intervals/timeouts for cleanup
+        let currentAnimationFrames = {}; // To store requestAnimationFrame IDs for cleanup
 
         // --- Core Functionality ---
 
-        // Set default checked state for checkboxes
-        hideMenuCheckbox.checked = true;
-        hideSettingsCheckbox.checked = true;
+        // Helper function to show an element (remove hidden class)
+        function showElement(element) {
+            element.classList.remove('hidden');
+        }
 
-        // Apply initial hidden state if checked
-        if (hideMenuCheckbox.checked) menu.classList.add('hidden');
-        if (hideSettingsCheckbox.checked) settings.classList.add('hidden');
-
-        // Checkbox event listeners
-        hideMenuCheckbox.addEventListener('change', () => {
-            if (hideMenuCheckbox.checked) {
-                // If the mouse is not currently over the main content (which includes displayArea, menu, settings), hide it
-                if (!body.matches(':hover')) {
-                    menu.classList.add('hidden');
-                }
-            } else {
-                menu.classList.remove('hidden'); // Always show if unchecked
-            }
-        });
-
-        hideSettingsCheckbox.addEventListener('change', () => {
-            if (hideSettingsCheckbox.checked) {
-                // If the mouse is not currently over the main content (which includes displayArea, menu, settings), hide it
-                if (!body.matches(':hover')) {
-                    settings.classList.add('hidden');
-                }
-            } else {
-                settings.classList.remove('hidden'); // Always show if unchecked
-            }
-        });
+        // Helper function to hide an element (add hidden class)
+        function hideElement(element) {
+            element.classList.add('hidden');
+        }
 
         // Mouse leave/enter logic for the *entire window* (body)
+        // This is crucial for menus to reappear when the mouse re-enters the browser window
         document.body.addEventListener('mouseleave', () => {
             if (hideMenuCheckbox.checked) {
-                menu.classList.add('hidden');
+                hideElement(menu);
             }
             if (hideSettingsCheckbox.checked) {
-                settings.classList.add('hidden');
+                hideElement(settings);
             }
         });
 
         document.body.addEventListener('mouseenter', () => {
             if (hideMenuCheckbox.checked) {
-                menu.classList.remove('hidden');
+                showElement(menu);
             }
             if (hideSettingsCheckbox.checked) {
-                settings.classList.remove('hidden');
+                showElement(settings);
             }
         });
 
-        // Keep menus visible when mouse is over them, even if checkboxes are checked
-        menu.addEventListener('mouseenter', () => { menu.classList.remove('hidden'); });
-        settings.addEventListener('mouseenter', () => { settings.classList.remove('hidden'); });
+        // Keep menus visible when mouse is explicitly over them, overriding body.mouseleave if applicable
+        menu.addEventListener('mouseenter', () => { showElement(menu); });
+        settings.addEventListener('mouseenter', () => { showElement(settings); });
+
+        // Event listeners for checkboxes to control visibility behavior
+        hideMenuCheckbox.addEventListener('change', () => {
+            if (!hideMenuCheckbox.checked) {
+                showElement(menu); // If unchecked, ensure it's visible permanently
+            } else {
+                // If re-checked, hide if mouse is not currently over the menu or body (i.e. if it's already hidden)
+                if (!menu.matches(':hover') && !body.matches(':hover')) {
+                    hideElement(menu);
+                }
+            }
+        });
+
+        hideSettingsCheckbox.addEventListener('change', () => {
+            if (!hideSettingsCheckbox.checked) {
+                showElement(settings); // If unchecked, ensure it's visible permanently
+            } else {
+                // If re-checked, hide if mouse is not currently over the settings or body
+                if (!settings.matches(':hover') && !body.matches(':hover')) {
+                    hideElement(settings);
+                }
+            }
+        });
+
+        // Set default checked state for checkboxes on load
+        hideMenuCheckbox.checked = true;
+        hideSettingsCheckbox.checked = true;
 
 
         // Function to activate a screensaver
         function activateScreensaver(screensaverId) {
-            // Clean up previous screensaver's specific animations
+            // Clean up previous screensaver's specific animations and elements
             cleanupCurrentScreensaver();
 
             screensavers.forEach(ss => {
                 ss.style.display = 'none'; // Hide all screensavers
-                // Clean up any dynamically added elements that are specific to a screensaver's internal logic
-                if (ss.id !== 'flyingThroughSpace' && ss.id !== 'pipes3D' && ss.id !== 'curves' && ss.id !== 'flowerBox3D' && ss.id !== 'flyingObjects3D') {
-                    ss.innerHTML = '';
-                }
             });
 
             const targetScreensaver = document.getElementById(screensaverId);
@@ -549,7 +553,8 @@
                 document.querySelector(`[data-screensaver="${screensaverId}"]`).classList.add('active');
 
                 activeScreensaverId = screensaverId;
-                updateScreensaverSpecificSettings(screensaverId);
+                updateScreensaverSpecificSettings(screensaverId); // Load settings UI
+
                 // Initialize/reset screensaver if needed
                 switch (screensaverId) {
                     case 'flyingThroughSpace':
@@ -571,8 +576,7 @@
                         initFlyingObjects3D();
                         break;
                     case 'text3D':
-                        // Ensure the text and its animation are reset/applied
-                        update3DText(); // Call update to ensure text and animation are set
+                        update3DText(); // Ensure text content and animation are set
                         break;
                     default:
                         // No specific init for simple CSS ones or conceptual ones
@@ -585,7 +589,7 @@
             }
         }
 
-        // Cleans up intervals/timeouts for the currently active screensaver
+        // Cleans up intervals/timeouts and specific elements for the currently active screensaver
         function cleanupCurrentScreensaver() {
             if (activeScreensaverId) {
                 // Clear any intervals/timeouts specific to the previous screensaver
@@ -595,7 +599,13 @@
                 }
                 currentAnimationIntervals = {}; // Reset
 
-                // Specific cleanup for canvas-based screensavers
+                // Cancel any requestAnimationFrame loops
+                for (const key in currentAnimationFrames) {
+                    cancelAnimationFrame(currentAnimationFrames[key]);
+                }
+                currentAnimationFrames = {}; // Reset
+
+                // Specific cleanup for canvas-based screensavers (Mystify)
                 if (activeScreensaverId === 'curves') {
                     if (mystifyAnimationId) {
                         cancelAnimationFrame(mystifyAnimationId);
@@ -603,15 +613,51 @@
                     }
                     const mystifyCanvasEl = document.getElementById('mystifyCanvas');
                     if (mystifyCanvasEl) mystifyCanvasEl.remove(); // Remove the canvas
+                    window.removeEventListener('resize', resizeMystifyCanvas); // Remove resize listener
                 }
-                if (activeScreensaverId === 'orbit') {
-                    if (orbitAnimationId) {
-                        cancelAnimationFrame(orbitAnimationId);
-                        orbitAnimationId = null;
+
+                // Clean up dynamically added elements for specific screensavers
+                const ss = document.getElementById(activeScreensaverId);
+                if (ss) {
+                    switch (activeScreensaverId) {
+                        case 'flyingThroughSpace':
+                            // Remove all stars
+                            ss.querySelectorAll('.pixel-star').forEach(star => star.remove());
+                            break;
+                        case 'pipes3D':
+                            // Remove all pipe segments and trails
+                            ss.querySelectorAll('.pipe-segment, .pipe-trail').forEach(pipe => pipe.remove());
+                            break;
+                        case 'flowerBox3D':
+                            // Clear flower grid
+                            const flowerGrid = ss.querySelector('.flower-grid');
+                            if (flowerGrid) flowerGrid.innerHTML = '';
+                            break;
+                        case 'flyingObjects3D':
+                            // Remove all flying objects
+                            ss.querySelectorAll('.flying-object').forEach(obj => obj.remove());
+                            break;
+                        case 'text3D':
+                            // Ensure 3D text is reset to initial state to prevent lingering animation issues
+                            const custom3DText = document.getElementById('custom3DText');
+                            if (custom3DText) {
+                                custom3DText.style.animation = 'none'; // Stop current animation
+                                custom3DText.textContent = 'RETRO!'; // Reset text content
+                            }
+                            break;
+                        case 'orbit':
+                            // Reset sphere position variables
+                            currentOrbitX = undefined;
+                            currentOrbitY = undefined;
+                            if (orbitAnimationId) {
+                                cancelAnimationFrame(orbitAnimationId);
+                                orbitAnimationId = null;
+                            }
+                            break;
+                        default:
+                            // For other simple screensavers, just hide them. Their CSS handles the rest.
+                            break;
                     }
-                    // Reset orbit position vars so it re-initializes
-                    currentOrbitX = undefined;
-                    currentOrbitY = undefined;
                 }
             }
         }
@@ -620,6 +666,7 @@
         // Handle screensaver selection from menu
         screensaverLinks.forEach(link => {
             link.addEventListener('click', (e) => {
+                console.log('Menu link clicked:', e.target.dataset.screensaver); // Debugging log
                 e.preventDefault();
                 const screensaverId = e.target.dataset.screensaver;
                 activateScreensaver(screensaverId);
@@ -911,10 +958,13 @@
                     custom3DText.textContent = customTextInput.value || "RETRO!";
                     const rotationSpeed = document.getElementById('textRotationSpeed') ? parseFloat(document.getElementById('textRotationSpeed').value) : 10;
                     const globalSpeed = parseFloat(globalSpeedSlider.value);
-                    
-                    custom3DText.style.animation = 'none'; // Clear existing animation to reapply
-                    void custom3DText.offsetWidth; // Trigger reflow
-                    custom3DText.style.animation = `animateText ${rotationSpeed / globalSpeed}s infinite alternate`;
+
+                    // Reapply animation to ensure speed changes and it stays visible
+                    const effectiveDuration = rotationSpeed / globalSpeed;
+                    custom3DText.style.animationDuration = `${effectiveDuration}s`;
+                    custom3DText.style.animationPlayState = 'running'; // Ensure it's running
+                    custom3DText.style.opacity = 1; // Ensure it's not transparent from previous state
+                    custom3DText.style.display = 'inline-block'; // Ensure it's not hidden
                 }
             }
         }
@@ -925,23 +975,25 @@
         function initFlyingThroughSpace(numStars = 100) {
             const ss = document.getElementById('flyingThroughSpace');
             ss.innerHTML = ''; // Clear existing stars
-            const speedMultiplier = parseFloat(globalSpeedSlider.value);
-            const starColor = document.getElementById('starColor') ? document.getElementById('starColor').value : '#FFFFFF';
 
-            // Stop existing star generation/animation
+            // Clear any existing animation frames for FlyingThroughSpace
             if (currentAnimationIntervals.flyingThroughSpaceSpawn) {
                 clearInterval(currentAnimationIntervals.flyingThroughSpaceSpawn);
+                delete currentAnimationIntervals.flyingThroughSpaceSpawn;
             }
 
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+            const starColor = document.getElementById('starColor') ? document.getElementById('starColor').value : '#FFFFFF';
+            const activeStarAnimations = new Set(); // Keep track of active star animations
+
             const createStar = () => {
+                if (activeScreensaverId !== 'flyingThroughSpace') return; // Stop if screensaver changed
+
                 const displayRect = displayArea.getBoundingClientRect();
                 const centerX = displayRect.width / 2;
                 const centerY = displayRect.height / 2;
 
-                // Random angle for direction
                 const angle = Math.random() * 2 * Math.PI;
-
-                // Spawn 10 pixels away from the absolute center of the display area
                 const spawnRadius = 10;
                 const startX = centerX + spawnRadius * Math.cos(angle);
                 const startY = centerY + spawnRadius * Math.sin(angle);
@@ -949,42 +1001,45 @@
                 const star = document.createElement('div');
                 star.classList.add('pixel-star');
 
-                const size = Math.random() * 3 + 1; // 1-4px initial size
-                const finalSize = size * (Math.random() * 5 + 3); // Grow significantly
+                const size = Math.random() * 3 + 1;
+                const finalSize = size * (Math.random() * 5 + 3);
 
-                // Calculate an endpoint far outside the screen by extending the line from the center through the spawn point
-                // Use the largest dimension to ensure it goes off-screen
                 const maxDim = Math.max(displayRect.width, displayRect.height);
-                const endX = centerX + (maxDim * 0.7) * Math.cos(angle); // Extend 70% of max dim
+                const endX = centerX + (maxDim * 0.7) * Math.cos(angle);
                 const endY = centerY + (maxDim * 0.7) * Math.sin(angle);
 
-                const duration = (Math.random() * 5 + 5) / speedMultiplier; // 5-10 seconds
-                const delay = Math.random() * duration * 0.8; // Stagger appearance
+                const duration = (Math.random() * 5 + 5) / speedMultiplier;
+                const delay = Math.random() * duration * 0.8;
 
-                // Set initial position and size for the JS-driven animation
                 star.style.left = `${startX}px`;
                 star.style.top = `${startY}px`;
                 star.style.width = `${size}px`;
                 star.style.height = `${size}px`;
                 star.style.backgroundColor = starColor;
                 star.style.boxShadow = `0 0 5px ${starColor}, 0 0 10px ${starColor}`;
-                star.style.opacity = 0; // Start invisible for smooth fade-in
+                star.style.opacity = 0;
 
                 ss.appendChild(star);
 
-                // Animate using Web Animations API for better control
-                star.animate([
-                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 0, offset: 0 }, // Start centered, small, invisible
-                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 1, offset: 0.1 }, // Fade in
-                    { transform: `translate(${endX - startX - size/2}px, ${endY - startY - size/2}px) scale(${finalSize/size})`, opacity: 0, offset: 1 } // Move outwards, grow, fade out
+                const animation = star.animate([
+                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 0, offset: 0 },
+                    { transform: `translate(-50%, -50%) scale(1)`, opacity: 1, offset: 0.1 },
+                    { transform: `translate(${endX - startX - size/2}px, ${endY - startY - size/2}px) scale(${finalSize/size})`, opacity: 0, offset: 1 }
                 ], {
                     duration: duration * 1000,
                     delay: delay * 1000,
                     easing: 'linear',
                     fill: 'forwards'
-                }).onfinish = () => {
+                });
+
+                activeStarAnimations.add(animation); // Track animation instance
+
+                animation.onfinish = () => {
                     star.remove();
-                    createStar(); // Recreate when off-screen
+                    activeStarAnimations.delete(animation); // Remove from tracking set
+                    if (activeScreensaverId === 'flyingThroughSpace') {
+                        createStar(); // Recreate only if still active
+                    }
                 };
             };
 
@@ -992,32 +1047,45 @@
                 createStar();
             }
 
-            // Keep creating new stars over time
             currentAnimationIntervals.flyingThroughSpaceSpawn = setInterval(() => {
-                createStar();
-            }, 500 / speedMultiplier); // Adjust interval based on speed
+                if (activeScreensaverId === 'flyingThroughSpace') { // Only add if still active
+                    createStar();
+                }
+            }, 500 / speedMultiplier);
         }
 
 
         // 3D Pipes (Simplified)
         let pipeGenerationInterval;
-        let activePipes = new Set(); // To keep track of active pipe elements for proper cleanup
-
         function initPipes3D(numPipes = 20) {
             const ss = document.getElementById('pipes3D');
-            // Clear existing pipes and trails
-            ss.innerHTML = '';
-            activePipes.clear(); // Clear the set
+            ss.innerHTML = ''; // Clear existing pipes and trails
 
             if (pipeGenerationInterval) clearInterval(pipeGenerationInterval);
+            pipeGenerationInterval = null; // Clear old interval handle
+
+            // Clear any active requestAnimationFrame IDs for pipes
+            for (const key in currentAnimationFrames) {
+                if (key.startsWith('raf-pipeAnim-')) {
+                    cancelAnimationFrame(currentAnimationFrames[key]);
+                    delete currentAnimationFrames[key];
+                }
+            }
+            for (const key in currentAnimationIntervals) {
+                if (key.startsWith('pipeTimeout-')) {
+                    clearTimeout(currentAnimationIntervals[key]);
+                    delete currentAnimationIntervals[key];
+                }
+            }
 
             const speedMultiplier = parseFloat(globalSpeedSlider.value);
             const pipeColor = document.getElementById('pipeColor') ? document.getElementById('pipeColor').value : '#00FFFF';
 
             const createPipe = () => {
+                if (activeScreensaverId !== 'pipes3D') return; // Stop if screensaver changed
+
                 const pipe = document.createElement('div');
                 pipe.classList.add('pipe-segment');
-                activePipes.add(pipe); // Add to set
 
                 const startX = Math.random() * window.innerWidth;
                 const startY = Math.random() * window.innerHeight;
@@ -1035,27 +1103,30 @@
 
                 let currentX = startX;
                 let currentY = startY;
-                const deltaX = (endX - startX) / (duration * 60); // Assuming 60 frames per second
-                const deltaY = (endY - startY) / (duration * 60);
-
+                const totalFrames = duration * 60; // Total frames for the animation at 60fps
                 let frameCount = 0;
-                const totalFrames = duration * 60; // Total frames for the animation
+                let lastTimestamp = performance.now();
 
-                const movePipe = () => {
-                    if (!pipe.parentNode || frameCount >= totalFrames) { // Check if pipe is still in DOM or animation finished
-                        pipe.remove();
-                        activePipes.delete(pipe); // Remove from set
-                        return; // Stop this animation frame loop
+                const pipeAnimationId = `pipeAnim-${Date.now()}-${Math.random()}`; // Unique ID for this pipe's RAF
+                currentAnimationFrames[pipeAnimationId] = requestAnimationFrame(function animate(timestamp) {
+                    if (activeScreensaverId !== 'pipes3D' || !pipe.parentNode || frameCount >= totalFrames) {
+                         pipe.remove();
+                         delete currentAnimationFrames[pipeAnimationId]; // Clean up its RAF ID
+                         return;
                     }
 
-                    currentX += deltaX;
-                    currentY += deltaY;
+                    const elapsed = (timestamp - lastTimestamp) / 1000; // time in seconds
+                    lastTimestamp = timestamp;
+
+                    const progress = frameCount / totalFrames; // Use frame count for consistent progress
+                    currentX = startX + (endX - startX) * progress;
+                    currentY = startY + (endY - startY) * progress;
 
                     pipe.style.left = `${currentX}px`;
                     pipe.style.top = `${currentY}px`;
 
                     // Create trail
-                    if (frameCount % 3 === 0) { // Create trail every few frames for less density
+                    if (frameCount % 3 === 0) {
                         const trail = document.createElement('div');
                         trail.classList.add('pipe-trail');
                         trail.style.left = `${currentX}px`;
@@ -1063,7 +1134,7 @@
                         trail.style.width = `${pipe.offsetWidth}px`;
                         trail.style.height = `${pipe.offsetHeight}px`;
                         trail.style.backgroundColor = pipeColor;
-                        trail.style.setProperty('--trail-duration', `${duration}s`); // Trail fades over pipe duration
+                        trail.style.setProperty('--trail-duration', `${duration}s`);
                         ss.appendChild(trail);
 
                         trail.addEventListener('animationend', () => {
@@ -1072,23 +1143,30 @@
                     }
 
                     frameCount++;
-                    currentAnimationIntervals[`pipeAnim-${pipe.id || Math.random()}`] = requestAnimationFrame(movePipe);
-                };
+                    currentAnimationFrames[pipeAnimationId] = requestAnimationFrame(animate);
+                });
 
-                // Start the animation immediately
-                movePipe();
-
-                // Set a timeout to remove the pipe and create a new one after its duration
-                currentAnimationIntervals[`pipeTimeout-${pipe.id || Math.random()}`] = setTimeout(() => {
+                currentAnimationIntervals[`pipeTimeout-${pipeAnimationId}`] = setTimeout(() => {
                     if (pipe.parentNode) pipe.remove();
-                    activePipes.delete(pipe);
-                    createPipe(); // Create a new one when one finishes its lifecycle
+                    delete currentAnimationFrames[pipeAnimationId]; // Ensure RAF is cancelled too
+                    delete currentAnimationIntervals[`pipeTimeout-${pipeAnimationId}`]; // Clear timeout
+                    if (activeScreensaverId === 'pipes3D') {
+                        createPipe();
+                    }
                 }, duration * 1000);
             };
 
             for (let i = 0; i < numPipes; i++) {
                 createPipe();
             }
+
+            // Optional: Periodically create new pipes if density is not met
+            pipeGenerationInterval = setInterval(() => {
+                if (activeScreensaverId === 'pipes3D' && ss.querySelectorAll('.pipe-segment').length < numPipes) {
+                    createPipe();
+                }
+            }, 1000 / speedMultiplier); // Adjust interval for new pipe creation
+            currentAnimationIntervals.pipeGeneration = pipeGenerationInterval;
         }
 
 
@@ -1144,6 +1222,9 @@
             let rotationAngle = 0; // For internal color movement
 
             const animateOrbit = () => {
+                if (activeScreensaverId !== 'orbit') { // Stop if screensaver is no longer active
+                    return;
+                }
                 const currentDisplayRect = displayArea.getBoundingClientRect();
 
                 // Update position
@@ -1175,6 +1256,7 @@
                 orbitSphere.style.backgroundPosition = `${rotationAngle * 0.1}% ${rotationAngle * 0.1}%`;
 
                 orbitAnimationId = requestAnimationFrame(animateOrbit);
+                currentAnimationFrames['raf-orbit'] = orbitAnimationId; // Store for cleanup
             };
 
             animateOrbit(); // Start the animation loop
@@ -1335,8 +1417,13 @@
         }
 
         function mystifyAnimate() {
-            if (!mystifyCtx || !mystifyCanvas) return; // Exit if canvas not ready
+            if (!mystifyCtx || !mystifyCanvas || activeScreensaverId !== 'curves') { // Stop if canvas not ready or not active
+                if (mystifyAnimationId) cancelAnimationFrame(mystifyAnimationId);
+                mystifyAnimationId = null;
+                return;
+            }
             mystifyAnimationId = requestAnimationFrame(mystifyAnimate);
+            currentAnimationFrames['raf-mystify'] = mystifyAnimationId; // Store for cleanup
             mystifyFrameCount++;
 
             if (mystifySettings.trailMode === 'fade') {
@@ -1410,6 +1497,10 @@
         function initFlowerBox3D(gridSize = 5) {
             const ss = document.getElementById('flowerBox3D');
             const flowerGrid = ss.querySelector('.flower-grid');
+            if (!flowerGrid) { // Ensure grid exists before trying to manipulate
+                console.error("Flower grid not found!");
+                return;
+            }
             flowerGrid.innerHTML = '';
             flowerGrid.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
             flowerGrid.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
@@ -1448,6 +1539,7 @@
             const ss = document.getElementById('flyingObjects3D');
             ss.innerHTML = ''; // Clear existing objects
             if (flyingObjectsInterval) clearInterval(flyingObjectsInterval);
+            flyingObjectsInterval = null; // Clear old interval handle
 
             const objectSource = document.getElementById('objectSource') ? document.getElementById('objectSource').value : 'ascii';
             const imageUrl = document.getElementById('objectImageURL') ? document.getElementById('objectImageURL').value : '';
@@ -1455,6 +1547,8 @@
             const speedMultiplier = parseFloat(globalSpeedSlider.value);
 
             const createObject = () => {
+                if (activeScreensaverId !== 'flyingObjects3D') return; // Stop if screensaver changed
+
                 const obj = document.createElement('div');
                 obj.classList.add('flying-object');
 
@@ -1492,10 +1586,13 @@
 
                 ss.appendChild(obj);
 
-                obj.addEventListener('animationend', () => {
+                obj.addEventListener('animationend', function handler() {
+                    obj.removeEventListener('animationend', handler); // Remove self
                     obj.remove();
-                    createObject(); // Create a new one
-                }, { once: true });
+                    if (activeScreensaverId === 'flyingObjects3D') { // Only create new if still active
+                         createObject();
+                    }
+                });
             };
 
             for (let i = 0; i < numObjects; i++) {
@@ -1504,16 +1601,20 @@
 
             // Continuously add objects
             flyingObjectsInterval = setInterval(() => {
-                createObject();
+                if (activeScreensaverId === 'flyingObjects3D') { // Only add if still active
+                    createObject();
+                }
             }, 1000 / (numObjects / 10) / speedMultiplier); // Adjust creation rate
             currentAnimationIntervals.flyingObjects = flyingObjectsInterval;
         }
 
 
         // Initial setup
-        // Activate 3D Text (Fake) by default on load
         document.addEventListener('DOMContentLoaded', () => {
-            activateScreensaver('text3D');
+            // Ensure menus are visible on load, the body mouseleave will handle initial hide.
+            menu.classList.remove('hidden');
+            settings.classList.remove('hidden');
+            activateScreensaver('text3D'); // Start with 3D Text by default
         });
 
     </script>
