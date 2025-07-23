@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atari Mystify</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply Inter font and basic body styling */
+        body {
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            background-color: #000; /* Black background for the canvas */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Canvas will fill the entire screen */
+        canvas {
+            display: block;
+            background-color: #000; /* Ensure canvas background is black */
+        }
+
+        /* Styling for the control panel */
+        .control-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent black */
+            padding: 1.5rem;
+            border-radius: 0.75rem; /* Rounded corners */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            color: #fff;
+            max-width: 300px;
+            z-index: 10; /* Ensure it's above the canvas */
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #a0aec0; /* Light gray label color */
+        }
+
+        .control-group input[type="range"],
+        .control-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4a5568; /* Darker border */
+            background-color: #2d3748; /* Dark background for inputs */
+            color: #fff;
+            appearance: none; /* Remove default browser styling for range input */
+            -webkit-appearance: none;
+        }
+
+        /* Custom styling for range input thumb */
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #63b3ed; /* Blue thumb */
+            cursor: pointer;
+            margin-top: -6px; /* Center thumb vertically */
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #63b3ed;
+            cursor: pointer;
+            box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .control-group input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: #4a5568;
+            border-radius: 2px;
+        }
+
+        .control-group input[type="range"]::-moz-range-track {
+            height: 4px;
+            background: #4a5568;
+            border-radius: 2px;
+        }
+
+        .control-group select option {
+            background-color: #2d3748; /* Dark background for select options */
+            color: #fff;
+        }
+
+        /* Checkbox specific styling */
+        .control-group input[type="checkbox"] {
+            width: auto; /* Override 100% width for checkbox */
+            margin-right: 0.5rem;
+            transform: scale(1.2); /* Make checkbox slightly larger */
+        }
+
+        .reset-button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #4299e1; /* Blue button */
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .reset-button:hover {
+            background-color: #3182ce; /* Darker blue on hover */
+            transform: translateY(-1px);
+        }
+
+        .reset-button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mystifyCanvas"></canvas>
+
+    <div class="control-panel">
+        <h2 class="text-xl font-bold mb-4 text-center text-blue-300">Atari Mystify Controls</h2>
+
+        <div class="control-group">
+            <label for="numObjects">Number of Objects: <span id="numObjectsValue">5</span></label>
+            <input type="range" id="numObjects" min="1" max="20" value="5">
+        </div>
+
+        <div class="control-group">
+            <label for="numNodes">Nodes per Object: <span id="numNodesValue">4</span></label>
+            <input type="range" id="numNodes" min="3" max="10" value="4">
+        </div>
+
+        <div class="control-group">
+            <label for="trailFrequency">Trail Frequency: <span id="trailFrequencyValue">10</span></label>
+            <input type="range" id="trailFrequency" min="1" max="50" value="10">
+        </div>
+
+        <div class="control-group flex items-center">
+            <input type="checkbox" id="individualPrints" class="mr-2">
+            <label for="individualPrints" class="mb-0">Individual Prints (Hollow)</label>
+        </div>
+
+        <div class="control-group">
+            <label for="colorPalette">Color Palette:</label>
+            <select id="colorPalette">
+                <option value="classicAtari">Classic Atari</option>
+                <option value="vibrantAtari">Vibrant Atari</option>
+                <option value="monochrome">Monochrome (Green)</option>
+            </select>
+        </div>
+
+        <button id="resetButton" class="reset-button">Reset Animation</button>
+    </div>
+
+    <script>
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('mystifyCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Global variables to manage animation and settings
+        let objects = []; // Array to hold all animated objects
+        let animationFrameId; // Stores the ID of the requestAnimationFrame, used for cancellation
+        let frameCount = 0; // Global frame counter for individual prints
+
+        // Default settings for the animation
+        const settings = {
+            numObjects: 5,
+            numNodes: 4,
+            trailFrequency: 10, // Higher value means more prints visible at once.
+            trailMode: 'fade', // New setting: 'fade' or 'individual'
+            colorPalette: 'classicAtari', // Default color palette
+            initialSpeed: 2, // Base speed for objects
+            maxSpeedVariance: 1 // Max random speed added/subtracted
+        };
+
+        // Define Atari-inspired color palettes
+        const palettes = {
+            classicAtari: [
+                '#A00000', // Dark Red
+                '#00A000', // Dark Green
+                '#0000A0', // Dark Blue
+                '#A0A000', // Dark Yellow
+                '#A000A0', // Dark Magenta
+                '#00A0A0', // Dark Cyan
+                '#C0C0C0', // Light Gray
+                '#404040'  // Dark Gray
+            ],
+            vibrantAtari: [
+                '#FF0000', // Bright Red
+                '#00FF00', // Bright Green
+                '#0000FF', // Bright Blue
+                '#FFFF00', // Bright Yellow
+                '#FF00FF', // Bright Magenta
+                '#00FFFF', // Bright Cyan
+                '#FFFFFF', // White
+                '#808080'  // Medium Gray
+            ],
+            monochrome: [
+                '#00FF00', // Bright Green (for old CRT feel)
+                '#00CC00', // Medium Green
+                '#009900', // Dark Green
+                '#006600'  // Very Dark Green
+            ]
+        };
+
+        /**
+         * Initializes the canvas size and sets up event listeners for window resize
+         * and UI controls.
+         */
+        function init() {
+            // Set initial canvas size to fill the window
+            resizeCanvas();
+
+            // Add event listener to resize canvas when window size changes
+            window.addEventListener('resize', resizeCanvas);
+
+            // Get UI elements
+            const numObjectsInput = document.getElementById('numObjects');
+            const numObjectsValueSpan = document.getElementById('numObjectsValue');
+            const numNodesInput = document.getElementById('numNodes');
+            const numNodesValueSpan = document.getElementById('numNodesValue');
+            const trailFrequencyInput = document.getElementById('trailFrequency');
+            const trailFrequencyValueSpan = document.getElementById('trailFrequencyValue');
+            const individualPrintsCheckbox = document.getElementById('individualPrints');
+            const colorPaletteSelect = document.getElementById('colorPalette');
+            const resetButton = document.getElementById('resetButton');
+
+            // Set initial values for UI elements based on settings
+            numObjectsInput.value = settings.numObjects;
+            numObjectsValueSpan.textContent = settings.numObjects;
+            numNodesInput.value = settings.numNodes;
+            numNodesValueSpan.textContent = settings.numNodes;
+            trailFrequencyInput.value = settings.trailFrequency;
+            trailFrequencyValueSpan.textContent = settings.trailFrequency;
+            individualPrintsCheckbox.checked = (settings.trailMode === 'individual');
+            colorPaletteSelect.value = settings.colorPalette;
+
+            // Add event listeners for UI control changes
+            numObjectsInput.addEventListener('input', (e) => {
+                settings.numObjects = parseInt(e.target.value);
+                numObjectsValueSpan.textContent = settings.numObjects;
+                resetAnimation(); // Reset animation when number of objects changes
+            });
+
+            numNodesInput.addEventListener('input', (e) => {
+                settings.numNodes = parseInt(e.target.value);
+                numNodesValueSpan.textContent = settings.numNodes;
+                resetAnimation(); // Reset animation when number of nodes changes
+            });
+
+            trailFrequencyInput.addEventListener('input', (e) => {
+                settings.trailFrequency = parseInt(e.target.value);
+                trailFrequencyValueSpan.textContent = settings.trailFrequency;
+                // Only reset if individual prints mode is active to apply the new trail length immediately
+                // This is needed because changing trailFrequency changes the number of snapshots to store
+                if (settings.trailMode === 'individual') {
+                    resetAnimation();
+                }
+            });
+
+            individualPrintsCheckbox.addEventListener('change', (e) => {
+                settings.trailMode = e.target.checked ? 'individual' : 'fade';
+                resetAnimation(); // Reset animation to apply new trail mode
+            });
+
+            colorPaletteSelect.addEventListener('change', (e) => {
+                settings.colorPalette = e.target.value;
+                resetAnimation(); // Reset animation to apply new colors
+            });
+
+            resetButton.addEventListener('click', resetAnimation);
+
+            // Start the initial animation
+            resetAnimation();
+        }
+
+        /**
+         * Resizes the canvas to fill the entire browser window.
+         * This function is called on initial load and whenever the window is resized.
+         */
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // When canvas resizes, the content is cleared, so we need to reset the animation
+            resetAnimation();
+        }
+
+        /**
+         * Generates a single animated object with a specified number of nodes.
+         * Each object now contains its current nodes, a history of snapshots for trails, and its color.
+         * @returns {Object} An object containing nodes, trailSnapshots, and color for a single animated shape.
+         */
+        function generateObject() {
+            const currentPalette = palettes[settings.colorPalette];
+            // Pick a random color from the selected palette for this object
+            const objectColor = currentPalette[Math.floor(Math.random() * currentPalette.length)];
+            const nodes = [];
+
+            for (let i = 0; i < settings.numNodes; i++) {
+                // Random initial position within canvas bounds
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+
+                // Random initial velocity, ensuring some movement
+                const dx = (Math.random() * settings.maxSpeedVariance * 2 - settings.maxSpeedVariance) + (Math.random() < 0.5 ? settings.initialSpeed : -settings.initialSpeed);
+                const dy = (Math.random() * settings.maxSpeedVariance * 2 - settings.maxSpeedVariance) + (Math.random() < 0.5 ? settings.initialSpeed : -settings.initialSpeed);
+
+                // Nodes now only store position and velocity; color is stored at the object level
+                nodes.push({ x, y, dx, dy });
+            }
+            // Return an object with current nodes, an empty trail history, and its color
+            return { nodes: nodes, trailSnapshots: [], color: objectColor };
+        }
+
+        /**
+         * Resets the animation by clearing existing objects and generating new ones.
+         * Cancels any ongoing animation frame and starts a new one.
+         */
+        function resetAnimation() {
+            // Cancel any existing animation frame to prevent multiple loops running
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+
+            objects = []; // Clear the existing objects
+            frameCount = 0; // Reset frame counter on animation reset
+
+            // Generate new objects based on current settings
+            for (let i = 0; i < settings.numObjects; i++) {
+                objects.push(generateObject());
+            }
+
+            // Clear the canvas completely before starting new animation to remove old trails
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Start the animation loop
+            animate();
+        }
+
+        /**
+         * The main animation loop.
+         * Updates object positions, handles collisions, and redraws the scene.
+         */
+        function animate() {
+            // Request the next animation frame for smooth animation
+            animationFrameId = requestAnimationFrame(animate);
+            frameCount++; // Increment frame counter
+
+            // --- Canvas Clearing Logic ---
+            if (settings.trailMode === 'fade') {
+                // For 'fade' mode, draw a semi-transparent black rectangle over the entire canvas
+                // This creates the continuous fading trail effect.
+                ctx.fillStyle = `rgba(0, 0, 0, ${1 / settings.trailFrequency})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else { // settings.trailMode === 'individual'
+                // For 'individual' mode, clear the canvas completely each frame.
+                // This is necessary to redraw all historical prints with updated opacities
+                // and avoid accumulation without explicit fade.
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // --- Object Update and Drawing Logic ---
+            objects.forEach(obj => {
+                // 1. Update current node positions and handle collisions for all nodes
+                // This block ALWAYS runs to ensure smooth movement, regardless of trail mode or frequency.
+                obj.nodes.forEach((node) => {
+                    // Update node position based on its velocity
+                    node.x += node.dx;
+                    node.y += node.dy;
+
+                    // Boundary collision detection:
+                    // If node hits left or right edge, reverse horizontal velocity
+                    if (node.x < 0 || node.x > canvas.width) {
+                        node.dx *= -1;
+                        // Adjust position slightly to prevent sticking to the edge
+                        node.x = node.x < 0 ? 0 : canvas.width;
+                    }
+
+                    // If node hits top or bottom edge, reverse vertical velocity
+                    if (node.y < 0 || node.y > canvas.height) {
+                        node.dy *= -1;
+                        // Adjust position slightly to prevent sticking to the edge
+                        node.y = node.y < 0 ? 0 : canvas.height;
+                    }
+                });
+
+                // 2. Drawing logic based on trailMode
+                if (settings.trailMode === 'fade') {
+                    // Draw the current filled shape (for 'fade' mode)
+                    ctx.strokeStyle = obj.color;
+                    ctx.fillStyle = obj.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(obj.nodes[0].x, obj.nodes[0].y);
+                    obj.nodes.forEach(node => ctx.lineTo(node.x, node.y));
+                    ctx.closePath();
+                    ctx.stroke();
+                    ctx.fill();
+                } else { // settings.trailMode === 'individual'
+                    // Add current snapshot to trail if frequency condition met
+                    // This is for capturing the "print" at specific intervals.
+                    if (frameCount % settings.trailFrequency === 0) {
+                        const snapshot = obj.nodes.map(node => ({ x: node.x, y: node.y }));
+                        obj.trailSnapshots.push(snapshot);
+                    }
+
+                    // Limit trail length (number of visible prints).
+                    // If the number of snapshots exceeds the desired trail frequency, remove the oldest.
+                    while (obj.trailSnapshots.length > settings.trailFrequency) {
+                        obj.trailSnapshots.shift(); // Remove the oldest snapshot from the beginning of the array
+                    }
+
+                    // Draw all trail snapshots with fading opacity
+                    // This block ALWAYS runs to ensure smooth fading of existing prints.
+                    obj.trailSnapshots.forEach((snapshot, index) => {
+                        // Calculate opacity: oldest prints (index 0) are most transparent,
+                        // newest (last index) are fully opaque. This creates the fade-out effect.
+                        // Adding 1 to index and using length ensures alpha ranges from >0 to 1.
+                        const alpha = (index + 1) / obj.trailSnapshots.length;
+
+                        ctx.strokeStyle = obj.color;
+                        ctx.lineWidth = 2;
+                        ctx.globalAlpha = alpha; // Apply opacity to the current drawing operation
+
+                        ctx.beginPath();
+                        ctx.moveTo(snapshot[0].x, snapshot[0].y);
+                        snapshot.forEach(pos => ctx.lineTo(pos.x, pos.y)); // Draw lines based on snapshot positions
+                        ctx.closePath();
+                        ctx.stroke(); // Draw only the outline (hollow)
+                    });
+
+                    // Reset globalAlpha to 1 after drawing all prints for this object.
+                    // This is crucial so future drawings (e.g., other objects) are not affected
+                    // by the reduced alpha set for the trail.
+                    ctx.globalAlpha = 1;
+                }
+            });
+        }
+
+        // Initialize the application when the window has fully loaded
+        window.onload = init;
+    </script>
+</body>
+</html>
