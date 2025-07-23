@@ -328,35 +328,40 @@
             100% { transform: translate(var(--endX), var(--endY)) scale(0.5); opacity: 0; }
         }
 
-        /* 3D Text (Fake) - Revamped */
+        /* 3D Text (Fake) - Revamped for Bouncing */
         #text3D.screensaver {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            position: absolute; /* Changed from flex container */
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
             background-color: #000;
             perspective: 800px; /* Crucial for CSS 3D */
-            z-index: 1; /* Ensure it's above potential overlay issues */
+            z-index: 1;
         }
 
         .text3d {
+            position: absolute; /* Now absolutely positioned within #text3D.screensaver */
             font-size: 8em;
             color: #0f0;
             text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0, 0 0 40px #0f0; /* Stronger glow */
-            animation: animateText 10s infinite alternate; /* Duration adjusted by JS */
+            animation: animateText var(--rotation-duration, 10s) infinite alternate; /* Duration adjusted by JS */
             transform-style: preserve-3d; /* CRITICAL for 3D appearance */
-            will-change: transform; /* Optimize animation */
+            will-change: transform, left, top; /* Optimize animation and movement */
             text-align: center;
             line-height: 1;
             padding: 20px;
             white-space: nowrap; /* Prevent text from wrapping */
+            transform: translate(-50%, -50%); /* Center based on its own dimensions */
+            transform-origin: center center;
         }
 
         @keyframes animateText {
-            0% { transform: translateZ(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
-            25% { transform: translateZ(50px) rotateX(20deg) rotateY(45deg) rotateZ(10deg); }
-            50% { transform: translateZ(0px) rotateX(-10deg) rotateY(90deg) rotateZ(-20deg); }
-            75% { transform: translateZ(-50px) rotateX(30deg) rotateY(135deg) rotateZ(0deg); }
-            100% { transform: translateZ(0px) rotateX(0deg) rotateY(180deg) rotateZ(0deg); }
+            0% { transform: translate(-50%, -50%) translateZ(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            25% { transform: translate(-50%, -50%) translateZ(50px) rotateX(20deg) rotateY(45deg) rotateZ(10deg); }
+            50% { transform: translate(-50%, -50%) translateZ(0px) rotateX(-10deg) rotateY(90deg) rotateZ(-20deg); }
+            75% { transform: translate(-50%, -50%) translateZ(-50px) rotateX(30deg) rotateY(135deg) rotateZ(0deg); }
+            100% { transform: translate(-50%, -50%) translateZ(0px) rotateX(0deg) rotateY(180deg) rotateZ(0deg); }
         }
 
         /* Styling for Mystify controls (integrated into settings panel) */
@@ -427,7 +432,7 @@
             </div>
             <div id="flyingObjects3D" class="screensaver"></div>
             <div id="text3D" class="screensaver">
-                <span class="text3d" id="custom3DText">RETRO!</span>
+                <span class="text3d" id="custom3DText">Windows 95</span>
             </div>
 
         </div>
@@ -594,7 +599,7 @@
                         initFlyingObjects3D();
                         break;
                     case 'text3D':
-                        update3DText(); // Ensure text content and animation are set
+                        update3DText(); // Ensure text content, animation, and movement are set
                         break;
                     default:
                         // No specific init for simple CSS ones or conceptual ones
@@ -659,8 +664,16 @@
                             // Ensure 3D text is reset to initial state to prevent lingering animation issues
                             const custom3DText = document.getElementById('custom3DText');
                             if (custom3DText) {
-                                custom3DText.style.animation = 'none'; // Stop current animation
-                                custom3DText.textContent = 'RETRO!'; // Reset text content
+                                custom3DText.style.animation = 'none'; // Stop current CSS animation
+                                custom3DText.style.left = ''; // Clear JS set positions
+                                custom3DText.style.top = '';
+                                custom3DText.textContent = 'RETRO!'; // Reset default text
+                            }
+                            // Also clear the movement animation for 3D Text
+                            if (text3DAnimationId) {
+                                cancelAnimationFrame(text3DAnimationId);
+                                text3DAnimationId = null;
+                                delete currentAnimationFrames['raf-text3D'];
                             }
                             break;
                         case 'orbit':
@@ -948,6 +961,10 @@
                             <label for="textRotationSpeed">Rotation Speed (s)</label>
                             <input type="range" id="textRotationSpeed" min="2" max="30" step="1" value="10">
                         </div>
+                        <div class="setting-group">
+                            <label for="textMovementSpeed">Movement Speed</label>
+                            <input type="range" id="textMovementSpeed" min="0.5" max="5" step="0.1" value="2">
+                        </div>
                     `;
                     document.getElementById('textColor3D').addEventListener('input', (e) => {
                         const color = e.target.value;
@@ -960,6 +977,10 @@
                     document.getElementById('textRotationSpeed').addEventListener('input', (e) => {
                         update3DText(); // Call update to re-apply animation with new speed
                     });
+                    document.getElementById('textMovementSpeed').addEventListener('input', (e) => {
+                        text3DSpeed = parseFloat(e.target.value);
+                        initText3DAnimation(); // Re-initialize movement with new speed
+                    });
                     break;
                 default:
                     screensaverSpecificSettings.innerHTML += `<p style="color: #aaa;">No specific settings for this screensaver.</p>`;
@@ -967,28 +988,123 @@
             }
         }
 
-        // Handle the custom 3D Text input
+        // Global variables for 3D Text movement
+        let text3DElement; // Reference to the .text3d span
+        let text3Dx, text3Dy;
+        let text3DDx, text3DDy;
+        let text3DAnimationId; // requestAnimationFrame ID for 3D Text movement
+        let text3DSpeed = 2; // Base speed for 3D text movement
+
+        // Initialize/Restart the 3D Text movement animation
+        function initText3DAnimation() {
+            text3DElement = document.getElementById('custom3DText');
+            if (!text3DElement) return;
+
+            // Stop any existing animation loop for 3D text movement
+            if (text3DAnimationId) {
+                cancelAnimationFrame(text3DAnimationId);
+                delete currentAnimationFrames['raf-text3D'];
+            }
+
+            const globalSpeedMultiplier = parseFloat(globalSpeedSlider.value);
+            const movementSpeedSetting = document.getElementById('textMovementSpeed') ? parseFloat(document.getElementById('textMovementSpeed').value) : 2;
+            text3DSpeed = movementSpeedSetting * globalSpeedMultiplier; // Adjust base speed
+
+            const displayRect = displayArea.getBoundingClientRect();
+            // Get actual dimensions after content is set and rendered
+            const textWidth = text3DElement.offsetWidth;
+            const textHeight = text3DElement.offsetHeight;
+
+            // Initialize position and direction only if not already set or if out of bounds
+            if (text3Dx === undefined || text3Dy === undefined ||
+                text3Dx > displayRect.width - textWidth || text3Dy > displayRect.height - textHeight ||
+                text3Dx < 0 || text3Dy < 0) {
+                // Initialize random position within bounds
+                text3Dx = Math.random() * (displayRect.width - textWidth);
+                text3Dy = Math.random() * (displayRect.height - textHeight);
+
+                // Initial random direction
+                text3DDx = (Math.random() < 0.5 ? 1 : -1) * text3DSpeed;
+                text3DDy = (Math.random() < 0.5 ? 1 : -1) * text3DSpeed;
+            } else {
+                 // Update speed without changing direction if already moving
+                text3DDx = Math.sign(text3DDx) * text3DSpeed;
+                text3DDy = Math.sign(text3DDy) * text3DSpeed;
+            }
+
+            animate3DTextMovement(); // Start the animation loop
+        }
+
+        function animate3DTextMovement() {
+            if (activeScreensaverId !== 'text3D' || !text3DElement) {
+                if (text3DAnimationId) {
+                    cancelAnimationFrame(text3DAnimationId);
+                    text3DAnimationId = null;
+                    delete currentAnimationFrames['raf-text3D'];
+                }
+                return;
+            }
+
+            const currentDisplayRect = displayArea.getBoundingClientRect();
+            const textWidth = text3DElement.offsetWidth;
+            const textHeight = text3DElement.offsetHeight;
+
+            // Update position
+            text3Dx += text3DDx;
+            text3Dy += text3DDy;
+
+            // Bounce off walls
+            if (text3Dx <= 0) {
+                text3Dx = 0;
+                text3DDx = Math.abs(text3DDx);
+            } else if (text3Dx >= currentDisplayRect.width - textWidth) {
+                text3Dx = currentDisplayRect.width - textWidth;
+                text3DDx = -Math.abs(text3DDx);
+            }
+
+            if (text3Dy <= 0) {
+                text3Dy = 0;
+                text3DDy = Math.abs(text3DDy);
+            } else if (text3Dy >= currentDisplayRect.height - textHeight) {
+                text3Dy = currentDisplayRect.height - textHeight;
+                text3DDy = -Math.abs(text3DDy);
+            }
+
+            // Apply new position using left/top, which will combine with CSS transform
+            text3DElement.style.left = `${text3Dx}px`;
+            text3DElement.style.top = `${text3Dy}px`;
+
+            text3DAnimationId = requestAnimationFrame(animate3DTextMovement);
+            currentAnimationFrames['raf-text3D'] = text3DAnimationId; // Store for cleanup
+        }
+
+
+        // Handle the custom 3D Text input and CSS animation
         function update3DText() {
             if (activeScreensaverId === 'text3D') {
                 const customTextInput = document.getElementById('customTextContent');
                 const custom3DText = document.getElementById('custom3DText');
                 if (customTextInput && custom3DText) {
-                    custom3DText.textContent = customTextInput.value || "RETRO!";
+                    custom3DText.textContent = customTextInput.value || "Windows 95";
                     const rotationSpeed = document.getElementById('textRotationSpeed') ? parseFloat(document.getElementById('textRotationSpeed').value) : 10;
                     const globalSpeed = parseFloat(globalSpeedSlider.value);
 
-                    // Reapply animation to ensure speed changes and it stays visible
                     const effectiveDuration = rotationSpeed / globalSpeed;
 
+                    // Stop and reapply CSS animation for rotation/depth
                     custom3DText.style.animation = 'none'; // Temporarily clear existing animation
                     custom3DText.offsetHeight; // Trigger reflow to apply 'none'
                     custom3DText.style.animation = `animateText ${effectiveDuration}s infinite alternate`; // Reapply animation
                     custom3DText.style.animationPlayState = 'running';
                     custom3DText.style.opacity = 1; // Ensure it's not transparent from previous state
-                    custom3DText.style.display = 'inline-block'; // Ensure it's not hidden
+                    custom3DText.style.display = 'block'; // Ensure it's visible
+
+                    // Initialize/restart the movement animation
+                    initText3DAnimation();
                 }
             }
         }
+
 
         // --- Screensaver Implementations (Simplified) ---
 
