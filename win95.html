@@ -26,13 +26,15 @@
             box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out; /* Keep for smooth visual hiding/showing */
             z-index: 100;
             flex-shrink: 0; /* Prevent shrinking when displayArea grows */
         }
 
+        /* Use display: none for true hiding, overriding flex when hidden */
         #menu.hidden {
-            transform: translateX(-100%);
+            display: none; /* Hide completely from layout flow */
+            transform: translateX(-100%); /* Still apply transform for potential visual effect on re-appearance */
         }
 
         #menu h2 {
@@ -102,13 +104,15 @@
             box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease-in-out;
+            transition: transform 0.3s ease-in-out; /* Keep for smooth visual hiding/showing */
             z-index: 100;
             flex-shrink: 0; /* Prevent shrinking when displayArea grows */
         }
 
+        /* Use display: none for true hiding, overriding flex when hidden */
         #settings.hidden {
-            transform: translateX(100%);
+            display: none; /* Hide completely from layout flow */
+            transform: translateX(100%); /* Still apply transform for potential visual effect on re-appearance */
         }
 
         #settings h2 {
@@ -474,59 +478,73 @@
 
         // --- Core Functionality ---
 
-        // Helper function to show an element (remove hidden class)
-        function showElement(element) {
-            element.classList.remove('hidden');
+        // Helper function to show the menu
+        function showMenu() {
+            menu.style.display = 'flex';
+            menu.classList.remove('hidden');
         }
 
-        // Helper function to hide an element (add hidden class)
-        function hideElement(element) {
-            element.classList.add('hidden');
+        // Helper function to hide the menu
+        function hideMenu() {
+            menu.style.display = 'none';
+            menu.classList.add('hidden');
+        }
+
+        // Helper function to show the settings
+        function showSettings() {
+            settings.style.display = 'flex';
+            settings.classList.remove('hidden');
+        }
+
+        // Helper function to hide the settings
+        function hideSettings() {
+            settings.style.display = 'none';
+            settings.classList.add('hidden');
         }
 
         // Mouse leave/enter logic for the *entire window* (body)
         // This is crucial for menus to reappear when the mouse re-enters the browser window
         document.body.addEventListener('mouseleave', () => {
             if (hideMenuCheckbox.checked) {
-                hideElement(menu);
+                hideMenu();
             }
             if (hideSettingsCheckbox.checked) {
-                hideElement(settings);
+                hideSettings();
             }
         });
 
         document.body.addEventListener('mouseenter', () => {
             if (hideMenuCheckbox.checked) {
-                showElement(menu);
+                showMenu();
             }
             if (hideSettingsCheckbox.checked) {
-                showElement(settings);
+                showSettings();
             }
         });
 
         // Keep menus visible when mouse is explicitly over them, overriding body.mouseleave if applicable
-        menu.addEventListener('mouseenter', () => { showElement(menu); });
-        settings.addEventListener('mouseenter', () => { showElement(settings); });
+        menu.addEventListener('mouseenter', () => { showMenu(); });
+        settings.addEventListener('mouseenter', () => { showSettings(); });
 
         // Event listeners for checkboxes to control visibility behavior
         hideMenuCheckbox.addEventListener('change', () => {
             if (!hideMenuCheckbox.checked) {
-                showElement(menu); // If unchecked, ensure it's visible permanently
+                showMenu(); // If unchecked, ensure it's visible permanently
             } else {
                 // If re-checked, hide if mouse is not currently over the menu or body (i.e. if it's already hidden)
                 if (!menu.matches(':hover') && !body.matches(':hover')) {
-                    hideElement(menu);
+                    hideMenu();
                 }
             }
         });
 
         hideSettingsCheckbox.addEventListener('change', () => {
             if (!hideSettingsCheckbox.checked) {
-                showElement(settings); // If unchecked, ensure it's visible permanently
+                showSettings(); // If unchecked, ensure it's visible permanently
             } else {
                 // If re-checked, hide if mouse is not currently over the settings or body
                 if (!settings.matches(':hover') && !body.matches(':hover')) {
-                    hideElement(settings);
+                    hideSettings();
                 }
             }
         });
@@ -706,7 +724,7 @@
                 screensaverSpecificSettings.innerHTML += `
                     <div class="setting-group">
                         <label for="customTextContent">3D Text Content</label>
-                        <input type="text" id="customTextContent" value="RETRO!" placeholder="Enter 3D text">
+                        <input type="text" id="customTextContent" value="Windows 95" placeholder="Enter 3D text">
                     </div>
                 `;
                  document.getElementById('customTextContent').addEventListener('input', update3DText);
@@ -1614,10 +1632,21 @@
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
-            // Ensure menus are visible on load, the body mouseleave will handle initial hide.
-            menu.classList.remove('hidden');
-            settings.classList.remove('hidden');
+            // Activate a default screensaver first
             activateScreensaver('text3D'); // Start with 3D Text by default
+
+            // Set default checked state for checkboxes on load (already done in HTML, but good to ensure)
+            hideMenuCheckbox.checked = true;
+            hideSettingsCheckbox.checked = true;
+
+            // Immediately hide menus if mouse is not over them
+            // This ensures displayArea expands on load if mouse is not on a menu
+            if (!menu.matches(':hover')) {
+                hideMenu();
+            }
+            if (!settings.matches(':hover')) {
+                hideSettings();
+            }
         });
 
     </script>
