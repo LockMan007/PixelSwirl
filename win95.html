@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Screensavers</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive, Arial, sans-serif; /* Added a retro font, or fall back */
+            display: flex;
+            height: 100vh;
+            background-color: #000;
+            color: #fff;
+            position: relative; /* For the mouseleave detection */
+        }
+
+        /* Import a retro-style font if desired */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        #menu {
+            width: 250px;
+            background-color: #222;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
+            flex-shrink: 0; /* Prevent shrinking when displayArea grows */
+        }
+
+        #menu.hidden {
+            transform: translateX(-100%);
+        }
+
+        #menu h2 {
+            margin-top: 0;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        #menu ul {
+            list-style: none;
+            padding: 0;
+            flex-grow: 1;
+        }
+
+        #menu li {
+            margin-bottom: 10px;
+        }
+
+        #menu a {
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 10px;
+            display: block;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            border: 1px solid transparent;
+        }
+
+        #menu a:hover, #menu a.active {
+            background-color: #555;
+            border-color: #0f0;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            color: #ccc;
+        }
+
+        .checkbox-container input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            accent-color: #0f0; /* Green accent for checkbox */
+        }
+
+        #mainContent {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+
+        #displayArea {
+            flex-grow: 1;
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #000; /* To clearly define the display area */
+        }
+
+        #settings {
+            width: 280px;
+            background-color: #222;
+            padding: 20px;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
+            flex-shrink: 0; /* Prevent shrinking when displayArea grows */
+        }
+
+        #settings.hidden {
+            transform: translateX(100%);
+        }
+
+        #settings h2 {
+            margin-top: 0;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0;
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+
+        .setting-group input[type="range"],
+        .setting-group input[type="color"],
+        .setting-group select,
+        .setting-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #444;
+            background-color: #333;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        /* Screensaver Styles */
+        .screensaver {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            display: none; /* Hidden by default */
+            image-rendering: pixelated; /* For a retro look */
+        }
+
+        /* 3D Maze (Simplified) */
+        #maze3D.screensaver {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #111;
+            /* Simple 2D grid effect */
+            background-image:
+                linear-gradient(0deg, transparent 95%, rgba(0,255,0,0.2) 95%),
+                linear-gradient(90deg, transparent 95%, rgba(0,255,0,0.2) 95%);
+            background-size: 20px 20px;
+            animation: scrollBackground 60s linear infinite;
+        }
+
+        @keyframes scrollBackground {
+            from { background-position: 0 0; }
+            to { background-position: 100% 100%; }
+        }
+
+        /* 3D Pipes (Simplified) */
+        #pipes3D.screensaver {
+            background-color: #000;
+            position: relative;
+        }
+        .pipe-segment {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #888;
+            border: 1px solid #fff;
+            box-shadow: 0 0 5px #0ff, inset 0 0 3px #fff;
+            animation: growPipe 5s linear forwards, movePipe var(--pipe-speed) linear infinite var(--delay);
+            transform-origin: center center;
+            opacity: 0;
+        }
+
+        @keyframes growPipe {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes movePipe {
+            0% { top: var(--startY); left: var(--startX); }
+            100% { top: var(--endY); left: var(--endX); }
+        }
+
+
+        /* Flying Through Space - NEW Implementation */
+        #flyingThroughSpace.screensaver {
+            background-color: #000;
+            overflow: hidden;
+        }
+
+        .pixel-star {
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 0 5px white, 0 0 10px white;
+            width: var(--size);
+            height: var(--size);
+            transform: translate(var(--x), var(--y)) scale(var(--scale, 0.1));
+            opacity: 0;
+            animation: flyPixelStar var(--duration) linear forwards;
+            image-rendering: pixelated;
+        }
+
+        @keyframes flyPixelStar {
+            0% { opacity: 0; transform: translate(var(--start-x), var(--start-y)) scale(var(--start-scale)); }
+            10% { opacity: 1; }
+            100% { opacity: 0; transform: translate(var(--end-x), var(--end-y)) scale(var(--end-scale)); }
+        }
+
+        /* Orbit - NEW Implementation (Bouncing Multi-Color Sphere) */
+        #orbit.screensaver {
+            background-color: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bouncing-sphere {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background-image: conic-gradient(
+                #f00 0% 16.6%,
+                #ff0 16.6% 33.3%,
+                #0f0 33.3% 50%,
+                #0ff 50% 66.6%,
+                #00f 66.6% 83.3%,
+                #f0f 83.3% 100%
+            );
+            box-shadow: 0 0 50px rgba(0, 255, 0, 0.7); /* Green glow */
+            animation: rotateSphere 10s linear infinite,
+                       moveSphere var(--move-duration) linear infinite alternate;
+            transform-origin: center center;
+            background-size: 200% 200%; /* Make colors larger than sphere */
+            background-position: var(--bg-pos-x, 0%) var(--bg-pos-y, 0%);
+        }
+
+        @keyframes rotateSphere {
+            from { transform: rotate(0deg); background-position: 0% 0%; }
+            to { transform: rotate(360deg); background-position: 100% 100%; }
+        }
+
+        @keyframes moveSphere {
+            from { transform: translate(var(--start-x), var(--start-y)); }
+            to { transform: translate(var(--end-x), var(--end-y)); }
+        }
+
+        /* Curves (Mystify) */
+        #curves.screensaver canvas {
+            display: block;
+            background-color: #000;
+        }
+
+        /* 3D FlowerBox (Simplified) */
+        #flowerBox3D.screensaver {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            perspective: 600px;
+        }
+        .flower-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-template-rows: repeat(5, 50px);
+            gap: 5px;
+            transform-style: preserve-3d;
+            animation: rotateFlowerGrid 30s linear infinite;
+        }
+        .flower-cell {
+            width: 50px;
+            height: 50px;
+            background-color: var(--flower-base-color, rgba(255, 0, 255, 0.5)); /* Magenta-ish */
+            border: 1px solid var(--flower-base-color-border, #f0f);
+            box-shadow: 0 0 10px var(--flower-base-color-shadow, #f0f), inset 0 0 3px #fff;
+            transform-style: preserve-3d;
+            transform: rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz));
+            animation: pulsateColor 5s infinite alternate ease-in-out;
+        }
+        @keyframes rotateFlowerGrid {
+            from { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            to { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+        }
+        @keyframes pulsateColor {
+            0% { background-color: var(--flower-base-color, rgba(255, 0, 255, 0.5)); box-shadow: 0 0 10px var(--flower-base-color-shadow, #f0f); }
+            100% { background-color: var(--flower-alt-color, rgba(0, 255, 255, 0.5)); box-shadow: 0 0 10px var(--flower-alt-color-shadow, #0ff); }
+        }
+
+
+        /* 3D Flying Objects (Simplified) */
+        #flyingObjects3D.screensaver {
+            background-color: #000;
+            position: relative;
+        }
+        .flying-object {
+            position: absolute;
+            font-size: 3em;
+            color: var(--obj-color, #fff);
+            text-shadow: 0 0 5px var(--obj-color, #fff);
+            animation: flyObject var(--duration) linear infinite;
+            opacity: 0;
+            transform: translate(var(--startX), var(--startY)) scale(0);
+            image-rendering: pixelated; /* For a retro object look */
+        }
+        .flying-object img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+
+        @keyframes flyObject {
+            0% { transform: translate(var(--startX), var(--startY)) scale(0); opacity: 0; }
+            20% { opacity: 1; transform: translate(var(--startX), var(--startY)) scale(1); }
+            80% { opacity: 1; }
+            100% { transform: translate(var(--endX), var(--endY)) scale(0.5); opacity: 0; }
+        }
+
+        /* 3D Text (Simplified) */
+        #text3D.screensaver {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            perspective: 800px; /* For a fake 3D look */
+        }
+
+        .text3d {
+            font-size: 8em;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 30px #0f0;
+            animation: animateText 10s infinite alternate;
+            transform-style: preserve-3d;
+            /* Using CSS variables for simpler control of fake 3D rotation */
+            transform: rotateX(var(--rotateX, 0deg)) rotateY(var(--rotateY, 0deg)) rotateZ(var(--rotateZ, 0deg));
+            will-change: transform; /* Optimize animation */
+            text-align: center; /* Ensure text is centered within its own box */
+            line-height: 1;
+            padding: 20px;
+        }
+
+        @keyframes animateText {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            25% { transform: rotateX(20deg) rotateY(45deg) rotateZ(10deg); }
+            50% { transform: rotateX(-10deg) rotateY(90deg) rotateZ(-20deg); }
+            75% { transform: rotateX(30deg) rotateY(135deg) rotateZ(0deg); }
+            100% { transform: rotateX(0deg) rotateY(180deg) rotateZ(0deg); }
+        }
+
+        /* Styling for Mystify controls (integrated into settings panel) */
+        #mystify-controls {
+            padding: 0; /* Remove padding as it's within settings */
+            box-shadow: none; /* Remove box shadow */
+            background-color: transparent; /* Transparent background */
+            color: #fff;
+            max-width: none;
+            z-index: auto;
+            transition: none;
+        }
+        #mystify-controls .control-group {
+            margin-bottom: 10px; /* Adjust spacing */
+        }
+        #mystify-controls h2 {
+            margin-top: 10px;
+            margin-bottom: 15px;
+            color: #63b3ed; /* Mystify blue */
+            text-shadow: none;
+            font-size: 1.2em;
+        }
+        #mystify-controls input[type="range"]::-webkit-slider-thumb {
+            background: #63b3ed;
+        }
+        #mystify-controls input[type="range"]::-moz-range-thumb {
+            background: #63b3ed;
+        }
+        #mystify-controls .reset-button {
+            margin-top: 15px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="menu">
+        <h2>Screensavers</h2>
+        <ul>
+            <li><a href="#" data-screensaver="maze3D">3D Maze (Flat)</a></li>
+            <li><a href="#" data-screensaver="pipes3D">3D Pipes (Animated)</a></li>
+            <li><a href="#" data-screensaver="flyingThroughSpace">Flying Through Space</a></li>
+            <li><a href="#" data-screensaver="orbit">Orbit</a></li>
+            <li><a href="#" data-screensaver="curves">Curves (Mystify)</a></li>
+            <li><a href="#" data-screensaver="flowerBox3D">3D FlowerBox (Grid)</a></li>
+            <li><a href="#" data-screensaver="flyingObjects3D">Flying Objects (ASCII/Image)</a></li>
+            <li><a href="#" data-screensaver="text3D">3D Text (Fake)</a></li>
+        </ul>
+        <div class="checkbox-container">
+            <input type="checkbox" id="hideMenuCheckbox" checked>
+            <label for="hideMenuCheckbox">Hide menu on mouse out</label>
+        </div>
+    </div>
+
+    <div id="mainContent">
+        <div id="displayArea">
+            <div id="maze3D" class="screensaver"></div>
+            <div id="pipes3D" class="screensaver"></div>
+            <div id="flyingThroughSpace" class="screensaver"></div>
+            <div id="orbit" class="screensaver">
+                <div class="bouncing-sphere"></div>
+            </div>
+            <div id="curves" class="screensaver">
+                </div>
+            <div id="flowerBox3D" class="screensaver">
+                <div class="flower-grid">
+                    </div>
+            </div>
+            <div id="flyingObjects3D" class="screensaver"></div>
+            <div id="text3D" class="screensaver">
+                <span class="text3d" id="custom3DText">RETRO!</span>
+            </div>
+
+        </div>
+
+        <div id="settings">
+            <h2>Settings</h2>
+
+            <div class="setting-group">
+                <label for="brightness">Brightness</label>
+                <input type="range" id="brightness" min="0" max="100" value="100">
+            </div>
+
+            <div class="setting-group">
+                <label for="animationSpeed">Global Speed</label>
+                <input type="range" id="animationSpeed" min="0.1" max="3" step="0.1" value="1">
+            </div>
+
+            <div class="setting-group">
+                <label for="backgroundColor">Background Color</label>
+                <input type="color" id="backgroundColor" value="#000000">
+            </div>
+
+            <div class="setting-group" id="screensaverSpecificSettings">
+                </div>
+
+            <div class="checkbox-container">
+                <input type="checkbox" id="hideSettingsCheckbox" checked>
+                <label for="hideSettingsCheckbox">Hide settings on mouse out</label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const menu = document.getElementById('menu');
+        const settings = document.getElementById('settings');
+        const displayArea = document.getElementById('displayArea');
+        const screensaverLinks = document.querySelectorAll('#menu a[data-screensaver]');
+        const screensavers = document.querySelectorAll('.screensaver');
+        const hideMenuCheckbox = document.getElementById('hideMenuCheckbox');
+        const hideSettingsCheckbox = document.getElementById('hideSettingsCheckbox');
+        const screensaverSpecificSettings = document.getElementById('screensaverSpecificSettings');
+        const globalSpeedSlider = document.getElementById('animationSpeed');
+        const body = document.body;
+
+        let activeScreensaverId = null; // To keep track of the currently active screensaver
+        let currentAnimationIntervals = {}; // To store intervals/timeouts for cleanup
+
+        // --- Core Functionality ---
+
+        // Set default checked state for checkboxes
+        hideMenuCheckbox.checked = true;
+        hideSettingsCheckbox.checked = true;
+
+        // Apply initial hidden state if checked
+        if (hideMenuCheckbox.checked) menu.classList.add('hidden');
+        if (hideSettingsCheckbox.checked) settings.classList.add('hidden');
+
+        // Checkbox event listeners
+        hideMenuCheckbox.addEventListener('change', () => {
+            if (hideMenuCheckbox.checked) {
+                // If the mouse is not currently over the main content (which includes displayArea, menu, settings), hide it
+                if (!body.matches(':hover')) {
+                    menu.classList.add('hidden');
+                }
+            } else {
+                menu.classList.remove('hidden'); // Always show if unchecked
+            }
+        });
+
+        hideSettingsCheckbox.addEventListener('change', () => {
+            if (hideSettingsCheckbox.checked) {
+                // If the mouse is not currently over the main content (which includes displayArea, menu, settings), hide it
+                if (!body.matches(':hover')) {
+                    settings.classList.add('hidden');
+                }
+            } else {
+                settings.classList.remove('hidden'); // Always show if unchecked
+            }
+        });
+
+        // Mouse leave/enter logic for the *entire window* (body)
+        document.body.addEventListener('mouseleave', () => {
+            if (hideMenuCheckbox.checked) {
+                menu.classList.add('hidden');
+            }
+            if (hideSettingsCheckbox.checked) {
+                settings.classList.add('hidden');
+            }
+        });
+
+        document.body.addEventListener('mouseenter', () => {
+            if (hideMenuCheckbox.checked) {
+                menu.classList.remove('hidden');
+            }
+            if (hideSettingsCheckbox.checked) {
+                settings.classList.remove('hidden');
+            }
+        });
+
+        // Keep menus visible when mouse is over them, even if checkboxes are checked
+        menu.addEventListener('mouseenter', () => { menu.classList.remove('hidden'); });
+        settings.addEventListener('mouseenter', () => { settings.classList.remove('hidden'); });
+
+
+        // Function to activate a screensaver
+        function activateScreensaver(screensaverId) {
+            // Clean up previous screensaver's specific animations
+            cleanupCurrentScreensaver();
+
+            screensavers.forEach(ss => {
+                ss.style.display = 'none'; // Hide all screensavers
+                // Clean up any dynamically added elements that are specific to a screensaver's internal logic
+                if (ss.id !== 'flyingThroughSpace' && ss.id !== 'pipes3D' && ss.id !== 'curves' && ss.id !== 'flowerBox3D' && ss.id !== 'flyingObjects3D') {
+                    ss.innerHTML = '';
+                }
+            });
+
+            const targetScreensaver = document.getElementById(screensaverId);
+            if (targetScreensaver) {
+                targetScreensaver.style.display = 'block';
+                // Remove 'active' class from all links, then add to current
+                screensaverLinks.forEach(link => link.classList.remove('active'));
+                document.querySelector(`[data-screensaver="${screensaverId}"]`).classList.add('active');
+
+                activeScreensaverId = screensaverId;
+                updateScreensaverSpecificSettings(screensaverId);
+                // Initialize/reset screensaver if needed
+                switch (screensaverId) {
+                    case 'flyingThroughSpace':
+                        initFlyingThroughSpace();
+                        break;
+                    case 'pipes3D':
+                        initPipes3D();
+                        break;
+                    case 'orbit':
+                        initOrbit();
+                        break;
+                    case 'curves':
+                        initCurvesMystify(); // Call the Mystify initializer
+                        break;
+                    case 'flowerBox3D':
+                        initFlowerBox3D();
+                        break;
+                    case 'flyingObjects3D':
+                        initFlyingObjects3D();
+                        break;
+                    case 'text3D':
+                        // Ensure the text and its animation are reset/applied
+                        const customText = document.getElementById('custom3DText');
+                        if (customText) {
+                            customText.textContent = document.getElementById('customTextContent').value || "RETRO!";
+                            customText.style.animation = ''; // Clear existing animation to reapply
+                            void customText.offsetWidth; // Trigger reflow
+                            customText.style.animation = `animateText ${parseFloat(document.getElementById('textRotationSpeed').value)}s infinite alternate`;
+                        }
+                        break;
+                    default:
+                        // No specific init for simple CSS ones or conceptual ones
+                        break;
+                }
+            } else {
+                displayArea.innerHTML = `<p style="text-align: center; margin-top: 50px; color: #aaa;">'${screensaverId}' Screensaver (Conceptual)</p>`;
+                activeScreensaverId = null;
+                screensaverSpecificSettings.innerHTML = '';
+            }
+        }
+
+        // Cleans up intervals/timeouts for the currently active screensaver
+        function cleanupCurrentScreensaver() {
+            if (activeScreensaverId) {
+                // Clear any intervals/timeouts specific to the previous screensaver
+                for (const key in currentAnimationIntervals) {
+                    clearInterval(currentAnimationIntervals[key]);
+                    clearTimeout(currentAnimationIntervals[key]);
+                }
+                currentAnimationIntervals = {}; // Reset
+
+                // Specific cleanup for canvas-based screensavers
+                if (activeScreensaverId === 'curves') {
+                    const canvas = document.getElementById('mystifyCanvas');
+                    if (canvas && mystifyAnimationId) {
+                        cancelAnimationFrame(mystifyAnimationId);
+                        mystifyAnimationId = null; // Reset animation ID for Mystify
+                        canvas.remove(); // Remove the canvas
+                    }
+                }
+            }
+        }
+
+
+        // Handle screensaver selection from menu
+        screensaverLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const screensaverId = e.target.dataset.screensaver;
+                activateScreensaver(screensaverId);
+            });
+        });
+
+        // --- General Settings Control ---
+
+        document.getElementById('brightness').addEventListener('input', (e) => {
+            const brightness = e.target.value / 100;
+            displayArea.style.filter = `brightness(${brightness})`;
+        });
+
+        globalSpeedSlider.addEventListener('input', (e) => {
+            const speedMultiplier = parseFloat(e.target.value);
+            // Apply a global speed factor to all animations via CSS variable
+            document.documentElement.style.setProperty('--global-speed-multiplier', speedMultiplier);
+
+            // Re-initialize the active screensaver to apply new speed
+            if (activeScreensaverId) {
+                activateScreensaver(activeScreensaverId);
+            }
+        });
+
+
+        document.getElementById('backgroundColor').addEventListener('input', (e) => {
+            displayArea.style.backgroundColor = e.target.value;
+        });
+
+        // --- Screensaver Specific Settings and Initialization ---
+
+        function updateScreensaverSpecificSettings(screensaverId) {
+            screensaverSpecificSettings.innerHTML = ''; // Clear previous settings
+
+            // Common 3D Text input (always present for 3D Text screensaver)
+            if (screensaverId === 'text3D') {
+                screensaverSpecificSettings.innerHTML += `
+                    <div class="setting-group">
+                        <label for="customTextContent">3D Text Content</label>
+                        <input type="text" id="customTextContent" value="RETRO!" placeholder="Enter 3D text">
+                    </div>
+                `;
+                 document.getElementById('customTextContent').addEventListener('input', update3DText);
+            }
+
+            switch (screensaverId) {
+                case 'maze3D':
+                    screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="mazeCellSize">Cell Size (px)</label>
+                            <input type="range" id="mazeCellSize" min="10" max="50" value="20">
+                        </div>
+                        <div class="setting-group">
+                            <label for="mazeLineColor">Line Color</label>
+                            <input type="color" id="mazeLineColor" value="#00FF00">
+                        </div>
+                    `;
+                    document.getElementById('mazeCellSize').addEventListener('input', (e) => {
+                        const size = e.target.value;
+                        document.getElementById('maze3D').style.backgroundSize = `${size}px ${size}px`;
+                    });
+                    document.getElementById('mazeLineColor').addEventListener('input', (e) => {
+                        const color = e.target.value;
+                        document.getElementById('maze3D').style.backgroundImage = `
+                            linear-gradient(0deg, transparent 95%, ${color}20 95%),
+                            linear-gradient(90deg, transparent 95%, ${color}20 95%)
+                        `;
+                    });
+                    break;
+                case 'pipes3D':
+                    screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="pipeColor">Pipe Color</label>
+                            <input type="color" id="pipeColor" value="#00FFFF">
+                        </div>
+                        <div class="setting-group">
+                            <label for="pipeDensity">Pipe Density</label>
+                            <input type="range" id="pipeDensity" min="5" max="50" value="20">
+                        </div>
+                    `;
+                    document.getElementById('pipeColor').addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty('--pipe-color', e.target.value);
+                        document.querySelectorAll('#pipes3D .pipe-segment').forEach(p => {
+                            p.style.backgroundColor = e.target.value;
+                            p.style.boxShadow = `0 0 5px ${e.target.value}, inset 0 0 3px #fff`;
+                        });
+                    });
+                    document.getElementById('pipeDensity').addEventListener('input', (e) => {
+                        initPipes3D(e.target.value);
+                    });
+                    break;
+                case 'flyingThroughSpace':
+                    screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="starDensity">Star Density</label>
+                            <input type="range" id="starDensity" min="10" max="300" value="100">
+                        </div>
+                        <div class="setting-group">
+                            <label for="starColor">Star Color</label>
+                            <input type="color" id="starColor" value="#FFFFFF">
+                        </div>
+                    `;
+                    document.getElementById('starDensity').addEventListener('input', (e) => {
+                        initFlyingThroughSpace(e.target.value);
+                    });
+                    document.getElementById('starColor').addEventListener('input', (e) => {
+                        document.querySelectorAll('#flyingThroughSpace .pixel-star').forEach(star => {
+                            star.style.backgroundColor = e.target.value;
+                            star.style.boxShadow = `0 0 5px ${e.target.value}, 0 0 10px ${e.target.value}`;
+                        });
+                    });
+                    break;
+                case 'orbit':
+                    screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="sphereGlowColor">Sphere Glow Color</label>
+                            <input type="color" id="sphereGlowColor" value="#00FF00">
+                        </div>
+                        <div class="setting-group">
+                            <label for="sphereSize">Sphere Size (px)</label>
+                            <input type="range" id="sphereSize" min="50" max="300" value="150">
+                        </div>
+                    `;
+                    document.getElementById('sphereGlowColor').addEventListener('input', (e) => {
+                        document.querySelector('.bouncing-sphere').style.boxShadow = `0 0 50px ${e.target.value}`;
+                    });
+                    document.getElementById('sphereSize').addEventListener('input', (e) => {
+                        const size = e.target.value;
+                        const sphere = document.querySelector('.bouncing-sphere');
+                        sphere.style.width = `${size}px`;
+                        sphere.style.height = `${size}px`;
+                        // Re-init to adjust bounce path
+                        initOrbit(size);
+                    });
+                    break;
+                case 'curves': // Mystify settings
+                    screensaverSpecificSettings.innerHTML += `
+                        <div id="mystify-controls">
+                            <h2>Mystify Controls</h2>
+                            <div class="control-group">
+                                <label for="mystifyNumObjects">Number of Objects: <span id="mystifyNumObjectsValue">5</span></label>
+                                <input type="range" id="mystifyNumObjects" min="1" max="20" value="5">
+                            </div>
+                            <div class="control-group">
+                                <label for="mystifyNumNodes">Nodes per Object: <span id="mystifyNumNodesValue">4</span></label>
+                                <input type="range" id="mystifyNumNodes" min="3" max="10" value="4">
+                            </div>
+                            <div class="control-group">
+                                <label for="mystifySpeedControl">Speed: <span id="mystifySpeedValue">1.0</span>x</label>
+                                <input type="range" id="mystifySpeedControl" min="0.1" max="10.0" step="0.1" value="1.0">
+                            </div>
+                            <div class="control-group">
+                                <label for="mystifyTrailFrequency">Trail Frequency: <span id="mystifyTrailFrequencyValue">10</span></label>
+                                <input type="range" id="mystifyTrailFrequency" min="1" max="50" value="10">
+                            </div>
+                            <div class="control-group flex items-center">
+                                <input type="checkbox" id="mystifyIndividualPrints" class="mr-2">
+                                <label for="mystifyIndividualPrints" class="mb-0">Individual Prints (Hollow)</label>
+                            </div>
+                            <div class="control-group">
+                                <label for="mystifyColorPalette">Color Palette:</label>
+                                <select id="mystifyColorPalette">
+                                    <option value="classicAtari">Classic Atari</option>
+                                    <option value="vibrantAtari">Vibrant Atari</option>
+                                    <option value="monochrome">Monochrome (Green)</option>
+                                </select>
+                            </div>
+                            <button id="mystifyResetButton" class="reset-button">Reset Animation</button>
+                        </div>
+                    `;
+                    // Attach Mystify event listeners
+                    attachMystifyEventListeners();
+                    break;
+                case 'flowerBox3D':
+                     screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="flowerGridSize">Grid Size (e.g., 5 for 5x5)</label>
+                            <input type="range" id="flowerGridSize" min="3" max="10" value="5">
+                        </div>
+                        <div class="setting-group">
+                            <label for="flowerBaseColor">Base Color</label>
+                            <input type="color" id="flowerBaseColor" value="#FF00FF">
+                        </div>
+                        <div class="setting-group">
+                            <label for="flowerAltColor">Alt Color</label>
+                            <input type="color" id="flowerAltColor" value="#00FFFF">
+                        </div>
+                    `;
+                    document.getElementById('flowerGridSize').addEventListener('input', (e) => {
+                        initFlowerBox3D(e.target.value);
+                    });
+                    document.getElementById('flowerBaseColor').addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty('--flower-base-color', e.target.value);
+                        document.documentElement.style.setProperty('--flower-base-color-border', e.target.value);
+                        document.documentElement.style.setProperty('--flower-base-color-shadow', e.target.value);
+                    });
+                    document.getElementById('flowerAltColor').addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty('--flower-alt-color', e.target.value);
+                        document.documentElement.style.setProperty('--flower-alt-color-shadow', e.target.value);
+                    });
+                    break;
+                case 'flyingObjects3D':
+                     screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="objectSource">Object Source</label>
+                            <select id="objectSource">
+                                <option value="ascii">ASCII Symbols</option>
+                                <option value="emoji">Emojis</option>
+                                <option value="image">Custom Image URL</option>
+                            </select>
+                        </div>
+                        <div class="setting-group" id="imageURLGroup" style="display:none;">
+                            <label for="objectImageURL">Image URL</label>
+                            <input type="text" id="objectImageURL" placeholder="https://example.com/image.png">
+                        </div>
+                        <div class="setting-group">
+                            <label for="objectColor">Object Color (for ASCII/Emoji)</label>
+                            <input type="color" id="objectColor" value="#FFFFFF">
+                        </div>
+                        <div class="setting-group">
+                            <label for="objectDensity">Object Density</label>
+                            <input type="range" id="objectDensity" min="5" max="100" value="30">
+                        </div>
+                    `;
+                    document.getElementById('objectSource').addEventListener('change', (e) => {
+                        const imageURLGroup = document.getElementById('imageURLGroup');
+                        imageURLGroup.style.display = (e.target.value === 'image') ? 'block' : 'none';
+                        initFlyingObjects3D(document.getElementById('objectDensity').value); // Re-init with new source
+                    });
+                    document.getElementById('objectImageURL').addEventListener('input', () => {
+                        if (document.getElementById('objectSource').value === 'image') {
+                            initFlyingObjects3D(document.getElementById('objectDensity').value);
+                        }
+                    });
+                    document.getElementById('objectColor').addEventListener('input', (e) => {
+                        document.documentElement.style.setProperty('--obj-color', e.target.value);
+                    });
+                    document.getElementById('objectDensity').addEventListener('input', (e) => {
+                        initFlyingObjects3D(e.target.value);
+                    });
+                    // Set initial state for image URL group
+                    const initialObjectSource = document.getElementById('objectSource');
+                    if (initialObjectSource && initialObjectSource.value === 'image') {
+                        document.getElementById('imageURLGroup').style.display = 'block';
+                    }
+                    break;
+                case 'text3D':
+                    screensaverSpecificSettings.innerHTML += `
+                        <div class="setting-group">
+                            <label for="textColor3D">Text Color</label>
+                            <input type="color" id="textColor3D" value="#00FF00">
+                        </div>
+                        <div class="setting-group">
+                            <label for="textRotationSpeed">Rotation Speed (s)</label>
+                            <input type="range" id="textRotationSpeed" min="2" max="30" step="1" value="10">
+                        </div>
+                    `;
+                    document.getElementById('textColor3D').addEventListener('input', (e) => {
+                        const color = e.target.value;
+                        const custom3DText = document.getElementById('custom3DText');
+                        if (custom3DText) {
+                            custom3DText.style.color = color;
+                            custom3DText.style.textShadow = `0 0 10px ${color}, 0 0 20px ${color}, 0 0 30px ${color}`;
+                        }
+                    });
+                    document.getElementById('textRotationSpeed').addEventListener('input', (e) => {
+                        const custom3DText = document.getElementById('custom3DText');
+                        if (custom3DText) {
+                            custom3DText.style.animationDuration = `${e.target.value / parseFloat(globalSpeedSlider.value)}s`;
+                        }
+                    });
+                    break;
+                default:
+                    screensaverSpecificSettings.innerHTML += `<p style="color: #aaa;">No specific settings for this screensaver.</p>`;
+                    break;
+            }
+        }
+
+        // Handle the custom 3D Text input
+        function update3DText() {
+            if (activeScreensaverId === 'text3D') {
+                const customTextInput = document.getElementById('customTextContent');
+                const custom3DText = document.getElementById('custom3DText');
+                if (customTextInput && custom3DText) {
+                     custom3DText.textContent = customTextInput.value || "RETRO!";
+                }
+            }
+        }
+
+        // --- Screensaver Implementations (Simplified) ---
+
+        // Flying Through Space - NEW Implementation
+        function initFlyingThroughSpace(numStars = 100) {
+            const ss = document.getElementById('flyingThroughSpace');
+            ss.innerHTML = ''; // Clear existing stars
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+            const starColor = document.getElementById('starColor') ? document.getElementById('starColor').value : '#FFFFFF';
+
+            // Stop existing star generation/animation
+            if (currentAnimationIntervals.flyingThroughSpace) {
+                clearInterval(currentAnimationIntervals.flyingThroughSpace);
+            }
+
+            const createStar = () => {
+                const star = document.createElement('div');
+                star.classList.add('pixel-star');
+
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                const size = Math.random() * 5 + 2; // 2-7px initial size
+                const finalSize = size * (Math.random() * 5 + 3); // Grow significantly
+
+                let endX, endY;
+                const side = Math.floor(Math.random() * 4); // 0:top, 1:right, 2:bottom, 3:left
+
+                // Determine target edge based on initial position
+                if (Math.abs(startX - 0) < Math.abs(startX - window.innerWidth) && Math.abs(startY - 0) < Math.abs(startY - window.innerHeight)) {
+                    // Closer to top-left
+                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
+                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
+                } else if (Math.abs(startX - window.innerWidth) < Math.abs(startY - 0) && Math.abs(startX - window.innerWidth) < Math.abs(startY - window.innerHeight)) {
+                    // Closer to top-right
+                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
+                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
+                } else if (Math.abs(startY - window.innerHeight) < Math.abs(startX - 0) && Math.abs(startY - window.innerHeight) < Math.abs(startX - window.innerWidth)) {
+                    // Closer to bottom-right
+                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
+                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
+                } else {
+                    // Closer to bottom-left
+                    endX = Math.random() < 0.5 ? -finalSize : window.innerWidth + finalSize;
+                    endY = Math.random() < 0.5 ? -finalSize : window.innerHeight + finalSize;
+                }
+
+
+                // Set random start/end coordinates for movement towards edges
+                switch (side) {
+                    case 0: // Top
+                        endX = Math.random() * window.innerWidth;
+                        endY = -finalSize;
+                        break;
+                    case 1: // Right
+                        endX = window.innerWidth + finalSize;
+                        endY = Math.random() * window.innerHeight;
+                        break;
+                    case 2: // Bottom
+                        endX = Math.random() * window.innerWidth;
+                        endY = window.innerHeight + finalSize;
+                        break;
+                    case 3: // Left
+                        endX = -finalSize;
+                        endY = Math.random() * window.innerHeight;
+                        break;
+                }
+
+                // If start is in center, make it fly towards a random edge
+                if (startX > window.innerWidth * 0.25 && startX < window.innerWidth * 0.75 &&
+                    startY > window.innerHeight * 0.25 && startY < window.innerHeight * 0.75) {
+                        const randomEdge = Math.floor(Math.random() * 4);
+                        switch(randomEdge) {
+                            case 0: endY = -finalSize; break;
+                            case 1: endX = window.innerWidth + finalSize; break;
+                            case 2: endY = window.innerHeight + finalSize; break;
+                            case 3: endX = -finalSize; break;
+                        }
+                }
+
+
+                const duration = (Math.random() * 5 + 5) / speedMultiplier; // 5-10 seconds
+                const delay = Math.random() * duration * 0.8; // Stagger appearance
+
+                star.style.setProperty('--start-x', `${startX}px`);
+                star.style.setProperty('--start-y', `${startY}px`);
+                star.style.setProperty('--end-x', `${endX}px`);
+                star.style.setProperty('--end-y', `${endY}px`);
+                star.style.setProperty('--start-scale', `${size / finalSize}`);
+                star.style.setProperty('--end-scale', '1'); // Always end at finalSize scale
+                star.style.setProperty('--size', `${finalSize}px`); // Max size in CSS
+                star.style.setProperty('--duration', `${duration}s`);
+                star.style.animationDelay = `${delay}s`;
+                star.style.backgroundColor = starColor;
+                star.style.boxShadow = `0 0 5px ${starColor}, 0 0 10px ${starColor}`;
+
+                ss.appendChild(star);
+
+                star.addEventListener('animationend', () => {
+                    star.remove();
+                    createStar(); // Recreate when off-screen
+                }, { once: true });
+            };
+
+            for (let i = 0; i < numStars; i++) {
+                createStar();
+            }
+
+            // Keep creating new stars over time
+            currentAnimationIntervals.flyingThroughSpace = setInterval(() => {
+                createStar();
+            }, 500 / speedMultiplier); // Adjust interval based on speed
+        }
+
+
+        // 3D Pipes (Simplified)
+        let pipeGenerationInterval;
+        function initPipes3D(numPipes = 20) {
+            const ss = document.getElementById('pipes3D');
+            ss.innerHTML = '';
+            if (pipeGenerationInterval) clearInterval(pipeGenerationInterval);
+
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+            const pipeColor = document.getElementById('pipeColor') ? document.getElementById('pipeColor').value : '#00FFFF';
+
+            const createPipe = () => {
+                const pipe = document.createElement('div');
+                pipe.classList.add('pipe-segment');
+
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                const endX = Math.random() * window.innerWidth;
+                const endY = Math.random() * window.innerHeight;
+                const duration = (Math.random() * 3 + 3) / speedMultiplier; // 3-6s
+                const delay = Math.random() * duration;
+
+                pipe.style.setProperty('--startX', `${startX}px`);
+                pipe.style.setProperty('--startY', `${startY}px`);
+                pipe.style.setProperty('--endX', `${endX}px`);
+                pipe.style.setProperty('--endY', `${endY}px`);
+                pipe.style.setProperty('--pipe-speed', `${duration}s`);
+                pipe.style.setProperty('--delay', `${delay}s`);
+
+                pipe.style.backgroundColor = pipeColor;
+                pipe.style.boxShadow = `0 0 5px ${pipeColor}, inset 0 0 3px #fff`;
+
+                ss.appendChild(pipe);
+
+                pipe.addEventListener('animationend', (e) => {
+                    if (e.animationName === 'movePipe') {
+                        pipe.remove();
+                        createPipe(); // Create a new one when one finishes
+                    }
+                });
+            };
+
+            for (let i = 0; i < numPipes; i++) {
+                createPipe();
+            }
+        }
+
+        // Orbit - NEW Implementation (Bouncing Multi-Color Sphere)
+        let orbitSphere;
+        let sphereAnimationTimeout; // To clear bounce animation
+
+        function initOrbit(sphereSize = 150) {
+            const ss = document.getElementById('orbit');
+            ss.innerHTML = '<div class="bouncing-sphere"></div>'; // Recreate sphere
+            orbitSphere = ss.querySelector('.bouncing-sphere');
+
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+            const glowColor = document.getElementById('sphereGlowColor') ? document.getElementById('sphereGlowColor').value : '#00FF00';
+
+            orbitSphere.style.width = `${sphereSize}px`;
+            orbitSphere.style.height = `${sphereSize}px`;
+            orbitSphere.style.boxShadow = `0 0 50px ${glowColor}`;
+
+            // Reset animation to apply new properties
+            orbitSphere.style.animation = 'none';
+            void orbitSphere.offsetWidth; // Trigger reflow
+            orbitSphere.style.animation = `
+                rotateSphere ${10 / speedMultiplier}s linear infinite,
+                moveSphere ${Math.random() * 8 + 5 / speedMultiplier}s linear infinite alternate
+            `;
+
+            // Initial random position
+            const initialX = Math.random() * (window.innerWidth - sphereSize);
+            const initialY = Math.random() * (window.innerHeight - sphereSize);
+            orbitSphere.style.left = `${initialX}px`;
+            orbitSphere.style.top = `${initialY}px`;
+
+            // Set up random movement vectors for the sphere
+            let dx = (Math.random() < 0.5 ? 1 : -1) * (50 / speedMultiplier); // Initial horizontal velocity
+            let dy = (Math.random() < 0.5 ? 1 : -1) * (50 / speedMultiplier); // Initial vertical velocity
+            const animationDuration = 50; // Milliseconds per frame for movement logic
+
+            if (currentAnimationIntervals.orbit) {
+                clearInterval(currentAnimationIntervals.orbit);
+            }
+
+            let currentX = initialX;
+            let currentY = initialY;
+
+            currentAnimationIntervals.orbit = setInterval(() => {
+                currentX += dx;
+                currentY += dy;
+
+                // Bounce off walls
+                if (currentX <= 0) {
+                    currentX = 0;
+                    dx *= -1;
+                } else if (currentX >= window.innerWidth - sphereSize) {
+                    currentX = window.innerWidth - sphereSize;
+                    dx *= -1;
+                }
+
+                if (currentY <= 0) {
+                    currentY = 0;
+                    dy *= -1;
+                } else if (currentY >= window.innerHeight - sphereSize) {
+                    currentY = window.innerHeight - sphereSize;
+                    dy *= -1;
+                }
+
+                orbitSphere.style.transform = `translate(${currentX}px, ${currentY}px) rotateZ(${rotationAngle}deg)`; // Added rotation
+            }, animationDuration);
+
+            // Sphere color animation is handled by CSS conic-gradient and rotateSphere
+            let rotationAngle = 0;
+            currentAnimationIntervals.orbitRotation = setInterval(() => {
+                rotationAngle = (rotationAngle + 1) % 360; // Increment rotation for visual effect
+                orbitSphere.style.backgroundPosition = `${rotationAngle * 0.1}% ${rotationAngle * 0.1}%`; // Move gradient
+            }, 50 / speedMultiplier); // Faster interval for color movement
+        }
+
+
+        // Curves (Mystify) - Integrated from provided source
+        let mystifyCanvas, mystifyCtx, mystifyAnimationId;
+        const mystifySettings = {
+            numObjects: 5,
+            numNodes: 4,
+            speedMultiplier: 1.0,
+            trailFrequency: 10,
+            trailMode: 'fade',
+            colorPalette: 'classicAtari',
+            initialSpeed: 2,
+            maxSpeedVariance: 1,
+        };
+
+        const mystifyPalettes = {
+            classicAtari: [
+                '#A00000', '#00A000', '#0000A0', '#A0A000',
+                '#A000A0', '#00A0A0', '#C0C0C0', '#404040'
+            ],
+            vibrantAtari: [
+                '#FF0000', '#00FF00', '#0000FF', '#FFFF00',
+                '#FF00FF', '#00FFFF', '#FFFFFF', '#808080'
+            ],
+            monochrome: [
+                '#00FF00', '#00CC00', '#009900', '#006600'
+            ]
+        };
+        let mystifyObjects = [];
+        let mystifyFrameCount = 0;
+
+        function initCurvesMystify() {
+            const curvesScreensaver = document.getElementById('curves');
+            // Remove existing canvas if any
+            if (mystifyCanvas) {
+                mystifyCanvas.remove();
+                if (mystifyAnimationId) cancelAnimationFrame(mystifyAnimationId);
+            }
+
+            mystifyCanvas = document.createElement('canvas');
+            mystifyCanvas.id = 'mystifyCanvas';
+            mystifyCanvas.style.width = '100%';
+            mystifyCanvas.style.height = '100%';
+            mystifyCanvas.style.display = 'block';
+            curvesScreensaver.appendChild(mystifyCanvas);
+            mystifyCtx = mystifyCanvas.getContext('2d');
+
+            resizeMystifyCanvas();
+            window.addEventListener('resize', resizeMystifyCanvas);
+
+            mystifyResetAnimation();
+        }
+
+        function resizeMystifyCanvas() {
+            if (mystifyCanvas) {
+                mystifyCanvas.width = mystifyCanvas.offsetWidth;
+                mystifyCanvas.height = mystifyCanvas.offsetHeight;
+                // If the canvas is hidden (e.g., when another screensaver is active),
+                // offsetWidth/Height might be 0. Use parent's dimensions as fallback.
+                if (mystifyCanvas.width === 0 || mystifyCanvas.height === 0) {
+                     mystifyCanvas.width = displayArea.offsetWidth;
+                     mystifyCanvas.height = displayArea.offsetHeight;
+                }
+                 mystifyResetAnimation();
+            }
+        }
+
+        function attachMystifyEventListeners() {
+            const numObjectsInput = document.getElementById('mystifyNumObjects');
+            const numObjectsValueSpan = document.getElementById('mystifyNumObjectsValue');
+            const numNodesInput = document.getElementById('mystifyNumNodes');
+            const numNodesValueSpan = document.getElementById('mystifyNumNodesValue');
+            const speedControlInput = document.getElementById('mystifySpeedControl');
+            const speedValueSpan = document.getElementById('mystifySpeedValue');
+            const trailFrequencyInput = document.getElementById('mystifyTrailFrequency');
+            const trailFrequencyValueSpan = document.getElementById('mystifyTrailFrequencyValue');
+            const individualPrintsCheckbox = document.getElementById('mystifyIndividualPrints');
+            const colorPaletteSelect = document.getElementById('mystifyColorPalette');
+            const resetButton = document.getElementById('mystifyResetButton');
+
+            // Set initial values for UI elements based on settings
+            numObjectsInput.value = mystifySettings.numObjects;
+            numObjectsValueSpan.textContent = mystifySettings.numObjects;
+            numNodesInput.value = mystifySettings.numNodes;
+            numNodesValueSpan.textContent = mystifySettings.numNodes;
+            speedControlInput.value = mystifySettings.speedMultiplier;
+            speedValueSpan.textContent = mystifySettings.speedMultiplier.toFixed(1);
+            trailFrequencyInput.value = mystifySettings.trailFrequency;
+            trailFrequencyValueSpan.textContent = mystifySettings.trailFrequency;
+            individualPrintsCheckbox.checked = (mystifySettings.trailMode === 'individual');
+            colorPaletteSelect.value = mystifySettings.colorPalette;
+
+            numObjectsInput.oninput = (e) => {
+                mystifySettings.numObjects = parseInt(e.target.value);
+                numObjectsValueSpan.textContent = mystifySettings.numObjects;
+                mystifyResetAnimation();
+            };
+            numNodesInput.oninput = (e) => {
+                mystifySettings.numNodes = parseInt(e.target.value);
+                numNodesValueSpan.textContent = mystifySettings.numNodes;
+                mystifyResetAnimation();
+            };
+            speedControlInput.oninput = (e) => {
+                mystifySettings.speedMultiplier = parseFloat(e.target.value);
+                speedValueSpan.textContent = mystifySettings.speedMultiplier.toFixed(1);
+            };
+            trailFrequencyInput.oninput = (e) => {
+                mystifySettings.trailFrequency = parseInt(e.target.value);
+                trailFrequencyValueSpan.textContent = mystifySettings.trailFrequency;
+                if (mystifySettings.trailMode === 'individual') {
+                    mystifyResetAnimation();
+                }
+            };
+            individualPrintsCheckbox.onchange = (e) => {
+                mystifySettings.trailMode = e.target.checked ? 'individual' : 'fade';
+                mystifyResetAnimation();
+            };
+            colorPaletteSelect.onchange = (e) => {
+                mystifySettings.colorPalette = e.target.value;
+                mystifyResetAnimation();
+            };
+            resetButton.onclick = mystifyResetAnimation;
+        }
+
+        function mystifyGenerateObject() {
+            const currentPalette = mystifyPalettes[mystifySettings.colorPalette];
+            const objectColor = currentPalette[Math.floor(Math.random() * currentPalette.length)];
+            const nodes = [];
+
+            for (let i = 0; i < mystifySettings.numNodes; i++) {
+                const x = Math.random() * mystifyCanvas.width;
+                const y = Math.random() * mystifyCanvas.height;
+                const dx = (Math.random() * mystifySettings.maxSpeedVariance * 2 - mystifySettings.maxSpeedVariance) + (Math.random() < 0.5 ? mystifySettings.initialSpeed : -mystifySettings.initialSpeed);
+                const dy = (Math.random() * mystifySettings.maxSpeedVariance * 2 - mystifySettings.maxSpeedVariance) + (Math.random() < 0.5 ? mystifySettings.initialSpeed : -mystifySettings.initialSpeed);
+                nodes.push({ x, y, dx, dy });
+            }
+            return { nodes: nodes, trailSnapshots: [], color: objectColor };
+        }
+
+        function mystifyResetAnimation() {
+            if (mystifyAnimationId) {
+                cancelAnimationFrame(mystifyAnimationId);
+            }
+            mystifyObjects = [];
+            mystifyFrameCount = 0;
+
+            for (let i = 0; i < mystifySettings.numObjects; i++) {
+                mystifyObjects.push(mystifyGenerateObject());
+            }
+
+            if (mystifyCtx) {
+                mystifyCtx.clearRect(0, 0, mystifyCanvas.width, mystifyCanvas.height);
+            }
+            mystifyAnimate();
+        }
+
+        function mystifyAnimate() {
+            if (!mystifyCtx || !mystifyCanvas) return; // Exit if canvas not ready
+            mystifyAnimationId = requestAnimationFrame(mystifyAnimate);
+            mystifyFrameCount++;
+
+            if (mystifySettings.trailMode === 'fade') {
+                mystifyCtx.fillStyle = `rgba(0, 0, 0, ${1 / mystifySettings.trailFrequency})`;
+                mystifyCtx.fillRect(0, 0, mystifyCanvas.width, mystifyCanvas.height);
+            } else {
+                mystifyCtx.clearRect(0, 0, mystifyCanvas.width, mystifyCanvas.height);
+            }
+
+            mystifyObjects.forEach(obj => {
+                obj.nodes.forEach((node) => {
+                    node.x += node.dx * mystifySettings.speedMultiplier;
+                    node.y += node.dy * mystifySettings.speedMultiplier;
+
+                    if (node.x < 0 || node.x > mystifyCanvas.width) {
+                        node.dx *= -1;
+                        node.x = node.x < 0 ? 0 : mystifyCanvas.width;
+                    }
+                    if (node.y < 0 || node.y > mystifyCanvas.height) {
+                        node.dy *= -1;
+                        node.y = node.y < 0 ? 0 : mystifyCanvas.height;
+                    }
+                });
+
+                if (mystifySettings.trailMode === 'fade') {
+                    mystifyCtx.strokeStyle = obj.color;
+                    mystifyCtx.fillStyle = obj.color;
+                    mystifyCtx.lineWidth = 2;
+                    mystifyCtx.beginPath();
+                    mystifyCtx.moveTo(obj.nodes[0].x, obj.nodes[0].y);
+                    obj.nodes.forEach(node => mystifyCtx.lineTo(node.x, node.y));
+                    mystifyCtx.closePath();
+                    mystifyCtx.stroke();
+                    mystifyCtx.fill();
+                } else {
+                    if (mystifyFrameCount % mystifySettings.trailFrequency === 0) {
+                        const snapshot = obj.nodes.map(node => ({ x: node.x, y: node.y }));
+                        obj.trailSnapshots.push(snapshot);
+                    }
+                    while (obj.trailSnapshots.length > mystifySettings.trailFrequency) {
+                        obj.trailSnapshots.shift();
+                    }
+
+                    obj.trailSnapshots.forEach((snapshot, index) => {
+                        const alpha = (index + 1) / obj.trailSnapshots.length;
+                        mystifyCtx.strokeStyle = obj.color;
+                        mystifyCtx.lineWidth = 2;
+                        mystifyCtx.globalAlpha = alpha;
+                        mystifyCtx.beginPath();
+                        mystifyCtx.moveTo(snapshot[0].x, snapshot[0].y);
+                        snapshot.forEach(pos => mystifyCtx.lineTo(pos.x, pos.y));
+                        mystifyCtx.closePath();
+                        mystifyCtx.stroke();
+                    });
+
+                    mystifyCtx.globalAlpha = 1;
+                    mystifyCtx.strokeStyle = obj.color;
+                    mystifyCtx.lineWidth = 2;
+                    mystifyCtx.beginPath();
+                    mystifyCtx.moveTo(obj.nodes[0].x, obj.nodes[0].y);
+                    obj.nodes.forEach(node => mystifyCtx.lineTo(node.x, node.y));
+                    mystifyCtx.closePath();
+                    mystifyCtx.stroke();
+                }
+            });
+        }
+
+        // 3D FlowerBox (Simplified)
+        function initFlowerBox3D(gridSize = 5) {
+            const ss = document.getElementById('flowerBox3D');
+            const flowerGrid = ss.querySelector('.flower-grid');
+            flowerGrid.innerHTML = '';
+            flowerGrid.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            flowerGrid.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+            flowerGrid.style.animationDuration = `${30 / speedMultiplier}s`;
+
+            const baseColor = document.getElementById('flowerBaseColor') ? document.getElementById('flowerBaseColor').value : 'rgba(255, 0, 255, 0.5)';
+            const altColor = document.getElementById('flowerAltColor') ? document.getElementById('flowerAltColor').value : 'rgba(0, 255, 255, 0.5)';
+
+            // Update CSS variables
+            document.documentElement.style.setProperty('--flower-base-color', baseColor);
+            document.documentElement.style.setProperty('--flower-base-color-border', baseColor);
+            document.documentElement.style.setProperty('--flower-base-color-shadow', baseColor);
+            document.documentElement.style.setProperty('--flower-alt-color', altColor);
+            document.documentElement.style.setProperty('--flower-alt-color-shadow', altColor);
+
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('flower-cell');
+                cell.style.setProperty('--rx', `${Math.random() * 90 - 45}deg`);
+                cell.style.setProperty('--ry', `${Math.random() * 90 - 45}deg`);
+                cell.style.setProperty('--rz', `${Math.random() * 90 - 45}deg`);
+                cell.style.animationDelay = `${Math.random() * 5 / speedMultiplier}s`;
+                cell.style.animationDuration = `${5 / speedMultiplier}s`;
+                flowerGrid.appendChild(cell);
+            }
+        }
+
+        // 3D Flying Objects (Simplified)
+        let flyingObjectsInterval;
+        const asciiSymbols = ['*', '+', '#', '@', '%', '$', '&', '!', '?', '/', '\\', '^', '~'];
+        const emojis = ['🌟', '🚀', '🌌', '🛸', '✨', '💫', '🍎', '🍐', '🍊', '🍋', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🧆', '🌮', '🌯', '🥗', '🍲', '🥘', '🍝', '🍜', '🍛', '🍣', '🍱', '🥟', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧃', '🧉', '🧊', '🥄', '🍴', '🍽️', '🥣', '🥡', '🥢', '🧂'];
+
+        function initFlyingObjects3D(numObjects = 30) {
+            const ss = document.getElementById('flyingObjects3D');
+            ss.innerHTML = ''; // Clear existing objects
+            if (flyingObjectsInterval) clearInterval(flyingObjectsInterval);
+
+            const objectSource = document.getElementById('objectSource') ? document.getElementById('objectSource').value : 'ascii';
+            const imageUrl = document.getElementById('objectImageURL') ? document.getElementById('objectImageURL').value : '';
+            const objectColor = document.getElementById('objectColor') ? document.getElementById('objectColor').value : '#FFFFFF';
+            const speedMultiplier = parseFloat(globalSpeedSlider.value);
+
+            const createObject = () => {
+                const obj = document.createElement('div');
+                obj.classList.add('flying-object');
+
+                if (objectSource === 'image' && imageUrl) {
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.alt = "Flying Object";
+                    obj.appendChild(img);
+                    obj.style.fontSize = 'initial'; // Reset font size if image
+                    obj.style.width = '60px'; // Default size for images
+                    obj.style.height = '60px';
+                } else if (objectSource === 'emoji') {
+                    obj.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                } else { // ascii
+                    obj.textContent = asciiSymbols[Math.floor(Math.random() * asciiSymbols.length)];
+                }
+
+                obj.style.setProperty('--obj-color', objectColor);
+
+                const startX = Math.random() * window.innerWidth;
+                const startY = Math.random() * window.innerHeight;
+                // Ensure objects fly off screen
+                const endX = Math.random() * window.innerWidth * 2 - window.innerWidth; // -width to 2*width
+                const endY = Math.random() * window.innerHeight * 2 - window.innerHeight; // -height to 2*height
+
+                const duration = (Math.random() * 10 + 5) / speedMultiplier; // 5-15s
+                const delay = Math.random() * duration;
+
+                obj.style.setProperty('--startX', `${startX}px`);
+                obj.style.setProperty('--startY', `${startY}px`);
+                obj.style.setProperty('--endX', `${endX}px`);
+                obj.style.setProperty('--endY', `${endY}px`);
+                obj.style.setProperty('--duration', `${duration}s`);
+                obj.style.animationDelay = `${delay}s`;
+
+                ss.appendChild(obj);
+
+                obj.addEventListener('animationend', () => {
+                    obj.remove();
+                    createObject(); // Create a new one
+                }, { once: true });
+            };
+
+            for (let i = 0; i < numObjects; i++) {
+                createObject();
+            }
+
+            // Continuously add objects
+            flyingObjectsInterval = setInterval(() => {
+                createObject();
+            }, 1000 / (numObjects / 10) / speedMultiplier); // Adjust creation rate
+            currentAnimationIntervals.flyingObjects = flyingObjectsInterval;
+        }
+
+
+        // Initial setup
+        // Activate 3D Text (Fake) by default on load
+        activateScreensaver('text3D');
+
+    </script>
+</body>
+</html>
