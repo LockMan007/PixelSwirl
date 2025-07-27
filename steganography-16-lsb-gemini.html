@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Steganography App (Minimal GUI)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh; /* Ensure body takes full viewport height */
+        }
+
+        /* Top Row - Horizontal Layout */
+        .top-row-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start; /* Align items to the top */
+            gap: 15px;
+            width: 100%;
+            max-width: 1200px; /* Wider max-width for horizontal elements */
+            margin-bottom: 20px;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        }
+
+        .top-input-group {
+            background-color: #2b2b2b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 180px; /* Ensure some minimum width for each section */
+            flex: 1; /* Allow items to grow and shrink */
+        }
+
+        .top-input-group label {
+            font-size: 1.1em;
+            color: #f0f0f0;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        /* Image dimensions positioned to the left */
+        .image-label-row {
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Small gap between dimensions and label */
+            margin-bottom: 8px;
+        }
+
+        .image-dimensions {
+            font-size: 0.9em;
+            color: #b0b0b0;
+            min-width: 80px; /* Give it enough space */
+            text-align: right;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 10px;
+            flex-wrap: wrap; /* Allow wrapping */
+            justify-content: center;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            flex-grow: 1;
+            max-width: 150px;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #3a3a3a;
+            color: #e0e0e0;
+        }
+
+        .file-input-wrapper input[type="file"]::-webkit-file-upload-button {
+            background-color: #444;
+            color: #e0e0e0;
+            padding: 6px 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .file-input-wrapper input[type="file"]::-webkit-file-upload-button:hover {
+            background-color: #555;
+        }
+
+        .preview-thumb {
+            height: 60px; /* Fixed height for the thumbnail */
+            width: auto; /* Auto width to maintain aspect ratio */
+            max-width: 60px; /* Constrain width to avoid excessive size */
+            border: 1px solid #777;
+            border-radius: 4px;
+            object-fit: contain; /* Ensure image fits within bounds */
+            display: none; /* Hidden by default */
+            cursor: pointer; /* Indicate clickable */
+            transition: transform 0.2s ease-in-out;
+        }
+        .preview-thumb:hover:not(.zoomed) {
+            transform: scale(1.05); /* Slight hover effect */
+        }
+
+        /* Slider Styling */
+        .slider-group {
+            background-color: #2b2b2b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 180px;
+            width: 100%; /* Take full width of parent input group */
+            box-sizing: border-box; /* Include padding in width */
+        }
+        .slider-group label {
+            font-size: 1.1em;
+            color: #f0f0f0;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        .slider-group input[type="range"]:hover {
+            opacity: 1;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
+
+        /* Second Row - Main Image Displays */
+        .main-image-row {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            flex-grow: 1; /* Allow this row to take available vertical space */
+        }
+        .main-image-container {
+            background-color: #2b2b2b;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+        }
+        .main-image-container img {
+            border: 1px solid #555;
+            display: block;
+            max-width: 100%;
+            max-height: 640px; /* Capped height for large images */
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            margin-bottom: 15px; /* Space for buttons */
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+            flex-grow: 1; /* Allow image to fill vertical space */
+        }
+        .main-image-container img:hover:not(.zoomed) {
+            transform: scale(1.02);
+        }
+
+        /* Third Row - Buttons */
+        .button-row-container {
+            display: flex;
+            justify-content: space-between; /* Push buttons to ends */
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-bottom: 20px;
+            padding: 0 15px; /* Padding to match other sections */
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .button-group button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .button-group button:hover {
+            background-color: #0056b3;
+        }
+        #genNoiseButton {
+            background-color: #28a745;
+        }
+        #genNoiseButton:hover {
+            background-color: #218838;
+        }
+
+        /* Fourth Row - Full Size Decoded Image */
+        .full-size-output {
+            background-color: #2b2b2b;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            margin-bottom: 20px; /* Ensure space at the bottom */
+        }
+        .full-size-output img {
+            border: 1px solid #555;
+            display: block;
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+        .full-size-output img:hover:not(.zoomed) {
+            transform: scale(1.01);
+        }
+
+        /* Image Zoom Styles */
+        .zoomed {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 95vw !important;
+            max-height: 95vh !important;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            z-index: 1000;
+            border: 5px solid #007bff;
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.8);
+            cursor: zoom-out !important;
+        }
+        .zoom-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-row-container">
+        <div class="top-input-group">
+            <div class="image-label-row">
+                <div class="image-dimensions" id="visibleImageDims"></div>
+                <label>Visible Image</label>
+            </div>
+            <div class="file-input-wrapper">
+                <input type="file" id="visibleImageInput" accept="image/*">
+                <img id="visibleImagePreview" class="preview-thumb" src="#" alt="Visible Image Preview">
+            </div>
+            <div class="slider-group">
+                <label for="encodeBitsPerChannelSlider">Encode Bits (1-7): <span id="encodeBitsPerChannelValue">4</span></label>
+                <input type="range" id="encodeBitsPerChannelSlider" min="1" max="7" value="4">
+            </div>
+        </div>
+
+        <div class="top-input-group">
+            <div class="image-label-row">
+                <div class="image-dimensions" id="hiddenImageDims"></div>
+                <label>Hidden Image</label>
+            </div>
+            <div class="file-input-wrapper">
+                <input type="file" id="hiddenImageInput" accept="image/*">
+                <img id="hiddenImagePreview" class="preview-thumb" src="#" alt="Hidden Image Preview">
+            </div>
+            <div class="slider-group">
+                <label for="masterBitsPerChannelSlider">Master (1-7): <span id="masterBitsPerChannelValue">4</span></label>
+                <input type="range" id="masterBitsPerChannelSlider" min="1" max="7" value="4">
+            </div>
+        </div>
+
+        <div class="top-input-group">
+            <div class="image-label-row">
+                <div class="image-dimensions" id="encodedImageInputDims"></div>
+                <label>Encoded Image</label>
+            </div>
+            <div class="file-input-wrapper">
+                <input type="file" id="encodedImageInput" accept="image/*">
+                <img id="encodedImagePreview" class="preview-thumb" src="#" alt="Encoded Image Preview">
+            </div>
+            <div class="slider-group">
+                <label for="decodeBitsPerChannelSlider">Decode Bits (1-7): <span id="decodeBitsPerChannelValue">4</span></label>
+                <input type="range" id="decodeBitsPerChannelSlider" min="1" max="7" value="4">
+            </div>
+        </div>
+    </div>
+
+    <div class="main-image-row">
+        <div class="main-image-container">
+            <canvas id="encodedCanvas" style="display: none;"></canvas>
+            <img id="encodedOutputImage" src="#" alt="Encoded Output" style="display: none;">
+        </div>
+
+        <div class="main-image-container">
+            <canvas id="decodedCanvas" style="display: none;"></canvas>
+            <img id="decodedOutputImage" src="#" alt="Decoded Output" style="display: none;">
+        </div>
+    </div>
+
+    <div class="button-row-container">
+        <div class="button-group">
+            <button id="genNoiseButton">Gen Blocky RGB Noise</button>
+            <button id="saveEncodedButton" style="display: none;">Save Encoded Image</button>
+        </div>
+        <div class="button-group">
+            <button id="saveDecodedButton" style="display: none;">Save Decoded Image</button>
+        </div>
+    </div>
+
+    <div class="full-size-output" style="display: none;">
+        <img id="fullSizeDecodedImage" src="#" alt="Full Size Decoded Hidden Image">
+    </div>
+
+    <script>
+        // --- Global Image Objects ---
+        let visibleImage = new Image();
+        let hiddenImage = new Image();
+        let imageToDecode = new Image();
+
+        // --- DOM Elements ---
+        const visibleImageInput = document.getElementById('visibleImageInput');
+        const hiddenImageInput = document.getElementById('hiddenImageInput');
+        const encodedImageInput = document.getElementById('encodedImageInput');
+
+        const visibleImagePreview = document.getElementById('visibleImagePreview');
+        const hiddenImagePreview = document.getElementById('hiddenImagePreview');
+        const encodedImagePreview = document.getElementById('encodedImagePreview');
+
+        const visibleImageDims = document.getElementById('visibleImageDims');
+        const hiddenImageDims = document.getElementById('hiddenImageDims');
+        const encodedImageInputDims = document.getElementById('encodedImageInputDims');
+
+        const encodeBitsPerChannelSlider = document.getElementById('encodeBitsPerChannelSlider');
+        const encodeBitsPerChannelValueSpan = document.getElementById('encodeBitsPerChannelValue');
+        const decodeBitsPerChannelSlider = document.getElementById('decodeBitsPerChannelSlider');
+        const decodeBitsPerChannelValueSpan = document.getElementById('decodeBitsPerChannelValue');
+        const masterBitsPerChannelSlider = document.getElementById('masterBitsPerChannelSlider');
+        const masterBitsPerChannelValueSpan = document.getElementById('masterBitsPerChannelValue');
+
+
+        const genNoiseButton = document.getElementById('genNoiseButton');
+
+        const encodedCanvas = document.getElementById('encodedCanvas');
+        const encodedCtx = encodedCanvas.getContext('2d');
+        const encodedOutputImage = document.getElementById('encodedOutputImage');
+        const saveEncodedButton = document.getElementById('saveEncodedButton');
+
+        const decodedCanvas = document.getElementById('decodedCanvas');
+        const decodedCtx = decodedCanvas.getContext('2d');
+        const decodedOutputImage = document.getElementById('decodedOutputImage');
+        const saveDecodedButton = document.getElementById('saveDecodedButton');
+        const fullSizeDecodedImage = document.getElementById('fullSizeDecodedImage');
+        const fullSizeDecodedOutputSection = document.querySelector('.full-size-output');
+
+        // Initial slider value display
+        encodeBitsPerChannelValueSpan.textContent = encodeBitsPerChannelSlider.value;
+        decodeBitsPerChannelValueSpan.textContent = decodeBitsPerChannelSlider.value;
+        masterBitsPerChannelValueSpan.textContent = masterBitsPerChannelSlider.value;
+
+
+        // --- Helper Function: Update Image, Preview, and Dimensions ---
+        function updateImageAndPreview(file, imageObject, previewElement, dimsElement, callback) {
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imageObject.onload = () => {
+                        if (previewElement) {
+                            previewElement.src = e.target.result;
+                            previewElement.style.display = 'block';
+                        }
+                        if (dimsElement) {
+                            dimsElement.textContent = `${imageObject.naturalWidth} x ${imageObject.naturalHeight}`;
+                        }
+                        if (callback) callback(); // Execute callback after image is fully loaded
+                    };
+                    imageObject.onerror = () => {
+                        console.error(`Error loading image: ${file.name}`);
+                        imageObject.src = '';
+                        if (previewElement) {
+                            previewElement.src = '#';
+                            previewElement.style.display = 'none';
+                        }
+                        if (dimsElement) {
+                            dimsElement.textContent = '';
+                        }
+                        if (callback) callback(); // Call callback even on error to allow state updates
+                    };
+                    imageObject.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imageObject.src = '';
+                if (previewElement) {
+                    previewElement.src = '#';
+                    previewElement.style.display = 'none';
+                }
+                if (dimsElement) {
+                    dimsElement.textContent = '';
+                }
+                if (callback) callback(); // Still call callback even if no file to ensure state updates
+            }
+        }
+
+        // --- Auto-Trigger Encoding/Decoding ---
+        function tryAutoEncode() {
+            // Check if both visible and hidden images are loaded and have natural dimensions
+            if (visibleImage.src && hiddenImage.src && visibleImage.complete && hiddenImage.complete &&
+                visibleImage.naturalWidth > 0 && visibleImage.naturalHeight > 0 &&
+                hiddenImage.naturalWidth > 0 && hiddenImage.naturalHeight > 0) {
+                console.log('Both images loaded, auto-encoding...');
+                performEncoding();
+            } else {
+                console.log('Images not yet ready for auto-encode or missing one/both.');
+            }
+        }
+
+        function tryAutoDecode() {
+            // Check if the encoded image is loaded and has natural dimensions
+            if (imageToDecode.src && imageToDecode.complete && imageToDecode.naturalWidth > 0 && imageToDecode.naturalHeight > 0) {
+                console.log('Encoded image loaded, auto-decoding...');
+                performDecode(imageToDecode);
+            } else {
+                console.log('Encoded image not yet ready for auto-decode or missing.');
+            }
+        }
+
+        // --- File Input Change Listeners (with auto-trigger) ---
+        visibleImageInput.addEventListener('change', (e) => {
+            updateImageAndPreview(e.target.files[0], visibleImage, visibleImagePreview, visibleImageDims, tryAutoEncode);
+        });
+
+        hiddenImageInput.addEventListener('change', (e) => {
+            updateImageAndPreview(e.target.files[0], hiddenImage, hiddenImagePreview, hiddenImageDims, tryAutoEncode);
+        });
+
+        encodedImageInput.addEventListener('change', (e) => {
+            updateImageAndPreview(e.target.files[0], imageToDecode, encodedImagePreview, encodedImageInputDims, tryAutoDecode);
+        });
+
+        // --- Drag and Drop Handlers (modified to use updateImageAndPreview and auto-trigger) ---
+        function handleDropWithAuto(event, imageObject, fileInput, previewElement, dimsElement, autoTriggerFunction) {
+            event.preventDefault();
+            const dropZone = event.currentTarget;
+            dropZone.classList.remove('drag-over');
+
+            const files = event.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                const file = files[0];
+                updateImageAndPreview(file, imageObject, previewElement, dimsElement, autoTriggerFunction);
+                // Also update the hidden file input's files list for consistency
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+            } else {
+                console.warn('Dropped file is not an image or no file dropped.');
+            }
+        }
+
+        // Event listeners for drag-and-drop zones
+        document.querySelectorAll('.top-input-group').forEach(dropZone => {
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', (e) => { e.currentTarget.classList.remove('drag-over'); });
+        });
+
+        // Specific drop targets for each input group
+        document.querySelector('.top-row-container > .top-input-group:nth-child(1)').addEventListener('drop', (e) => handleDropWithAuto(e, visibleImage, visibleImageInput, visibleImagePreview, visibleImageDims, tryAutoEncode));
+        document.querySelector('.top-row-container > .top-input-group:nth-child(2)').addEventListener('drop', (e) => handleDropWithAuto(e, hiddenImage, hiddenImageInput, hiddenImagePreview, hiddenImageDims, tryAutoEncode));
+        document.querySelector('.top-row-container > .top-input-group:nth-child(3)').addEventListener('drop', (e) => handleDropWithAuto(e, imageToDecode, encodedImageInput, encodedImagePreview, encodedImageInputDims, tryAutoDecode));
+
+
+        // --- Slider Change Listeners (separate for encode and decode) ---
+        encodeBitsPerChannelSlider.addEventListener('input', () => {
+            encodeBitsPerChannelValueSpan.textContent = encodeBitsPerChannelSlider.value;
+            tryAutoEncode(); // Only re-encode when this slider changes
+        });
+
+        decodeBitsPerChannelSlider.addEventListener('input', () => {
+            decodeBitsPerChannelValueSpan.textContent = decodeBitsPerChannelSlider.value;
+            tryAutoDecode(); // Only re-decode when this slider changes
+        });
+
+        // --- Master Slider Logic ---
+        masterBitsPerChannelSlider.addEventListener('input', () => {
+            const masterValue = masterBitsPerChannelSlider.value;
+            masterBitsPerChannelValueSpan.textContent = masterValue;
+
+            // Update both encode and decode sliders, triggering their respective change events
+            encodeBitsPerChannelSlider.value = masterValue;
+            encodeBitsPerChannelValueSpan.textContent = masterValue; // Update span directly for immediate feedback
+            // Manually call tryAutoEncode() as changing .value doesn't trigger 'input' event automatically
+            tryAutoEncode();
+
+            decodeBitsPerChannelSlider.value = masterValue;
+            decodeBitsPerChannelValueSpan.textContent = masterValue; // Update span directly for immediate feedback
+            // Manually call tryAutoDecode()
+            tryAutoDecode();
+        });
+
+        // --- Generate Blocky RGB Noise ---
+        genNoiseButton.addEventListener('click', () => {
+            // If hidden image is loaded, use its dimensions. Otherwise, use a default.
+            let noiseWidth = 512;
+            let noiseHeight = 512;
+
+            if (hiddenImage.src && hiddenImage.complete && hiddenImage.naturalWidth > 0 && hiddenImage.naturalHeight > 0) {
+                noiseWidth = hiddenImage.naturalWidth;
+                noiseHeight = hiddenImage.naturalHeight;
+                console.log('Generating Blocky RGB noise based on Hidden Image dimensions.');
+            } else {
+                console.warn('No Hidden Image selected. Generating default 512x512 Blocky RGB noise.');
+                // Optionally alert user or just proceed with default
+            }
+
+            generateNoise(noiseWidth, noiseHeight);
+        });
+
+        function generateNoise(width, height) {
+            const noiseCanvas = document.createElement('canvas');
+            noiseCanvas.width = width;
+            noiseCanvas.height = height;
+            const noiseCtx = noiseCanvas.getContext('2d');
+            const imageData = noiseCtx.createImageData(width, height);
+            const pixels = imageData.data;
+
+            const blockSize = 5; // The size of each square "pixel" of noise
+
+            for (let y = 0; y < height; y += blockSize) {
+                for (let x = 0; x < width; x += blockSize) {
+                    // Generate one random color for the entire block
+                    const r = Math.floor(Math.random() * 256);
+                    const g = Math.floor(Math.random() * 256);
+                    const b = Math.floor(Math.random() * 256);
+
+                    // Fill the 5x5 block with this random color
+                    for (let dy = 0; dy < blockSize; dy++) {
+                        for (let dx = 0; dx < blockSize; dx++) {
+                            const currentX = x + dx;
+                            const currentY = y + dy;
+
+                            // Ensure we don't draw outside the canvas boundaries
+                            if (currentX < width && currentY < height) {
+                                const idx = (currentY * width + currentX) * 4;
+                                pixels[idx] = r;     // Red
+                                pixels[idx + 1] = g; // Green
+                                pixels[idx + 2] = b; // Blue
+                                pixels[idx + 3] = 255; // Alpha (Opaque)
+                            }
+                        }
+                    }
+                }
+            }
+
+            noiseCtx.putImageData(imageData, 0, 0);
+            visibleImage.src = noiseCanvas.toDataURL('image/png');
+            visibleImagePreview.src = noiseCanvas.toDataURL('image/png');
+            visibleImagePreview.style.display = 'block';
+            visibleImageDims.textContent = `${width} x ${height}`;
+
+            console.log(`Generated ${width}x${height} blocky RGB noise image as visible image.`);
+
+            visibleImageInput.value = ''; // Clear file input value to reflect it's generated
+            visibleImage.onload = tryAutoEncode; // Ensure auto-encode runs after the new visible image (noise) is loaded
+        }
+
+
+        // --- Encoding Logic ---
+        function performEncoding() {
+            if (!visibleImage.src || !hiddenImage.src || !visibleImage.complete || !hiddenImage.complete || visibleImage.naturalWidth === 0 || hiddenImage.naturalWidth === 0) {
+                console.warn('Encoding skipped: Visible or Hidden image not fully loaded/available.');
+                return;
+            }
+
+            const bitsPerChannel = parseInt(encodeBitsPerChannelSlider.value); // Use encode slider's value
+
+            const clearMask = 255 - ((1 << bitsPerChannel) - 1);
+            const extractMask = (1 << bitsPerChannel) - 1;
+            const shiftAmount = 8 - bitsPerChannel;
+
+            encodedCanvas.width = visibleImage.naturalWidth;
+            encodedCanvas.height = visibleImage.naturalHeight;
+
+            encodedCtx.drawImage(visibleImage, 0, 0);
+            const visibleImageData = encodedCtx.getImageData(0, 0, encodedCanvas.width, encodedCanvas.height);
+            const visiblePixels = visibleImageData.data;
+
+            const tempHiddenCanvas = document.createElement('canvas');
+            const tempHiddenCtx = tempHiddenCanvas.getContext('2d');
+
+            tempHiddenCanvas.width = visibleImage.naturalWidth;
+            tempHiddenCanvas.height = visibleImage.naturalHeight;
+
+            let sourceWidth = hiddenImage.naturalWidth;
+            let sourceHeight = hiddenImage.naturalHeight;
+
+            let destWidth;
+            let destHeight;
+
+            const scaleFactor = Math.min(visibleImage.naturalWidth / sourceWidth, visibleImage.naturalHeight / sourceHeight);
+
+            destWidth = sourceWidth * scaleFactor;
+            destHeight = sourceHeight * scaleFactor;
+
+            let destX = (visibleImage.naturalWidth - destWidth) / 2;
+            let destY = (visibleImage.naturalHeight - destHeight) / 2;
+
+            tempHiddenCtx.clearRect(0, 0, tempHiddenCanvas.width, tempHiddenCanvas.height);
+            tempHiddenCtx.drawImage(hiddenImage, 0, 0, sourceWidth, sourceHeight,
+                                     destX, destY, destWidth, destHeight);
+
+            const hiddenImageData = tempHiddenCtx.getImageData(0, 0, tempHiddenCanvas.width, tempHiddenCanvas.height);
+            const hiddenPixels = hiddenImageData.data;
+
+            for (let i = 0; i < visiblePixels.length; i += 4) {
+                let vr = visiblePixels[i];
+                let vg = visiblePixels[i + 1];
+                let vb = visiblePixels[i + 2];
+
+                let hr = hiddenPixels[i];
+                let hg = hiddenPixels[i + 1];
+                let hb = hiddenPixels[i + 2];
+
+                vr = (vr & clearMask);
+                vg = (vg & clearMask);
+                vb = (vb & clearMask);
+
+                let hiddenR_bits = (hr >> shiftAmount) & extractMask;
+                let hiddenG_bits = (hg >> shiftAmount) & extractMask;
+                let hiddenB_bits = (hb >> shiftAmount) & extractMask;
+
+                visiblePixels[i] = vr | hiddenR_bits;
+                visiblePixels[i + 1] = vg | hiddenG_bits;
+                visiblePixels[i + 2] = vb | hiddenB_bits;
+            }
+
+            encodedCtx.putImageData(visibleImageData, 0, 0);
+            const encodedImageURL = encodedCanvas.toDataURL('image/png');
+            encodedOutputImage.src = encodedImageURL;
+            encodedOutputImage.style.display = 'block';
+            encodedCanvas.style.display = 'none';
+            saveEncodedButton.style.display = 'block';
+            console.log('Image encoded successfully!');
+
+            // --- AUTO-UPDATE ENCODED INPUT AND ATTEMPT DECODE ---
+            // Set the imageToDecode source to the newly encoded image
+            imageToDecode.src = encodedImageURL;
+            // Update the preview and dims for the encoded image input section
+            encodedImagePreview.src = encodedImageURL;
+            encodedImagePreview.style.display = 'block';
+            encodedImageInputDims.textContent = `${encodedCanvas.width} x ${encodedCanvas.height}`;
+
+            imageToDecode.onload = () => {
+                performDecode(imageToDecode); // Auto-decode immediately
+            };
+            imageToDecode.onerror = () => {
+                console.error("Failed to load encoded image for auto-decode from internal source.");
+            };
+        }
+
+        saveEncodedButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'encoded_image_steganography.png';
+            link.href = encodedCanvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // --- Decoding Logic ---
+        function performDecode(sourceImage) {
+            if (!sourceImage.src || !sourceImage.complete || sourceImage.naturalWidth === 0 || sourceImage.naturalHeight === 0) {
+                console.warn('Decoding skipped: Encoded image not fully loaded/available.');
+                return;
+            }
+
+            const bitsPerChannel = parseInt(decodeBitsPerChannelSlider.value); // Use decode slider's value
+
+            const extractMask = (1 << bitsPerChannel) - 1;
+            const scaleShift = 8 - bitsPerChannel;
+
+            decodedCanvas.width = sourceImage.naturalWidth;
+            decodedCanvas.height = sourceImage.naturalHeight;
+
+            decodedCtx.drawImage(sourceImage, 0, 0);
+            const encodedImageData = decodedCtx.getImageData(0, 0, decodedCanvas.width, decodedCanvas.height);
+            const encodedPixels = encodedImageData.data;
+
+            const decodedHiddenImageData = decodedCtx.createImageData(decodedCanvas.width, decodedCanvas.height);
+            const decodedHiddenPixels = decodedHiddenImageData.data;
+
+            for (let i = 0; i < encodedPixels.length; i += 4) {
+                let encodedR = encodedPixels[i];
+                let encodedG = encodedPixels[i + 1];
+                let encodedB = encodedPixels[i + 2];
+
+                let decodedR_bits = (encodedR & extractMask);
+                let decodedG_bits = (encodedG & extractMask);
+                let decodedB_bits = (encodedB & extractMask);
+
+                decodedHiddenPixels[i] = decodedR_bits << scaleShift;
+                decodedHiddenPixels[i + 1] = decodedG_bits << scaleShift;
+                decodedHiddenPixels[i + 2] = decodedB_bits << scaleShift;
+                decodedHiddenPixels[i + 3] = 255;
+            }
+
+            decodedCtx.putImageData(decodedHiddenImageData, 0, 0);
+
+            decodedOutputImage.src = decodedCanvas.toDataURL('image/png');
+            decodedOutputImage.style.display = 'block';
+            decodedCanvas.style.display = 'none';
+            saveDecodedButton.style.display = 'block';
+
+            fullSizeDecodedImage.src = decodedCanvas.toDataURL('image/png');
+            fullSizeDecodedOutputSection.style.display = 'flex';
+
+            console.log('Image decoded successfully!');
+        }
+
+        saveDecodedButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = 'decoded_hidden_image_steganography.png';
+            link.href = decodedCanvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // --- Image Zoom Functionality ---
+        function toggleImageZoom(imgElement) {
+            if (imgElement.classList.contains('zoomed')) {
+                // Restore original styles
+                imgElement.classList.remove('zoomed');
+                const overlay = document.getElementById('zoomOverlay');
+                if (overlay) {
+                    document.body.removeChild(overlay);
+                }
+            } else {
+                // Zoom in
+                const overlay = document.createElement('div');
+                overlay.id = 'zoomOverlay';
+                overlay.classList.add('zoom-overlay');
+                document.body.appendChild(overlay);
+
+                imgElement.classList.add('zoomed');
+
+                // Add event listener to overlay to unzoom when clicked
+                overlay.addEventListener('click', () => toggleImageZoom(imgElement));
+            }
+        }
+
+        // Attach zoom listeners to all relevant image elements
+        visibleImagePreview.addEventListener('click', () => toggleImageZoom(visibleImagePreview));
+        hiddenImagePreview.addEventListener('click', () => toggleImageZoom(hiddenImagePreview));
+        encodedImagePreview.addEventListener('click', () => toggleImageZoom(encodedImagePreview));
+        encodedOutputImage.addEventListener('click', () => toggleImageZoom(encodedOutputImage));
+        decodedOutputImage.addEventListener('click', () => toggleImageZoom(decodedOutputImage));
+        fullSizeDecodedImage.addEventListener('click', () => toggleImageZoom(fullSizeDecodedImage));
+
+    </script>
+</body>
+</html>
