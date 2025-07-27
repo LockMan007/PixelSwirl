@@ -15,7 +15,7 @@
         }
         #controls {
             display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 sliders per row for better layout */
+            grid-template-columns: repeat(5, 1fr); /* 5 columns for layout */
             gap: 15px;
             margin-bottom: 20px;
             padding: 20px;
@@ -28,7 +28,7 @@
         .slider-group {
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* Align contents to the start */
+            align-items: flex-start;
             border: 1px solid #eee;
             padding: 10px;
             border-radius: 5px;
@@ -38,12 +38,12 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        .chaos-option {
-            margin-top: 8px;
+        .option-group {
+            margin-top: 5px;
             display: flex;
             align-items: center;
         }
-        .chaos-option input {
+        .option-group input[type="checkbox"] {
             margin-right: 5px;
         }
         #global-actions {
@@ -85,7 +85,11 @@
         <div class="slider-group">
             <label for="layer0PixelSize">Layer 1 Pixel Size: <span id="layer0PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="0" id="layer0PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="0" id="layer0BW">
+                <label for="layer0BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="0" id="layer0Chaos">
                 <label for="layer0Chaos">Chaos</label>
             </div>
@@ -93,7 +97,11 @@
         <div class="slider-group">
             <label for="layer1PixelSize">Layer 2 Pixel Size: <span id="layer1PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="1" id="layer1PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="1" id="layer1BW">
+                <label for="layer1BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="1" id="layer1Chaos">
                 <label for="layer1Chaos">Chaos</label>
             </div>
@@ -101,7 +109,11 @@
         <div class="slider-group">
             <label for="layer2PixelSize">Layer 3 Pixel Size: <span id="layer2PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="2" id="layer2PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="2" id="layer2BW">
+                <label for="layer2BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="2" id="layer2Chaos">
                 <label for="layer2Chaos">Chaos</label>
             </div>
@@ -109,7 +121,11 @@
         <div class="slider-group">
             <label for="layer3PixelSize">Layer 4 Pixel Size: <span id="layer3PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="3" id="layer3PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="3" id="layer3BW">
+                <label for="layer3BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="3" id="layer3Chaos">
                 <label for="layer3Chaos">Chaos</label>
             </div>
@@ -117,7 +133,11 @@
         <div class="slider-group">
             <label for="layer4PixelSize">Layer 5 Pixel Size: <span id="layer4PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="4" id="layer4PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="4" id="layer4BW">
+                <label for="layer4BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="4" id="layer4Chaos">
                 <label for="layer4Chaos">Chaos</label>
             </div>
@@ -125,7 +145,11 @@
         <div class="slider-group">
             <label for="layer5PixelSize">Layer 6 Pixel Size: <span id="layer5PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="5" id="layer5PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="5" id="layer5BW">
+                <label for="layer5BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="5" id="layer5Chaos">
                 <label for="layer5Chaos">Chaos</label>
             </div>
@@ -133,7 +157,11 @@
         <div class="slider-group">
             <label for="layer6PixelSize">Layer 7 Pixel Size: <span id="layer6PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="6" id="layer6PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="6" id="layer6BW">
+                <label for="layer6BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="6" id="layer6Chaos">
                 <label for="layer6Chaos">Chaos</label>
             </div>
@@ -141,7 +169,11 @@
         <div class="slider-group">
             <label for="layer7PixelSize">Layer 8 Pixel Size: <span id="layer7PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="7" id="layer7PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="7" id="layer7BW">
+                <label for="layer7BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="7" id="layer7Chaos">
                 <label for="layer7Chaos">Chaos</label>
             </div>
@@ -149,7 +181,11 @@
         <div class="slider-group">
             <label for="layer8PixelSize">Layer 9 Pixel Size: <span id="layer8PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="8" id="layer8PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="8" id="layer8BW">
+                <label for="layer8BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="8" id="layer8Chaos">
                 <label for="layer8Chaos">Chaos</label>
             </div>
@@ -157,7 +193,11 @@
         <div class="slider-group">
             <label for="layer9PixelSize">Layer 10 Pixel Size: <span id="layer9PixelSizeValue">0</span></label>
             <input type="range" class="pixel-size-slider" data-layer="9" id="layer9PixelSize" min="0" max="100" value="0">
-            <div class="chaos-option">
+            <div class="option-group">
+                <input type="checkbox" class="bw-checkbox" data-layer="9" id="layer9BW">
+                <label for="layer9BW">BW</label>
+            </div>
+            <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="9" id="layer9Chaos">
                 <label for="layer9Chaos">Chaos</label>
             </div>
@@ -172,16 +212,23 @@
         const pixelSizeSliders = document.querySelectorAll('.pixel-size-slider');
         const pixelSizeValueSpans = document.querySelectorAll('[id$="PixelSizeValue"]');
         const randomizeButton = document.getElementById('randomizeActiveSliders');
+        // Select the new "BW" checkboxes
+        const bwCheckboxes = document.querySelectorAll('.bw-checkbox');
+        // Select the new "Chaos" checkboxes
         const chaosCheckboxes = document.querySelectorAll('.chaos-checkbox');
+
 
         const IMAGE_WIDTH = 768;
         const IMAGE_HEIGHT = 768;
         const NUM_LAYERS = 10;
-        const CHAOS_PROBABILITY = 0.5; // 50% chance to draw a block if chaos is enabled
+        // For BW:
+        const BW_RANDOM_COLOR_PROBABILITY = 0.5; // 50% chance to draw a random RGB block when BW is enabled
+        const BW_BLACK_PROBABILITY = 0.5; // Of the 'not random color' blocks, 50% chance to be black (vs. white)
 
         function drawAllNoise() {
             const layerPixelSizes = Array.from(pixelSizeSliders).map(slider => parseInt(slider.value));
-            const layerChaosStates = Array.from(chaosCheckboxes).map(checkbox => checkbox.checked);
+            const layerBWStates = Array.from(bwCheckboxes).map(checkbox => checkbox.checked);
+            const layerChaosStates = Array.from(chaosCheckboxes).map(checkbox => checkbox.checked); // New chaos states
 
             // Update displayed values
             pixelSizeValueSpans.forEach((span, index) => {
@@ -201,32 +248,62 @@
 
             const layerPixelData = [];
             for (let layerIndex = 0; layerIndex < NUM_LAYERS; layerIndex++) {
-                const pixelSize = layerPixelSizes[layerIndex];
-                const isChaosEnabled = layerChaosStates[layerIndex];
+                const basePixelSize = layerPixelSizes[layerIndex]; // This is the slider value
+                const isBWEnabled = layerBWStates[layerIndex];
+                const isChaosEnabled = layerChaosStates[layerIndex]; // New chaos state
 
-                if (pixelSize === 0) {
+                if (basePixelSize === 0) {
                     layerPixelData.push(new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4).fill(0));
-                    continue; // Skip generation for this layer
+                    continue; // Skip generation for this layer if pixel size is 0
                 }
 
                 const layerImageData = new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4);
+                // Get the max value from this specific slider for chaos calculation
+                const maxSliderValue = parseInt(pixelSizeSliders[layerIndex].max);
 
-                for (let y = 0; y < IMAGE_HEIGHT; y += pixelSize) {
-                    for (let x = 0; x < IMAGE_WIDTH; x += pixelSize) {
+                let currentPixelSize; // Will be basePixelSize or random for chaos
+
+                for (let y = 0; y < IMAGE_HEIGHT; y += currentPixelSize || basePixelSize) { // Use currentPixelSize for stepping if chaos, else base
+                    for (let x = 0; x < IMAGE_WIDTH; x += currentPixelSize || basePixelSize) {
+                        currentPixelSize = basePixelSize; // Reset for each block
+
+                        if (isChaosEnabled) {
+                            // If chaos is enabled, choose a random pixel size for this block
+                            currentPixelSize = Math.floor(Math.random() * maxSliderValue) + 1; // Random between 1 and max
+                        }
+
+                        // Ensure currentPixelSize is at least 1 to prevent infinite loops
+                        if (currentPixelSize < 1) {
+                             currentPixelSize = 1;
+                        }
+
                         let r, g, b;
 
-                        // Apply chaos: 50% chance to skip drawing this block
-                        if (isChaosEnabled && Math.random() < CHAOS_PROBABILITY) {
-                            r = 0; g = 0; b = 0; // Make this block black/transparent for this layer
+                        // Apply BW logic first (if enabled)
+                        if (isBWEnabled) {
+                            if (Math.random() < BW_RANDOM_COLOR_PROBABILITY) {
+                                // 50% chance to be a random RGB color
+                                r = Math.floor(Math.random() * 256);
+                                g = Math.floor(Math.random() * 256);
+                                b = Math.floor(Math.random() * 256);
+                            } else {
+                                // 50% chance to be either black or white
+                                if (Math.random() < BW_BLACK_PROBABILITY) {
+                                    r = 0; g = 0; b = 0;
+                                } else {
+                                    r = 255; g = 255; b = 255;
+                                }
+                            }
                         } else {
-                            r = Math.floor(Math.random() * 256); // 0-255
-                            g = Math.floor(Math.random() * 256); // 0-255
-                            b = Math.floor(Math.random() * 256); // 0-255
+                            // No BW, so always a random RGB color
+                            r = Math.floor(Math.random() * 256);
+                            g = Math.floor(Math.random() * 256);
+                            b = Math.floor(Math.random() * 256);
                         }
 
                         // Fill the pixel block in this layer's temporary data
-                        for (let py = 0; py < pixelSize; py++) {
-                            for (let px = 0; px < pixelSize; px++) {
+                        for (let py = 0; py < currentPixelSize; py++) {
+                            for (let px = 0; px < currentPixelSize; px++) {
                                 const actualX = x + px;
                                 const actualY = y + py;
 
@@ -252,9 +329,7 @@
                 let activeLayersAtPixel = 0;
 
                 for (let layerIndex = 0; layerIndex < NUM_LAYERS; layerIndex++) {
-                    // Only consider layers that have an active pixelSize (> 0)
-                    // If a layer has chaos enabled and randomized to be transparent for this block,
-                    // its RGB values will be 0, so they won't add to the sum, which is correct.
+                    // Only consider layers that have an active basePixelSize (> 0)
                     if (layerPixelSizes[layerIndex] > 0) {
                         sumR += layerPixelData[layerIndex][i + 0];
                         sumG += layerPixelData[layerIndex][i + 1];
@@ -280,15 +355,22 @@
             slider.addEventListener('input', drawAllNoise);
         });
 
+        // Event listeners for the new BW checkboxes
+        bwCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', drawAllNoise);
+        });
+
+        // Event listeners for the new Chaos checkboxes
         chaosCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', drawAllNoise);
         });
 
         randomizeButton.addEventListener('click', () => {
             pixelSizeSliders.forEach((slider, index) => {
+                const maxSliderValue = parseInt(slider.max);
                 if (parseInt(slider.value) > 0) {
-                    // Randomize between 1 and 10 (inclusive)
-                    const newValue = Math.floor(Math.random() * 100) + 1;
+                    // Randomize between 1 and maxSliderValue (inclusive)
+                    const newValue = Math.floor(Math.random() * maxSliderValue) + 1;
                     slider.value = newValue;
                     pixelSizeValueSpans[index].textContent = newValue; // Update displayed value
                 }
