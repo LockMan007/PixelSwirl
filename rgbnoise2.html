@@ -93,6 +93,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="0" id="layer0Chaos">
                 <label for="layer0Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="0" id="layer0Shapes">
+                <label for="layer0Shapes">Shapes</label>
+            </div>
         </div>
         <div class="slider-group">
             <label for="layer1PixelSize">Layer 2 Pixel Size: <span id="layer1PixelSizeValue">0</span></label>
@@ -104,6 +108,10 @@
             <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="1" id="layer1Chaos">
                 <label for="layer1Chaos">Chaos</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="1" id="layer1Shapes">
+                <label for="layer1Shapes">Shapes</label>
             </div>
         </div>
         <div class="slider-group">
@@ -117,6 +125,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="2" id="layer2Chaos">
                 <label for="layer2Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="2" id="layer2Shapes">
+                <label for="layer2Shapes">Shapes</label>
+            </div>
         </div>
         <div class="slider-group">
             <label for="layer3PixelSize">Layer 4 Pixel Size: <span id="layer3PixelSizeValue">0</span></label>
@@ -128,6 +140,10 @@
             <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="3" id="layer3Chaos">
                 <label for="layer3Chaos">Chaos</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="3" id="layer3Shapes">
+                <label for="layer3Shapes">Shapes</label>
             </div>
         </div>
         <div class="slider-group">
@@ -141,6 +157,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="4" id="layer4Chaos">
                 <label for="layer4Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="4" id="layer4Shapes">
+                <label for="layer4Shapes">Shapes</label>
+            </div>
         </div>
         <div class="slider-group">
             <label for="layer5PixelSize">Layer 6 Pixel Size: <span id="layer5PixelSizeValue">0</span></label>
@@ -152,6 +172,10 @@
             <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="5" id="layer5Chaos">
                 <label for="layer5Chaos">Chaos</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="5" id="layer5Shapes">
+                <label for="layer5Shapes">Shapes</label>
             </div>
         </div>
         <div class="slider-group">
@@ -165,6 +189,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="6" id="layer6Chaos">
                 <label for="layer6Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="6" id="layer6Shapes">
+                <label for="layer6Shapes">Shapes</label>
+            </div>
         </div>
         <div class="slider-group">
             <label for="layer7PixelSize">Layer 8 Pixel Size: <span id="layer7PixelSizeValue">0</span></label>
@@ -176,6 +204,10 @@
             <div class="option-group">
                 <input type="checkbox" class="chaos-checkbox" data-layer="7" id="layer7Chaos">
                 <label for="layer7Chaos">Chaos</label>
+            </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="7" id="layer7Shapes">
+                <label for="layer7Shapes">Shapes</label>
             </div>
         </div>
         <div class="slider-group">
@@ -189,6 +221,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="8" id="layer8Chaos">
                 <label for="layer8Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="8" id="layer8Shapes">
+                <label for="layer8Shapes">Shapes</label>
+            </div>
         </div>
         <div class="slider-group">
             <label for="layer9PixelSize">Layer 10 Pixel Size: <span id="layer9PixelSizeValue">0</span></label>
@@ -201,6 +237,10 @@
                 <input type="checkbox" class="chaos-checkbox" data-layer="9" id="layer9Chaos">
                 <label for="layer9Chaos">Chaos</label>
             </div>
+            <div class="option-group">
+                <input type="checkbox" class="shapes-checkbox" data-layer="9" id="layer9Shapes">
+                <label for="layer9Shapes">Shapes</label>
+            </div>
         </div>
     </div>
 
@@ -212,23 +252,53 @@
         const pixelSizeSliders = document.querySelectorAll('.pixel-size-slider');
         const pixelSizeValueSpans = document.querySelectorAll('[id$="PixelSizeValue"]');
         const randomizeButton = document.getElementById('randomizeActiveSliders');
-        // Select the new "BW" checkboxes
         const bwCheckboxes = document.querySelectorAll('.bw-checkbox');
-        // Select the new "Chaos" checkboxes
         const chaosCheckboxes = document.querySelectorAll('.chaos-checkbox');
-
+        const shapesCheckboxes = document.querySelectorAll('.shapes-checkbox'); // New Shapes checkboxes
 
         const IMAGE_WIDTH = 768;
         const IMAGE_HEIGHT = 768;
         const NUM_LAYERS = 10;
-        // For BW:
         const BW_RANDOM_COLOR_PROBABILITY = 0.5; // 50% chance to draw a random RGB block when BW is enabled
         const BW_BLACK_PROBABILITY = 0.5; // Of the 'not random color' blocks, 50% chance to be black (vs. white)
+
+        // Min pixel size for shapes (especially diagonals/circles) to make sense
+        const MIN_SHAPE_PIXEL_SIZE = 3; 
+
+        // Helper function to generate a random RGB color
+        function getRandomRGB() {
+            return {
+                r: Math.floor(Math.random() * 256),
+                g: Math.floor(Math.random() * 256),
+                b: Math.floor(Math.random() * 256)
+            };
+        }
+
+        // Helper function to get colors based on BW state
+        function getColors(isBWEnabled) {
+            if (isBWEnabled) {
+                if (Math.random() < BW_RANDOM_COLOR_PROBABILITY) {
+                    // 50% chance to be a random RGB color
+                    return { main: getRandomRGB(), bg: getRandomRGB() };
+                } else {
+                    // 50% chance to be either black/white
+                    if (Math.random() < BW_BLACK_PROBABILITY) {
+                        return { main: {r:0,g:0,b:0}, bg: {r:255,g:255,b:255} }; // Black main, White background
+                    } else {
+                        return { main: {r:255,g:255,b:255}, bg: {r:0,g:0,b:0} }; // White main, Black background
+                    }
+                }
+            } else {
+                // Not BW, so both colors are random RGB
+                return { main: getRandomRGB(), bg: getRandomRGB() };
+            }
+        }
 
         function drawAllNoise() {
             const layerPixelSizes = Array.from(pixelSizeSliders).map(slider => parseInt(slider.value));
             const layerBWStates = Array.from(bwCheckboxes).map(checkbox => checkbox.checked);
-            const layerChaosStates = Array.from(chaosCheckboxes).map(checkbox => checkbox.checked); // New chaos states
+            const layerChaosStates = Array.from(chaosCheckboxes).map(checkbox => checkbox.checked);
+            const layerShapesStates = Array.from(shapesCheckboxes).map(checkbox => checkbox.checked); // Get Shapes states
 
             // Update displayed values
             pixelSizeValueSpans.forEach((span, index) => {
@@ -248,9 +318,10 @@
 
             const layerPixelData = [];
             for (let layerIndex = 0; layerIndex < NUM_LAYERS; layerIndex++) {
-                const basePixelSize = layerPixelSizes[layerIndex]; // This is the slider value
+                const basePixelSize = layerPixelSizes[layerIndex];
                 const isBWEnabled = layerBWStates[layerIndex];
-                const isChaosEnabled = layerChaosStates[layerIndex]; // New chaos state
+                const isChaosEnabled = layerChaosStates[layerIndex];
+                const isShapesEnabled = layerShapesStates[layerIndex]; // Is Shapes enabled for this layer?
 
                 if (basePixelSize === 0) {
                     layerPixelData.push(new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4).fill(0));
@@ -258,61 +329,90 @@
                 }
 
                 const layerImageData = new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4);
-                // Get the max value from this specific slider for chaos calculation
                 const maxSliderValue = parseInt(pixelSizeSliders[layerIndex].max);
 
                 let currentPixelSize; // Will be basePixelSize or random for chaos
 
-                for (let y = 0; y < IMAGE_HEIGHT; y += currentPixelSize || basePixelSize) { // Use currentPixelSize for stepping if chaos, else base
+                // Outer loop for pixel blocks
+                for (let y = 0; y < IMAGE_HEIGHT; y += currentPixelSize || basePixelSize) {
                     for (let x = 0; x < IMAGE_WIDTH; x += currentPixelSize || basePixelSize) {
                         currentPixelSize = basePixelSize; // Reset for each block
 
                         if (isChaosEnabled) {
-                            // If chaos is enabled, choose a random pixel size for this block
-                            currentPixelSize = Math.floor(Math.random() * maxSliderValue) + 1; // Random between 1 and max
+                            currentPixelSize = Math.floor(Math.random() * maxSliderValue) + 1;
                         }
 
-                        // Ensure currentPixelSize is at least 1 to prevent infinite loops
                         if (currentPixelSize < 1) {
                              currentPixelSize = 1;
                         }
 
-                        let r, g, b;
+                        const { main: {r, g, b}, bg: {r: r2, g: g2, b: b2} } = getColors(isBWEnabled);
 
-                        // Apply BW logic first (if enabled)
-                        if (isBWEnabled) {
-                            if (Math.random() < BW_RANDOM_COLOR_PROBABILITY) {
-                                // 50% chance to be a random RGB color
-                                r = Math.floor(Math.random() * 256);
-                                g = Math.floor(Math.random() * 256);
-                                b = Math.floor(Math.random() * 256);
-                            } else {
-                                // 50% chance to be either black or white
-                                if (Math.random() < BW_BLACK_PROBABILITY) {
-                                    r = 0; g = 0; b = 0;
-                                } else {
-                                    r = 255; g = 255; b = 255;
+                        // If Shapes is enabled and pixelSize is large enough for shapes
+                        if (isShapesEnabled && currentPixelSize >= MIN_SHAPE_PIXEL_SIZE) {
+                            const shapeType = Math.floor(Math.random() * 3); // 0: Square, 1: Diagonal, 2: Circle
+
+                            for (let py = 0; py < currentPixelSize; py++) {
+                                for (let px = 0; px < currentPixelSize; px++) {
+                                    const actualX = x + px;
+                                    const actualY = y + py;
+
+                                    if (actualX < IMAGE_WIDTH && actualY < IMAGE_HEIGHT) {
+                                        const index = (actualY * IMAGE_WIDTH + actualX) * 4;
+                                        let pixelR, pixelG, pixelB;
+
+                                        if (shapeType === 0) { // Solid Square
+                                            pixelR = r; pixelG = g; pixelB = b;
+                                        } else if (shapeType === 1) { // Diagonal Line
+                                            const diagonalDirection = Math.random() < 0.5; // true for TL-BR, false for TR-BL
+                                            if (diagonalDirection) { // Top-Left to Bottom-Right diagonal
+                                                if (px >= py) {
+                                                    pixelR = r; pixelG = g; pixelB = b;
+                                                } else {
+                                                    pixelR = r2; pixelG = g2; pixelB = b2;
+                                                }
+                                            } else { // Top-Right to Bottom-Left diagonal
+                                                if (px + py < currentPixelSize) {
+                                                    pixelR = r; pixelG = g; pixelB = b;
+                                                } else {
+                                                    pixelR = r2; pixelG = g2; pixelB = b2;
+                                                }
+                                            }
+                                        } else { // Circle
+                                            const centerX = currentPixelSize / 2;
+                                            const centerY = currentPixelSize / 2;
+                                            const radius = currentPixelSize / 2 * (0.5 + Math.random() * 0.5); // Random radius between 25-50% of pixelSize
+
+                                            const distance = Math.sqrt(Math.pow(px - centerX, 2) + Math.pow(py - centerY, 2));
+
+                                            if (distance <= radius) {
+                                                pixelR = r; pixelG = g; pixelB = b;
+                                            } else {
+                                                pixelR = r2; pixelG = g2; pixelB = b2;
+                                            }
+                                        }
+
+                                        layerImageData[index + 0] = pixelR;
+                                        layerImageData[index + 1] = pixelG;
+                                        layerImageData[index + 2] = pixelB;
+                                        layerImageData[index + 3] = 255; // Opaque
+                                    }
                                 }
                             }
                         } else {
-                            // No BW, so always a random RGB color
-                            r = Math.floor(Math.random() * 256);
-                            g = Math.floor(Math.random() * 256);
-                            b = Math.floor(Math.random() * 256);
-                        }
+                            // Default behavior: fill solid square (no shapes, or pixelSize too small for shapes)
+                            for (let py = 0; py < currentPixelSize; py++) {
+                                for (let px = 0; px < currentPixelSize; px++) {
+                                    const actualX = x + px;
+                                    const actualY = y + py;
 
-                        // Fill the pixel block in this layer's temporary data
-                        for (let py = 0; py < currentPixelSize; py++) {
-                            for (let px = 0; px < currentPixelSize; px++) {
-                                const actualX = x + px;
-                                const actualY = y + py;
-
-                                if (actualX < IMAGE_WIDTH && actualY < IMAGE_HEIGHT) {
-                                    const index = (actualY * IMAGE_WIDTH + actualX) * 4;
-                                    layerImageData[index + 0] = r;
-                                    layerImageData[index + 1] = g;
-                                    layerImageData[index + 2] = b;
-                                    layerImageData[index + 3] = 255; // Opaque
+                                    if (actualX < IMAGE_WIDTH && actualY < IMAGE_HEIGHT) {
+                                        const index = (actualY * IMAGE_WIDTH + actualX) * 4;
+                                        layerImageData[index + 0] = r;
+                                        layerImageData[index + 1] = g;
+                                        layerImageData[index + 2] = b;
+                                        layerImageData[index + 3] = 255; // Opaque
+                                    }
                                 }
                             }
                         }
@@ -355,13 +455,15 @@
             slider.addEventListener('input', drawAllNoise);
         });
 
-        // Event listeners for the new BW checkboxes
         bwCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', drawAllNoise);
         });
 
-        // Event listeners for the new Chaos checkboxes
         chaosCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', drawAllNoise);
+        });
+
+        shapesCheckboxes.forEach(checkbox => { // New event listener for Shapes checkboxes
             checkbox.addEventListener('change', drawAllNoise);
         });
 
@@ -369,13 +471,12 @@
             pixelSizeSliders.forEach((slider, index) => {
                 const maxSliderValue = parseInt(slider.max);
                 if (parseInt(slider.value) > 0) {
-                    // Randomize between 1 and maxSliderValue (inclusive)
                     const newValue = Math.floor(Math.random() * maxSliderValue) + 1;
                     slider.value = newValue;
-                    pixelSizeValueSpans[index].textContent = newValue; // Update displayed value
+                    pixelSizeValueSpans[index].textContent = newValue;
                 }
             });
-            drawAllNoise(); // Redraw after randomization
+            drawAllNoise();
         });
 
         // Initial draw
