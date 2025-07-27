@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Layer Pixel Noise Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            background-color: #f0f0f0;
+        }
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 sliders per row for better layout */
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            width: 90%;
+            max-width: 1200px;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .slider-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Multi-Layer Pixel Noise Generator</h1>
+
+    <div id="controls">
+        <div class="slider-group">
+            <label for="layer0PixelSize">Layer 1 Pixel Size: <span id="layer0PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="0" id="layer0PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer1PixelSize">Layer 2 Pixel Size: <span id="layer1PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="1" id="layer1PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer2PixelSize">Layer 3 Pixel Size: <span id="layer2PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="2" id="layer2PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer3PixelSize">Layer 4 Pixel Size: <span id="layer3PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="3" id="layer3PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer4PixelSize">Layer 5 Pixel Size: <span id="layer4PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="4" id="layer4PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer5PixelSize">Layer 6 Pixel Size: <span id="layer5PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="5" id="layer5PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer6PixelSize">Layer 7 Pixel Size: <span id="layer6PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="6" id="layer6PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer7PixelSize">Layer 8 Pixel Size: <span id="layer7PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="7" id="layer7PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer8PixelSize">Layer 9 Pixel Size: <span id="layer8PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="8" id="layer8PixelSize" min="0" max="100" value="0">
+        </div>
+        <div class="slider-group">
+            <label for="layer9PixelSize">Layer 10 Pixel Size: <span id="layer9PixelSizeValue">0</span></label>
+            <input type="range" class="pixel-size-slider" data-layer="9" id="layer9PixelSize" min="0" max="100" value="0">
+        </div>
+    </div>
+
+    <canvas id="noiseCanvas" width="768" height="768"></canvas>
+
+    <script>
+        const canvas = document.getElementById('noiseCanvas');
+        const ctx = canvas.getContext('2d');
+        const pixelSizeSliders = document.querySelectorAll('.pixel-size-slider');
+        const pixelSizeValueSpans = document.querySelectorAll('[id$="PixelSizeValue"]');
+
+        const IMAGE_WIDTH = 768;
+        const IMAGE_HEIGHT = 768;
+        const NUM_LAYERS = 10;
+
+        function drawAllNoise() {
+            // Get all layer pixel sizes
+            const layerPixelSizes = Array.from(pixelSizeSliders).map(slider => parseInt(slider.value));
+
+            // Update displayed values
+            pixelSizeValueSpans.forEach((span, index) => {
+                span.textContent = layerPixelSizes[index];
+            });
+
+            // Create a temporary ImageData to combine all layers
+            const combinedImageData = ctx.createImageData(IMAGE_WIDTH, IMAGE_HEIGHT);
+            const combinedData = combinedImageData.data;
+
+            // Initialize all pixels to black
+            for (let i = 0; i < combinedData.length; i += 4) {
+                combinedData[i + 0] = 0; // R
+                combinedData[i + 1] = 0; // G
+                combinedData[i + 2] = 0; // B
+                combinedData[i + 3] = 255; // A (fully opaque)
+            }
+
+            // Store each layer's pixel data temporarily
+            const layerPixelData = [];
+            for (let layerIndex = 0; layerIndex < NUM_LAYERS; layerIndex++) {
+                const pixelSize = layerPixelSizes[layerIndex];
+
+                // If pixelSize is 0, this layer doesn't contribute, so store an empty or black layer
+                if (pixelSize === 0) {
+                    layerPixelData.push(new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4).fill(0));
+                    continue; // Skip generation for this layer
+                }
+
+                const layerImageData = new Uint8ClampedArray(IMAGE_WIDTH * IMAGE_HEIGHT * 4);
+
+                for (let y = 0; y < IMAGE_HEIGHT; y += pixelSize) {
+                    for (let x = 0; x < IMAGE_WIDTH; x += pixelSize) {
+                        // Generate a random RGB color for this block for THIS layer
+                        const r = Math.floor(Math.random() * 256); // 0-255
+                        const g = Math.floor(Math.random() * 256); // 0-255
+                        const b = Math.floor(Math.random() * 256); // 0-255
+
+                        // Fill the pixel block in this layer's temporary data
+                        for (let py = 0; py < pixelSize; py++) {
+                            for (let px = 0; px < pixelSize; px++) {
+                                const actualX = x + px;
+                                const actualY = y + py;
+
+                                if (actualX < IMAGE_WIDTH && actualY < IMAGE_HEIGHT) {
+                                    const index = (actualY * IMAGE_WIDTH + actualX) * 4;
+                                    layerImageData[index + 0] = r;
+                                    layerImageData[index + 1] = g;
+                                    layerImageData[index + 2] = b;
+                                    layerImageData[index + 3] = 255; // Opaque
+                                }
+                            }
+                        }
+                    }
+                }
+                layerPixelData.push(layerImageData);
+            }
+
+            // Now, combine all layer pixel data into the final combinedData
+            for (let i = 0; i < combinedData.length; i += 4) {
+                let sumR = 0;
+                let sumG = 0;
+                let sumB = 0;
+                let activeLayersAtPixel = 0; // Count layers that contribute to this pixel
+
+                for (let layerIndex = 0; layerIndex < NUM_LAYERS; layerIndex++) {
+                    // Only consider layers that have an active pixelSize (> 0)
+                    if (layerPixelSizes[layerIndex] > 0) {
+                        sumR += layerPixelData[layerIndex][i + 0];
+                        sumG += layerPixelData[layerIndex][i + 1];
+                        sumB += layerPixelData[layerIndex][i + 2];
+                        activeLayersAtPixel++;
+                    }
+                }
+
+                // Average the colors if there are active layers, otherwise keep black (0,0,0)
+                if (activeLayersAtPixel > 0) {
+                    combinedData[i + 0] = Math.floor(sumR / activeLayersAtPixel);
+                    combinedData[i + 1] = Math.floor(sumG / activeLayersAtPixel);
+                    combinedData[i + 2] = Math.floor(sumB / activeLayersAtPixel);
+                }
+                combinedData[i + 3] = 255; // Alpha remains 255
+            }
+
+            // Put the combined image data onto the canvas
+            ctx.putImageData(combinedImageData, 0, 0);
+        }
+
+        // Add event listeners to all pixel size sliders
+        pixelSizeSliders.forEach(slider => {
+            slider.addEventListener('input', drawAllNoise);
+        });
+
+        // Initial draw
+        drawAllNoise();
+    </script>
+</body>
+</html>
