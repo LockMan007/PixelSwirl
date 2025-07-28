@@ -57,11 +57,20 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
+            width: 90%;
+            max-width: 1200px;
         }
-        #global-actions .global-option-group {
+        #global-actions .global-option-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        #global-actions .global-slider-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 5px;
         }
         #global-actions button {
             padding: 10px 20px;
@@ -84,13 +93,17 @@
     </style>
 </head>
 <body>
-    <h1>Multi-Layer Pixel Noise Generator</h1>
-
     <div id="global-actions">
         <button id="randomizeActiveSliders">Randomize Active Sliders</button>
-        <div class="global-option-group">
-            <label for="chaosVariance">Chaos Variance: <span id="chaosVarianceValue">0</span></label>
-            <input type="range" id="chaosVariance" min="0" max="100" value="0">
+        <div class="global-option-row">
+            <div class="global-slider-group">
+                <label for="chaosVariance">Chaos Variance: <span id="chaosVarianceValue">0</span></label>
+                <input type="range" id="chaosVariance" min="0" max="100" value="0">
+            </div>
+            <div class="global-slider-group">
+                <label for="numColors">Number of Colors: <span id="numColorsValue">Full</span></label>
+                <input type="range" id="numColors" min="0" max="4" value="4">
+            </div>
         </div>
     </div>
 
@@ -268,39 +281,76 @@
         const bwCheckboxes = document.querySelectorAll('.bw-checkbox');
         const chaosCheckboxes = document.querySelectorAll('.chaos-checkbox');
         const shapesCheckboxes = document.querySelectorAll('.shapes-checkbox');
-        const chaosVarianceSlider = document.getElementById('chaosVariance'); // New Chaos Variance slider
-        const chaosVarianceValueSpan = document.getElementById('chaosVarianceValue'); // Span to display its value
+        const chaosVarianceSlider = document.getElementById('chaosVariance');
+        const chaosVarianceValueSpan = document.getElementById('chaosVarianceValue');
+        const numColorsSlider = document.getElementById('numColors'); // Renamed from bitDepthSlider
+        const numColorsValueSpan = document.getElementById('numColorsValue'); // Renamed from bitDepthValueSpan
 
         const IMAGE_WIDTH = 768;
         const IMAGE_HEIGHT = 768;
         const NUM_LAYERS = 10;
-        const BW_RANDOM_COLOR_PROBABILITY = 0.5; // 50% chance to draw a random RGB block when BW is enabled
-        const BW_BLACK_PROBABILITY = 0.5; // Of the 'not random color' blocks, 50% chance to be black (vs. white)
+        const BW_RANDOM_COLOR_PROBABILITY = 0.5;
+        const BW_BLACK_PROBABILITY = 0.5;
         const MIN_SHAPE_PIXEL_SIZE = 3; 
 
-        // Helper function to generate a random RGB color
-        function getRandomRGB() {
-            return {
-                r: Math.floor(Math.random() * 256),
-                g: Math.floor(Math.random() * 256),
-                b: Math.floor(Math.random() * 256)
-            };
+        // Define our fixed color palettes
+        const PALETTES = {
+            2: [ // Black & White
+                { r: 0, g: 0, b: 0 },
+                { r: 255, g: 255, b: 255 }
+            ],
+            3: [ // Red, Green, Blue
+                { r: 255, g: 0, b: 0 },
+                { r: 0, g: 255, b: 0 },
+                { r: 0, g: 0, b: 255 }
+            ],
+            5: [ // RGB + Black & White
+                { r: 255, g: 0, b: 0 },
+                { r: 0, g: 255, b: 0 },
+                { r: 0, g: 0, b: 255 },
+                { r: 0, g: 0, b: 0 },
+                { r: 255, g: 255, b: 255 }
+            ],
+            8: [ // Full RGB Cube (Black, White, Red, Green, Blue, Cyan, Magenta, Yellow)
+                { r: 0, g: 0, b: 0 },         // Black
+                { r: 255, g: 255, b: 255 },   // White
+                { r: 255, g: 0, b: 0 },       // Red
+                { r: 0, g: 255, b: 0 },       // Green
+                { r: 0, g: 0, b: 255 },       // Blue
+                { r: 0, g: 255, b: 255 },     // Cyan
+                { r: 255, g: 0, b: 255 },     // Magenta
+                { r: 255, g: 255, b: 0 }      // Yellow
+            ]
+        };
+
+        // Helper function to get a random color based on the selected palette
+        function getRandomColorFromPalette(paletteKey) {
+            const palette = PALETTES[paletteKey];
+            if (palette) {
+                return palette[Math.floor(Math.random() * palette.length)];
+            } else {
+                // Default to full random RGB if no specific palette is selected (e.g., slider max value)
+                return {
+                    r: Math.floor(Math.random() * 256),
+                    g: Math.floor(Math.random() * 256),
+                    b: Math.floor(Math.random() * 256)
+                };
+            }
         }
 
-        // Helper function to get colors based on BW state
-        function getColors(isBWEnabled) {
+        // Helper function to get colors based on BW state and global number of colors
+        function getColors(isBWEnabled, globalNumColorsSetting) {
             if (isBWEnabled) {
                 if (Math.random() < BW_RANDOM_COLOR_PROBABILITY) {
-                    return { main: getRandomRGB(), bg: getRandomRGB() };
+                    // Use the selected palette for random colors in BW mode if allowed
+                    return { main: getRandomColorFromPalette(globalNumColorsSetting), bg: getRandomColorFromPalette(globalNumColorsSetting) };
                 } else {
-                    if (Math.random() < BW_BLACK_PROBABILITY) {
-                        return { main: {r:0,g:0,b:0}, bg: {r:255,g:255,b:255} };
-                    } else {
-                        return { main: {r:255,g:255,b:255}, bg: {r:0,g:0,b:0} };
-                    }
+                    // Force pure black and white for the other 50% chance in BW mode
+                    return { main: {r:0,g:0,b:0}, bg: {r:255,g:255,b:255} }; 
                 }
             } else {
-                return { main: getRandomRGB(), bg: getRandomRGB() };
+                // Not BW, use the selected palette or full random
+                return { main: getRandomColorFromPalette(globalNumColorsSetting), bg: getRandomColorFromPalette(globalNumColorsSetting) };
             }
         }
 
@@ -309,18 +359,37 @@
             const layerBWStates = Array.from(bwCheckboxes).map(checkbox => checkbox.checked);
             const layerChaosStates = Array.from(chaosCheckboxes).map(checkbox => checkbox.checked);
             const layerShapesStates = Array.from(shapesCheckboxes).map(checkbox => checkbox.checked);
-            const globalChaosVariance = parseInt(chaosVarianceSlider.value); // Get global chaos variance value
+            const globalChaosVariance = parseInt(chaosVarianceSlider.value);
+            // Map slider value to palette key or 'full'
+            const numColorsSliderValue = parseInt(numColorsSlider.value);
+            let globalNumColorsSetting;
+
+            switch (numColorsSliderValue) {
+                case 0: globalNumColorsSetting = 2; break; // Map 0 to 2 colors (B&W)
+                case 1: globalNumColorsSetting = 3; break; // Map 1 to 3 colors (RGB)
+                case 2: globalNumColorsSetting = 5; break; // Map 2 to 5 colors (RGB+BW)
+                case 3: globalNumColorsSetting = 8; break; // Map 3 to 8 colors (Full RGB Cube)
+                case 4: globalNumColorsSetting = 'full'; break; // Map 4 to full color
+                default: globalNumColorsSetting = 'full'; // Fallback
+            }
 
             // Update displayed values
             pixelSizeValueSpans.forEach((span, index) => {
                 span.textContent = layerPixelSizes[index];
             });
-            chaosVarianceValueSpan.textContent = globalChaosVariance; // Update chaos variance display
+            chaosVarianceValueSpan.textContent = globalChaosVariance;
+            // Update the display for the "Number of Colors" slider
+            if (globalNumColorsSetting === 'full') {
+                numColorsValueSpan.textContent = "Full";
+            } else {
+                numColorsValueSpan.textContent = `${globalNumColorsSetting} Colors`;
+            }
+
 
             const combinedImageData = ctx.createImageData(IMAGE_WIDTH, IMAGE_HEIGHT);
             const combinedData = combinedImageData.data;
 
-            // Initialize all pixels to black
+            // Initialize all pixels to black (as a neutral base for blending)
             for (let i = 0; i < combinedData.length; i += 4) {
                 combinedData[i + 0] = 0;
                 combinedData[i + 1] = 0;
@@ -351,20 +420,17 @@
                         currentPixelSize = basePixelSize;
 
                         if (isChaosEnabled && globalChaosVariance > 0) {
-                            // Calculate min/max range based on basePixelSize and chaosVariance
                             const minSize = Math.max(1, basePixelSize - globalChaosVariance);
                             const maxSize = Math.min(maxSliderValue, basePixelSize + globalChaosVariance);
-                            
-                            // Generate random size within the calculated range
                             currentPixelSize = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
                         }
 
-                        // Ensure currentPixelSize is at least 1 to prevent infinite loops
                         if (currentPixelSize < 1) {
                              currentPixelSize = 1;
                         }
 
-                        const { main: {r, g, b}, bg: {r: r2, g: g2, b: b2} } = getColors(isBWEnabled);
+                        // Get colors based on BW state and the global number of colors setting
+                        const { main: {r, g, b}, bg: {r: r2, g: g2, b: b2} } = getColors(isBWEnabled, globalNumColorsSetting);
 
                         // If Shapes is enabled and pixelSize is large enough for shapes
                         if (isShapesEnabled && currentPixelSize >= MIN_SHAPE_PIXEL_SIZE) {
@@ -399,7 +465,7 @@
                                         } else { // Circle
                                             const centerX = currentPixelSize / 2;
                                             const centerY = currentPixelSize / 2;
-                                            const radius = currentPixelSize / 2 * (0.5 + Math.random() * 0.5); // Random radius between 25-50% of pixelSize
+                                            const radius = currentPixelSize / 2 * (0.5 + Math.random() * 0.5); 
 
                                             const distance = Math.sqrt(Math.pow(px - centerX, 2) + Math.pow(py - centerY, 2));
 
@@ -483,8 +549,10 @@
             checkbox.addEventListener('change', drawAllNoise);
         });
 
-        // New event listener for the Chaos Variance slider
         chaosVarianceSlider.addEventListener('input', drawAllNoise);
+
+        // New event listener for the Number of Colors slider
+        numColorsSlider.addEventListener('input', drawAllNoise);
 
         randomizeButton.addEventListener('click', () => {
             pixelSizeSliders.forEach((slider, index) => {
