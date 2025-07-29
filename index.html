@@ -10,102 +10,216 @@
             margin: 0;
             padding: 0;
             background-color: black;
-            color: gray; /* Default text color */
+            color: gray; /* Default text color - retained */
             font-family: Arial, sans-serif; /* Modern, readable font */
             display: flex; /* Use flexbox for centering content */
             justify-content: center; /* Center horizontally */
-            align-items: center; /* Center vertically */
+            align-items: flex-start; /* Align items to the start vertically for better page flow */
             min-height: 100vh; /* Ensure body takes full viewport height */
-            text-align: center; /* Center text within the main container */
         }
 
         /* Container for all content */
         .container {
-            max-width: 800px; /* Limit content width for readability */
+            max-width: 1200px; /* Increased max-width to allow for 3 columns, adjust as needed */
+            width: 90%; /* Responsive width */
             padding: 20px;
-            background-color: #1a1a1a; /* Slightly lighter black for contrast */
+            background-color: #1a1a1a; /* Slightly lighter black for contrast - retained */
             border-radius: 8px; /* Rounded corners for a softer look */
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+            text-align: center; /* Center text within the main container */
+            margin-top: 50px; /* Add some top margin if you don't want it perfectly centered vertically */
+            margin-bottom: 50px; /* Add some bottom margin */
         }
 
         /* Headings */
         h1 {
-            color: yellow;
+            color: yellow; /* Retained */
             font-size: 2.5em; /* Larger heading */
             margin-bottom: 30px;
         }
 
-        /* Links Styling */
-        a {
-            color: white; /* Default link color */
-            text-decoration: none; /* Remove underline */
-            transition: color 0.3s ease; /* Smooth color transition on hover */
+        /* Grid Container for the project items */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Creates 3 equal columns */
+            gap: 20px; /* Space between grid items */
+            margin-bottom: 40px;
+            max-width: 1000px; /* Limit the width of the grid itself if desired */
+            margin-left: auto; /* Center the grid */
+            margin-right: auto; /* Center the grid */
+        }
+
+        /* NEW: Styling for each individual project item within the grid */
+        .project-item {
+            background-color: #222; /* Slightly different background for items */
+            border: 1px solid #333; /* Subtle border */
+            border-radius: 8px; /* Rounded corners */
+            padding: 15px;
+            display: flex; /* Use flexbox for vertical alignment of content inside each item */
+            flex-direction: column; /* Stack children vertically */
+            justify-content: space-between; /* Pushes content to top/bottom, image to bottom */
+            align-items: center; /* Center content horizontally within the item */
+            text-align: center; /* Center text */
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth hover effects */
+            min-height: 250px; /* Ensure a minimum height for consistent cards */
+        }
+
+        .project-item:hover {
+            transform: translateY(-5px); /* Lift effect on hover */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); /* Stronger shadow on hover */
+        }
+
+        /* Styles for the link within a project item */
+        .project-item a {
+            color: white; /* Default link color - retained */
+            text-decoration: none;
             font-weight: bold;
-            font-size: 1.2em; /* Slightly larger link text */
-            display: block; /* Each link on its own line */
-            padding: 10px 0; /* Vertical spacing for links */
+            font-size: 1.2em; /* Slightly larger for the title link */
+            margin-bottom: 10px; /* Space between link and description */
+            display: block; /* Ensure link takes its own line */
+            transition: color 0.3s ease; /* Smooth color transition */
         }
 
-        a:hover {
-            color: red; /* Hover color */
-            text-decoration: underline; /* Underline on hover for better UX */
+        .project-item a:hover {
+            color: red; /* Hover color - retained */
+            text-decoration: underline;
         }
 
-
-
-        a:active {
-            color: yellow; /* Active link color */
+        .project-item a:visited {
+            color: white; /* Retained */
         }
 
-        /* Paragraphs */
-        p {
-            color: lime; /* Default paragraph color */
-            line-height: 1.6; /* Improve readability */
+        .project-item a:active {
+            color: yellow; /* Retained */
+        }
+
+        /* Styles for the description within a project item */
+        .project-item p.description {
+            color: gray; /* Retained from your body default or could be white */
+            font-size: 0.9em;
+            line-height: 1.5;
+            margin-bottom: 15px; /* Space between description and image */
+            flex-grow: 1; /* Allow description to take available space */
+        }
+
+        /* Styles for the image within a project item */
+        .project-item img {
+            max-width: 100%; /* Ensure image fits within its container */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 4px; /* Slightly rounded corners for images */
+            margin-top: auto; /* Pushes image to the bottom if content above is shorter */
+            display: block; /* Ensures proper rendering */
+        }
+
+        /* Your existing global paragraph and footer text styles - largely unchanged unless specific to project items */
+        p { /* This applies to general paragraphs, like the footer ones */
+            color: lime; /* Retained */
+            line-height: 1.6;
             margin-bottom: 15px;
         }
 
-        /* Specific yellow text for copyright/footer */
         .footer-text-yellow {
-            color: yellow;
+            color: yellow; /* Retained */
             font-size: 0.9em;
             margin-top: 30px;
         }
 
-        /* Green text for "feel free to use" */
         .footer-text-lime {
-            color: lime;
+            color: lime; /* Retained */
             font-size: 1em;
             margin-top: 10px;
         }
 
-        /* Horizontal Rules */
+        /* Horizontal Rules - retained */
         hr {
             border: none;
-            border-top: 2px solid #333; /* Thicker, subtle grey line */
-            margin: 40px auto; /* More vertical space and center it */
-            width: 50%; /* Shorter line */
+            border-top: 2px solid #333;
+            margin: 40px auto;
+            width: 50%;
+        }
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 768px) {
+            .links-grid {
+                grid-template-columns: repeat(2, 1fr); /* 2 columns on medium screens */
+            }
+            .container {
+                width: 95%;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2.2em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .links-grid {
+                grid-template-columns: 1fr; /* Single column on small screens */
+            }
+            .project-item {
+                min-height: auto; /* Allow height to adjust on mobile */
+            }
+            h1 {
+                font-size: 1.8em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>https://lockman007.github.io/PixelSwirl/</h1>
-
+        <div class="links-grid">
+<div class="project-item">
         <a href="https://lockman007.github.io/PixelSwirl/PixelSwirl.html">PixelSwirl.html</a> image animation
-        <a href="https://lockman007.github.io/PixelSwirl/cannon.html">cannon.html</a> cannon shooter, basic
-        <a href="https://lockman007.github.io/PixelSwirl/mrwizard.html">mrwizard.html</a> kaleidoscope drawing
-        <a href="https://lockman007.github.io/PixelSwirl/mystify.html">mystify.html</a> win95 screensaver mystify your mind
-	<a href="https://lockman007.github.io/PixelSwirl/win95.html">win95.html</a> win95 screensaver list (work in progress? 1625 lines)
-	<a href="https://lockman007.github.io/PixelSwirl/maze.html">maze.html</a> win95 screensaver maze?
-	<a href="https://lockman007.github.io/PixelSwirl/tv-snow.html">tv-snow.html</a> CPU Intensive 
-	<a href="https://lockman007.github.io/PixelSwirl/tv-snow-SonifTweak.html">tv-snow-SonifTweak.html</a> alt
-	<a href="https://lockman007.github.io/PixelSwirl/rgbnoise2.html">rgbnoise2.html</a> some RBG Noise Generator (WiP)
-	    <br><a href="https://lockman007.github.io/PixelSwirl/rgbnoise2.html"><img src="https://lockman007.github.io/PixelSwirl/images/rgbnoise2.png"></a>
-	<a href="https://lockman007.github.io/PixelSwirl/steganography-16-lsb-gemini.html">steganography-16-lsb-gemini.html</a> Steganography (WiP) [LSB]
-	    <br><a href="https://lockman007.github.io/PixelSwirl/steganography.html"><img src="https://lockman007.github.io/PixelSwirl/images/steganography.png"></a>
-	<a href="https://lockman007.github.io/PixelSwirl/image-rip.html">image-rip.html</a> Steganography (WiP) [XOR & LCG]
-	    <br><a href="https://lockman007.github.io/PixelSwirl/image-rip.html"><img src="https://lockman007.github.io/PixelSwirl/images/image-rip.png"></a>
+            </div>
 
+            <div class="project-item">
+        <a href="https://lockman007.github.io/PixelSwirl/cannon.html">cannon.html</a> cannon shooter, basic
+            </div>
+
+            <div class="project-item">
+        <a href="https://lockman007.github.io/PixelSwirl/mrwizard.html">mrwizard.html</a> kaleidoscope drawing
+            </div>
+
+            <div class="project-item">
+        <a href="https://lockman007.github.io/PixelSwirl/mystify.html">mystify.html</a> win95 screensaver mystify your mind
+            </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/win95.html">win95.html</a> win95 screensaver list (work in progress? 1625 lines)
+            </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/maze.html">maze.html</a> win95 screensaver maze?
+            </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/tv-snow.html">tv-snow.html</a> CPU Intensive 
+            </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/tv-snow-SonifTweak.html">tv-snow-SonifTweak.html</a>
+	<p class="description">alt</p>
+            </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/rgbnoise2.html">rgbnoise2.html</a>
+	<p class="description">some RBG Noise Generator (WiP)</p>
+	<a href="https://lockman007.github.io/PixelSwirl/rgbnoise2.html"><img src="https://lockman007.github.io/PixelSwirl/images/rgbnoise2.png"></a>
+	    </div>
+
+            <div class="project-item">
+	<a href="https://lockman007.github.io/PixelSwirl/steganography-16-lsb-gemini.html">steganography-16-lsb-gemini.html</a>
+	<p class="description">Steganography (WiP) [LSB]</p>
+	<a href="https://lockman007.github.io/PixelSwirl/steganography.html"><img src="https://lockman007.github.io/PixelSwirl/images/steganography.png"></a>
+	    </div>
+
+            <div class="project-item">	
+	<a href="https://lockman007.github.io/PixelSwirl/image-rip.html">image-rip.html</a>
+	<p class="description">Steganography (WiP) [XOR & LCG]</p>	    
+	<a href="https://lockman007.github.io/PixelSwirl/image-rip.html"><img src="https://lockman007.github.io/PixelSwirl/images/image-rip.png"></a>
+	    </div>
+        </div>
         <hr>
 
         <p class="footer-text-yellow">
