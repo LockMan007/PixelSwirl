@@ -556,23 +556,5 @@
     </script>
 
 </body>
-    <br>
-<br>
-    <hr>
-<br>
-<br>
-<br>This is a way to hide an image far better.
-<br>a simple XOR on the image, will make it appear to be random RGB noise, but this is not a secure way to hide an image.
-<br>However, I also added "Scramble" which will use a seed phrase (password) and a number (1 - 34,359,738,336) that will shuffle the pixels around.
-<br>Combining Scramble with password with XOR will create an RBG noise image that can't be undone without the password (and the number, if you change it from 11111 to something else).
-<br>To share the image, the person needs to know the password and the number (if the number is changed).
-<br>
-<br>I can't say this is a secure way to send highly confidential pictures, because I don't know.
-<br>Any shuffling can be brute forced to un-shuffle, but the longer the password and the higher the number is, the more attempts it would take to brute force.
-<br>As far as running the "Apply scramble and XOR" multiple times, the XOR will be canceled out every even number and enabled every odd number of clicks.
-<br>So click it 1 time, it is enabled, click it 2 times it is disabled.
-<br>The intention was never to allow someone to click the buttons more than 1 time, but it's a feature that is there.
-<br>There are Just Scramble and Just XOR buttons,  to see what they do on their own.
-<br>It is amazing how "just scramble" will 100% obliterate an image to appear as just colored noise 
-<br>and amazing how just XOR always turns it into RGB noise.
+
 </html>
