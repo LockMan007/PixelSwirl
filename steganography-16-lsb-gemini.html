@@ -808,5 +808,19 @@
         fullSizeDecodedImage.addEventListener('click', () => toggleImageZoom(fullSizeDecodedImage));
 
     </script>
+    <br>
+    <br>
+    <hr>
+    <br>
+    <br>
+<br>This uses 2 images. You see 1 image, and you hide another image in that image, using the Least Significant Bit (LSB).
+<br>This is not a secure way to hide an image, because the math to do this, is universally known.
+<br>Also if the source image is solid white, you will see a very faint pale version of the hidden image.
+<br>You really need 2 complex images, so that it is not visually obvious.
+<br>Then you choose the quality of the hidden image.
+<br>The more visible it is in the image you share, the higher quality the decoded image will be.
+<br>The less visible it is in the image you share, the lower quality the decoded image will be.
+<br>If someone knows you used LSB, they can undo it and see the image effortlessly.
+<br>This is really awesome, but not a secure way to send a secret image.</p>
 </body>
 </html>
