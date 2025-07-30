@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Project Helper</title>
+    <style>
+        /* Global Dark Mode Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #2b2b2b; /* Dark background */
+            color: #cccccc; /* Light text */
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Hide main body overflow */
+        }
+
+        /* General element styling for dark mode */
+        label, button, input[type="file"], select {
+            color: #dddddd;
+        }
+
+        input[type="text"], textarea, select {
+            background-color: #3c3c3c;
+            border: 1px solid #555555;
+            color: #cccccc;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: "Consolas", "Courier New", monospace; /* Code font */
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #505050;
+            border: 1px solid #666666;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-left: 5px;
+        }
+
+        button:hover {
+            background-color: #606060;
+        }
+
+        /* Top Bar Layout */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            gap: 10px;
+            border-bottom: 1px solid #555555;
+            background-color: #3c3c3c;
+        }
+
+        .top-bar input[type="text"] {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        /* Main Content Area Layout (Splitter like) */
+        .main-content {
+            display: flex;
+            flex: 1; /* Takes remaining vertical space */
+            overflow: hidden; /* Prevent inner scrollbars from affecting layout */
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            border-right: 1px solid #444444;
+            flex: 1; /* Distribute space */
+            min-width: 0; /* Allow shrinking */
+        }
+
+        .column:last-child {
+            border-right: none;
+        }
+
+        .column-left {
+            flex: 0.2; /* Smaller left column */
+            min-width: 200px; /* Minimum width for the left column */
+            max-width: 300px;
+            overflow-y: auto; /* Scroll for long section lists */
+        }
+
+        .column-middle {
+            flex: 0.5; /* Middle column for code editors */
+            border-right: 1px solid #444444;
+            display: flex;
+            flex-direction: column; /* Stack editors vertically */
+        }
+
+        .column-right {
+            flex: 0.3; /* Right column for browser preview */
+            overflow: hidden; /* Ensure iframe scales */
+        }
+
+        /* Section List Styles */
+        #sectionList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1; /* Take available space */
+            overflow-y: auto; /* Make list scrollable */
+        }
+
+        #sectionList li {
+            padding: 8px;
+            cursor: pointer;
+            border-bottom: 1px solid #333333;
+            transition: background-color 0.1s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #sectionList li:hover {
+            background-color: #4a4a4a;
+        }
+
+        #sectionList li.selected {
+            background-color: #007acc; /* Selected item highlight */
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Text Editor Styles */
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* Fill available vertical space */
+            margin-bottom: 10px; /* Space between editors */
+        }
+        .editor-container label {
+             margin-bottom: 5px;
+        }
+
+        textarea {
+            flex: 1; /* Fill available space in their containers */
+            resize: none; /* Disable manual resizing */
+            white-space: pre; /* Maintain whitespace for code */
+            overflow: auto; /* Enable scrolling for code */
+            line-height: 1.5; /* Improve readability */
+        }
+
+        /* Specific styles for the "Full HTML Code" editor */
+        #fullHtmlCode {
+            margin-top: 10px; /* Space from font controls */
+        }
+
+        /* Code Block controls */
+        .code-block-controls {
+            display: flex;
+            justify-content: flex-start;
+            padding-top: 5px;
+        }
+        .code-block-controls button {
+            margin-right: 10px;
+        }
+
+        /* Browser Preview styles */
+        #livePreview {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #555555;
+            background-color: white; /* Iframe content is often light */
+        }
+
+        /* Status Bar */
+        .status-bar {
+            padding: 8px 10px;
+            background-color: #3c3c3c;
+            border-top: 1px solid #555555;
+            font-size: 0.9em;
+            color: #aaaaaa;
+        }
+
+        /* Font controls */
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #444444;
+        }
+        .font-controls input[type="number"] {
+            width: 50px;
+            text-align: center;
+            padding: 5px;
+        }
+        .font-controls select {
+            padding: 5px;
+        }
+        .font-controls input[type="range"] {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: #555;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        .font-controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007acc;
+            cursor: pointer;
+        }
+        .font-controls input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #007acc;
+            cursor: pointer;
+        }
+
+        /* Auto refresh checkbox */
+        .refresh-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 5px;
+        }
+        .refresh-controls input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        .refresh-controls label {
+            cursor: pointer;
+        }
+
+        /* Hide the default file input text */
+        #fileInput {
+            display: none;
+        }
+
+        /* Style for the custom file input button */
+        #browseButton {
+            margin-left: 0;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <label for="filePathDisplay">HTML File:</label>
+        <input type="text" id="filePathDisplay" readonly placeholder="No file selected">
+        <input type="file" id="fileInput" accept=".html">
+        <button id="browseButton">Browse</button>
+        <button id="loadButton">Load HTML</button>
+        <button id="saveButton">Save HTML As...</button>
+    </div>
+
+    <div class="main-content">
+        <div class="column column-left">
+            <label>HTML Sections:</label>
+            <ul id="sectionList">
+                </ul>
+        </div>
+
+        <div class="column column-middle">
+            <div class="font-controls">
+                <label for="fontSizeSlider">Font Size:</label>
+                <input type="range" id="fontSizeSlider" min="6" max="72" value="14">
+                <input type="number" id="fontSizeTextbox" min="6" max="72" value="14">
+
+                <label for="fontFamilySelect">Font:</label>
+                <select id="fontFamilySelect">
+                    <option value="Consolas">Consolas</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Monaco">Monaco</option>
+                    <option value="Cascadia Code">Cascadia Code</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Verdana">Verdana</option>
+                </select>
+            </div>
+
+            <div class="editor-container">
+                <label for="fullHtmlCode">Full HTML Code:</label>
+                <textarea id="fullHtmlCode" placeholder="Load an HTML file..."></textarea>
+            </div>
+
+            <div class="editor-container">
+                <label for="codeBlockEditor">Selected Code Block:</label>
+                <textarea id="codeBlockEditor" placeholder="Select a section from the list..."></textarea>
+                <div class="code-block-controls">
+                    <button id="copyBlockButton">Copy Block</button>
+                    <button id="updateBlockButton" disabled>Update Block</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="column column-right">
+            <label>Web Browser Preview:</label>
+            <iframe id="livePreview" srcdoc="<h1>No HTML Loaded</h1><p>Load an HTML file to preview it here.</p>"></iframe>
+            <div class="refresh-controls">
+                <button id="refreshBrowserButton">Refresh Browser</button>
+                <input type="checkbox" id="autoRefreshCheckbox" checked>
+                <label for="autoRefreshCheckbox">Auto Refresh on Update</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar" id="statusBar">Application started.</div>
+
+    <script>
+        // --- DOM Elements ---
+        const filePathDisplay = document.getElementById('filePathDisplay');
+        const fileInput = document.getElementById('fileInput');
+        const browseButton = document.getElementById('browseButton');
+        const loadButton = document.getElementById('loadButton');
+        const saveButton = document.getElementById('saveButton');
+
+        const sectionList = document.getElementById('sectionList');
+        const fullHtmlCodeEditor = document.getElementById('fullHtmlCode');
+        const codeBlockEditor = document.getElementById('codeBlockEditor');
+        const copyBlockButton = document.getElementById('copyBlockButton');
+        const updateBlockButton = document.getElementById('updateBlockButton');
+
+        const livePreview = document.getElementById('livePreview');
+        const refreshBrowserButton = document.getElementById('refreshBrowserButton');
+        const autoRefreshCheckbox = document.getElementById('autoRefreshCheckbox');
+
+        const statusBar = document.getElementById('statusBar');
+
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const fontSizeTextbox = document.getElementById('fontSizeTextbox');
+        const fontFamilySelect = document.getElementById('fontFamilySelect');
+
+        // --- Application State ---
+        let currentHtmlPath = '';
+        let currentFullHtmlContent = '';
+        // sections stores parsed sections: {name: {startLine: line (0-indexed, including START), endLine: line (0-indexed, including END), content: "...", fullContent: "..."}}
+        let sections = {};
+        let currentSelectedSectionName = null;
+        let autoRefreshEnabled = true;
+
+        // --- Utility Functions ---
+        function getTimestamp() {
+            const now = new Date();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            let hours = now.getHours();
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            return `${month}/${day}/${now.getFullYear()} ${hours}:${minutes}${ampm}`;
+        }
+
+        function updateStatus(message) {
+            statusBar.textContent = `${message} ${getTimestamp()}`;
+        }
+
+        function applyCodeFontSettings() {
+            const fontSize = fontSizeTextbox.value + 'px';
+            const fontFamily = fontFamilySelect.value;
+            fullHtmlCodeEditor.style.fontSize = fontSize;
+            fullHtmlCodeEditor.style.fontFamily = fontFamily;
+            codeBlockEditor.style.fontSize = fontSize;
+            codeBlockEditor.style.fontFamily = fontFamily;
+            sectionList.style.fontSize = fontSize; // Apply to listbox too
+            sectionList.style.fontFamily = fontFamily;
+            updateStatus(`Font set to '${fontFamily}', Size: ${fontSizeTextbox.value}`);
+        }
+
+        // --- Core Application Logic ---
+
+        function parseSections() {
+            sections = {};
+            sectionList.innerHTML = ''; // Clear existing list
+
+            const lines = currentFullHtmlContent.split('\n');
+            let currentSectionName = null;
+            let sectionStartMarkerLine = -1; // 0-indexed line number of the START marker
+            let sectionContentLines = []; // Lines for the content WITHOUT markers
+            let fullSectionContentLines = []; // Lines for the content WITH markers
+
+            // Robust Regex for START/END markers
+            // It allows for optional '/*' and '*/' around the '// START/END' part.
+            // (?:...) creates a non-capturing group.
+            // \*? means zero or one asterisk, allowing '/*' or '/'.
+            // \s* allows for any whitespace.
+            // (.+?) captures the section name non-greedily.
+            const startPattern = /^\s*(?:\/\*?\s*)?\/\/ START (.+?)(?:\s*\*\/)?\s*$/;
+            const endPattern = /^\s*(?:\/\*?\s*)?\/\/ END (.+?)(?:\s*\*\/)?\s*$/;
+
+            lines.forEach((line, i) => {
+                const startMatch = line.match(startPattern);
+                const endMatch = line.match(endPattern);
+
+                if (startMatch) {
+                    // If a new START is found while a section is active, it means the previous one was unclosed.
+                    if (currentSectionName !== null) {
+                        updateStatus(`Warning: Unclosed section '${currentSectionName}' before new START marker '${startMatch[1]}' at line ${i + 1}. Previous section not added.`);
+                        // Reset state for the previous unclosed section
+                        currentSectionName = null;
+                        sectionStartMarkerLine = -1;
+                        sectionContentLines = [];
+                        fullSectionContentLines = [];
+                    }
+                    currentSectionName = startMatch[1].trim();
+                    sectionStartMarkerLine = i; // Store the line number of the START marker
+                    sectionContentLines = []; // Reset content for new section
+                    fullSectionContentLines = [line]; // Add the START marker line to full content
+                } else if (endMatch) {
+                    const endSectionName = endMatch[1].trim();
+                    if (currentSectionName && currentSectionName === endSectionName) {
+                        fullSectionContentLines.push(line); // Add the END marker line to full content
+
+                        sections[currentSectionName] = {
+                            startLine: sectionStartMarkerLine, // Line number of the START marker
+                            endLine: i,                       // Line number of the END marker
+                            content: sectionContentLines.join('\n'), // Content without START/END markers
+                            fullContent: fullSectionContentLines.join('\n') // Content including START/END markers
+                        };
+                        const listItem = document.createElement('li');
+                        listItem.textContent = currentSectionName;
+                        listItem.dataset.sectionName = currentSectionName; // Store section name for easy lookup
+                        // --- FIX: Pass the correct section name from dataset on click ---
+                        listItem.addEventListener('click', () => displaySelectedSection(listItem.dataset.sectionName));
+                        // --- END FIX ---
+                        sectionList.appendChild(listItem);
+
+                        // Reset for next section
+                        currentSectionName = null;
+                        sectionStartMarkerLine = -1;
+                        sectionContentLines = [];
+                        fullSectionContentLines = [];
+                    } else {
+                        updateStatus(`Warning: Mismatched or unstarted END marker for '${endSectionName}' at line ${i + 1}. Ignoring.`);
+                    }
+                } else if (currentSectionName !== null) {
+                    // This line is part of an active section's content
+                    sectionContentLines.push(line);
+                    fullSectionContentLines.push(line);
+                }
+            });
+
+            if (currentSectionName) {
+                updateStatus(`Warning: Section '${currentSectionName}' started at line ${sectionStartMarkerLine + 1} but no END marker found. This section is incomplete and will not be listed.`);
+            }
+
+            // After parsing, set the initial state of the buttons
+            updateBlockButton.disabled = true; // No section selected initially
+            codeBlockEditor.value = '';
+            // If sections were found, select the first one by default for better UX
+            if (Object.keys(sections).length > 0) {
+                const firstSectionName = Object.keys(sections)[0];
+                displaySelectedSection(firstSectionName);
+            } else {
+                 updateStatus("No sections found in the loaded HTML file. Ensure markers '// START SectionName' and '// END SectionName' (with optional /* */ surrounding) are correctly placed.");
+            }
+        }
+
+        function displaySelectedSection(sectionName) {
+            // Un-highlight *all* previously selected items to ensure only one is selected at a time
+            const allSelectedItems = sectionList.querySelectorAll('li.selected');
+            allSelectedItems.forEach(item => item.classList.remove('selected'));
+
+            // Find the item corresponding to the requested sectionName
+            const currentItem = sectionList.querySelector(`li[data-section-name="${sectionName}"]`);
+            
+            // --- FIX: Ensure currentItem exists AND sectionName is valid before proceeding ---
+            if (sectionName && sectionName in sections && currentItem) {
+            // --- END FIX ---
+                const sectionData = sections[sectionName];
+                
+                // Highlight the newly selected item
+                currentItem.classList.add('selected');
+                
+                // Populate the codeBlockEditor with the section's content
+                codeBlockEditor.value = sectionData.content; 
+
+                currentSelectedSectionName = sectionName; // Update the globally tracked selected section
+                updateBlockButton.disabled = false;
+                updateStatus(`Displayed section: '${sectionName}'`);
+
+                // Optional: Scroll full HTML editor to the selected section and select text
+                const lines = fullHtmlCodeEditor.value.split('\n');
+                // Calculate character position of the START marker for selection range
+                let startCharPos = 0;
+                for (let i = 0; i < sectionData.startLine; i++) {
+                    startCharPos += lines[i].length + 1; // +1 for newline character
+                }
+                const endCharPos = startCharPos + sectionData.fullContent.length;
+                
+                fullHtmlCodeEditor.focus();
+                fullHtmlCodeEditor.setSelectionRange(startCharPos, endCharPos);
+                // Scroll into view (approximate, as precise scrolling by char pos is hard in textarea)
+                // This aims to bring the start of the selected block into view
+                fullHtmlCodeEditor.scrollTop = (fullHtmlCodeEditor.scrollHeight / lines.length) * sectionData.startLine;
+
+            } else {
+                // If sectionName is invalid or item not found, clear the editor and selection state
+                codeBlockEditor.value = '';
+                currentSelectedSectionName = null;
+                updateBlockButton.disabled = true;
+                updateStatus(`Error: Section '${sectionName}' not found or list item not clickable. Editor cleared.`);
+            }
+        }
+
+        function copySelectedBlock() {
+            if (codeBlockEditor.value.trim()) {
+                navigator.clipboard.writeText(codeBlockEditor.value).then(() => {
+                    updateStatus("Selected code block copied to clipboard!");
+                }).catch(err => {
+                    updateStatus("Failed to copy text: " + err);
+                });
+            } else {
+                updateStatus("Warning: No code block selected or content is empty to copy.");
+            }
+        }
+
+        function updateSelectedBlock() {
+            if (!currentSelectedSectionName) {
+                updateStatus("Warning: Please select a section to update.");
+                return;
+            }
+
+            const newBlockInnerContent = codeBlockEditor.value;
+            const oldSectionData = sections[currentSelectedSectionName];
+
+            // Get the actual start and end marker lines from the currentFullHtmlContent
+            const currentHtmlLinesArray = currentFullHtmlContent.split('\n');
+            const startMarkerLineText = currentHtmlLinesArray[oldSectionData.startLine];
+            const endMarkerLineText = currentHtmlLinesArray[oldSectionData.endLine];
+
+            // Reconstruct the new full section content (including its START/END markers)
+            const newFullSectionContentLines = [
+                startMarkerLineText, // The original START marker line
+                ...newBlockInnerContent.split('\n'), // The updated inner content
+                endMarkerLineText    // The original END marker line
+            ];
+            const newFullSectionContent = newFullSectionContentLines.join('\n');
+
+            // Replace the old full section content with the new one in the overall HTML
+            const beforeSection = currentHtmlLinesArray.slice(0, oldSectionData.startLine).join('\n');
+            const afterSection = currentHtmlLinesArray.slice(oldSectionData.endLine + 1).join('\n');
+
+            // Handle newlines carefully to avoid extra blank lines or missing newlines
+            currentFullHtmlContent = 
+                beforeSection + 
+                (beforeSection ? '\n' : '') + // Add newline if there was content before this section
+                newFullSectionContent + 
+                (afterSection ? '\n' : '') + // Add newline if there's content after this section
+                afterSection;
+            
+            fullHtmlCodeEditor.value = currentFullHtmlContent; // Update the full HTML editor
+
+            // Re-parse sections to update line numbers and content for all sections
+            // This is crucial because line numbers will shift after an update
+            parseSections();
+
+            // Re-select the updated section in the list (important for maintaining context)
+            // displaySelectedSection will re-highlight and update currentSelectedSectionName
+            if (currentSelectedSectionName) {
+                displaySelectedSection(currentSelectedSectionName);
+            }
+
+            if (autoRefreshEnabled) {
+                refreshBrowser();
+            }
+            updateStatus(`Section '${currentSelectedSectionName}' updated.`);
+        }
+
+        function refreshBrowser() {
+            // Write the current full HTML content to the iframe
+            livePreview.srcdoc = currentFullHtmlContent || "<h1>No HTML Loaded</h1><p>Load an HTML file to preview it here.</p>";
+            updateStatus("Browser preview refreshed.");
+        }
+
+        function saveHtmlAsFile() {
+            if (!currentFullHtmlContent) {
+                updateStatus("Nothing to save. Load an HTML file first.");
+                return;
+            }
+
+            // Suggest a filename, e.g., original name with "-edited" or a timestamp
+            let suggestedFileName = "index-edited.html";
+            if (currentHtmlPath) {
+                const parts = currentHtmlPath.split('.');
+                const extension = parts.pop();
+                const baseName = parts.join('.');
+                suggestedFileName = `${baseName}-edited.${extension}`;
+            }
+
+            const blob = new Blob([currentFullHtmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = suggestedFileName; // This triggers the "Save As" dialog
+            document.body.appendChild(a); // Required for Firefox to work properly
+            a.click(); // Programmatically click the link to trigger download
+            document.body.removeChild(a); // Clean up the element
+            URL.revokeObjectURL(url); // Release the object URL
+
+            updateStatus(`Saving '${suggestedFileName}' initiated.`);
+        }
+
+        // --- Event Listeners ---
+
+        browseButton.addEventListener('click', () => {
+            fileInput.click(); // Programmatically click the hidden file input
+        });
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                filePathDisplay.value = file.name; // Display selected file name
+                currentHtmlPath = file.name; // Store for suggested save name
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentFullHtmlContent = e.target.result;
+                    fullHtmlCodeEditor.value = currentFullHtmlContent;
+                    parseSections(); // Parse sections from the loaded content
+                    refreshBrowser(); // Auto-refresh after loading
+                    updateStatus(`'${file.name}' loaded successfully.`);
+                };
+                reader.onerror = () => {
+                    updateStatus(`Error reading file: ${reader.error}`);
+                };
+                reader.readAsText(file);
+            } else {
+                filePathDisplay.value = '';
+                updateStatus("No file selected.");
+            }
+        });
+
+        loadButton.addEventListener('click', () => {
+            // If a file was already selected via browse, load it
+            if (fileInput.files.length > 0) {
+                fileInput.dispatchEvent(new Event('change')); // Trigger change event
+            } else {
+                updateStatus("Please use 'Browse' to select an HTML file first.");
+            }
+        });
+
+        saveButton.addEventListener('click', saveHtmlAsFile);
+
+        copyBlockButton.addEventListener('click', copySelectedBlock);
+        updateBlockButton.addEventListener('click', updateSelectedBlock);
+        refreshBrowserButton.addEventListener('click', refreshBrowser);
+
+        autoRefreshCheckbox.addEventListener('change', (event) => {
+            autoRefreshEnabled = event.target.checked;
+            updateStatus(`Auto refresh set to: ${autoRefreshEnabled ? 'Enabled' : 'Disabled'}`);
+        });
+
+        // Font control listeners
+        fontSizeSlider.addEventListener('input', (event) => {
+            fontSizeTextbox.value = event.target.value;
+            applyCodeFontSettings();
+        });
+
+        fontSizeTextbox.addEventListener('change', (event) => {
+            let size = parseInt(event.target.value);
+            if (isNaN(size) || size < 6 || size > 72) {
+                updateStatus("Error: Font size must be between 6 and 72.");
+                fontSizeTextbox.value = fontSizeSlider.value; // Revert
+            } else {
+                fontSizeSlider.value = size;
+                applyCodeFontSettings();
+            }
+        });
+
+        fontFamilySelect.addEventListener('change', applyCodeFontSettings);
+
+        // Allow zooming in fullHtmlCodeEditor with Ctrl + mouse wheel
+        fullHtmlCodeEditor.addEventListener('wheel', (event) => {
+            if (event.ctrlKey) {
+                event.preventDefault(); // Prevent page zoom
+                let currentSize = parseInt(fontSizeTextbox.value);
+                let newSize = currentSize;
+                if (event.deltaY < 0) { // Zoom in (scroll up)
+                    newSize = Math.min(currentSize + 1, 72);
+                } else { // Zoom out (scroll down)
+                    newSize = Math.max(currentSize - 1, 6);
+                }
+                fontSizeTextbox.value = newSize;
+                fontSizeSlider.value = newSize;
+                applyCodeFontSettings();
+            }
+        });
+
+        // Initial setup
+        applyCodeFontSettings(); // Apply default font settings on load
+        updateStatus("Application loaded.");
+    </script>
+
+</body>
+</html>
