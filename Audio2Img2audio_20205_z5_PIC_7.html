@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image-Audio Steganography Tool</title>
+    <style>
+        /* Dark Mode Base Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        .container {
+            background-color: #2a2a2a;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            width: 90%;
+            max-width: 1400px;
+            margin-bottom: 25px;
+            border: 1px solid #3a3a3a;
+        }
+        h1, h2, h3 {
+            color: #8bbce0;
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        h3 {
+            margin-top: 10px;
+            width: 100%;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 1px dashed #3a3a3a;
+        }
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        label.checkbox-label {
+            display: flex;
+            align-items: center;
+            font-weight: normal;
+            cursor: pointer;
+            margin-bottom: 0;
+            color: #c0c0c0;
+        }
+        button, select, input[type="number"] {
+            padding: 12px 18px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.2s ease-in-out;
+            box-sizing: border-box;
+            background-color: #383838;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+        button { background-color: #007bff; color: white; }
+        button:hover { background-color: #0056b3; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            width: 100%;
+        }
+        canvas {
+            border: 2px solid #555;
+            background-color: #444;
+            display: block;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 512px;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+        }
+        audio {
+            width: 100%;
+            margin-top: 15px;
+            border-radius: 8px;
+            background-color: #383838;
+            filter: invert(0.8) hue-rotate(180deg);
+        }
+        .io-section-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            width: 100%;
+            margin-top: 20px;
+            justify-content: space-around;
+            align-items: flex-start;
+        }
+        .content-column {
+            flex: 1;
+            min-width: 320px;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        a.download-link {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        a.download-link:hover { background-color: #218838; transform: translateY(-1px); }
+        #status { margin-top: 20px; font-weight: bold; text-align: center; padding: 10px; border: 1px solid; border-radius: 8px; display: none; }
+        #status.active { display: block; }
+        #status.error { color: #ff9999; background-color: #4a2a2a; border-color: #6a3a3a; }
+        #status.info { color: #99ccff; background-color: #2a3a4a; border-color: #3a5a6a; }
+        #status.success { color: #99ff99; background-color: #2a4a2a; border-color: #3a6a3a; }
+        #note { font-size: 0.95em; color: #a0a0a0; margin-top: 15px; padding: 15px; border: 1px solid #3a3a3a; background-color: #2a2a2a; border-radius: 8px; line-height: 1.5; }
+        #note strong { color: #8bbce0; }
+        #note code { background-color: #333; padding: 2px 5px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; }
+        .file-input-zone { border: 2px dashed #555; border-radius: 8px; padding: 30px 20px; text-align: center; transition: all 0.2s ease-in-out; margin-bottom: 5px; background-color: #2e2e2e; color: #c0c0c0; width: 100%; }
+        .file-input-zone.drag-over { border-color: #8bbce0; background-color: #3a3a3a; }
+        .file-input-zone p { margin: 0 0 15px 0; font-size: 1.1em; }
+        .file-input-zone label { padding: 12px 25px; border-radius: 8px; background-color: #007bff; color: white; display: inline-block; cursor: pointer; font-weight: 600; }
+        .file-input-zone label:hover { background-color: #0056b3; }
+        .file-input-zone input[type="file"] { display: none; }
+        .file-info-display { font-size: 1.1em; color: #c0c0c0; text-align: center; margin: 10px 0 25px 0; padding: 8px 15px; border-radius: 5px; background-color: #333; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); word-wrap: break-word; overflow-wrap: break-word; min-height: 2.5em; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .file-info-display.has-file { color: #8bbce0; font-weight: bold; }
+        .control-group { background-color: #333; padding: 20px; border-radius: 8px; margin-top: 20px; border: 1px solid #444; width: 100%; max-width: 512px; display: flex; flex-direction: column; gap: 15px;}
+        .control-group-inner { display: flex; justify-content: space-between; align-items: center; width: 100%;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image-Audio Steganography Tool</h1>
+        <p id="note">
+            This tool provides a high-fidelity method for encoding a complete image into an audio file and decoding it back.
+            <br><br>
+            <strong>1. Encode Image to Audio:</strong> Select an image and an encoding quality. "Lossless" provides a perfect copy, while "High Quality (Lossy)" creates a <strong>~50% smaller audio file</strong> at the cost of some color detail. You can also choose to ignore the alpha (transparency) channel in lossless mode for a **~25% smaller file**.
+            <br><br>
+            <strong>2. Decode Audio to Image:</strong> Select an audio file created by this tool. The app will <strong>automatically detect the format</strong> and reconstruct the original image. If it's a normal audio file, it will enter Fallback Synthesis Mode.
+        </p>
+
+        <div class="section">
+            <h2>1. Encode Image to Audio</h2>
+            <div class="io-section-content">
+                <div class="content-column">
+                    <h3>Input Image</h3>
+                    <div class="file-input-zone" id="imageDropZone"><p>Drag & drop an image here</p><label for="imageFile">Select Image File</label><input type="file" id="imageFile" accept="image/*"></div>
+                    <div class="file-info-display" id="imageFileInfoDisplay">No image file selected.</div>
+                    <canvas id="inputImagePreviewCanvas"></canvas>
+                     <div class="control-group">
+                        <div class="control-group-inner">
+                            <label for="qualitySelect">Encoding Quality:</label>
+                            <select id="qualitySelect">
+                                <option value="lossless" selected>Lossless (Default)</option>
+                                <option value="lossy">High Quality (~50% Smaller File)</option>
+                            </select>
+                        </div>
+                        <div class="control-group-inner">
+                             <label class="checkbox-label" for="ignoreAlphaCheckbox">
+                                <input type="checkbox" id="ignoreAlphaCheckbox" style="margin-right: 8px;">
+                                Ignore Alpha (~25% Smaller File)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="controls"><button id="encodeImageBtn">Encode to Audio</button></div>
+                </div>
+                <div class="content-column">
+                    <h3>Encoded Audio Output</h3>
+                    <audio id="encodedAudio" controls></audio>
+                    <a id="downloadAudioLink" class="download-link" style="display: none;">Download Audio</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Decode Audio to Image</h2>
+            <div class="io-section-content">
+                <div class="content-column">
+                    <h3>Input Audio</h3>
+                    <div class="file-input-zone" id="audioDropZone"><p>Drag & drop audio file here</p><label for="audioFile">Select Audio File</label><input type="file" id="audioFile" accept="audio/wav, audio/wave"></div>
+                    <div class="file-info-display" id="audioFileInfoDisplay">No audio file selected.</div>
+                     <div id="fallbackControls" class="control-group" style="display: none;">
+                        <h3>Fallback Synthesis Controls</h3>
+                        <div class="control-group-inner">
+                            <label for="fallbackWidth">Image Width:</label>
+                            <input type="number" id="fallbackWidth" value="512">
+                        </div>
+                        <div class="control-group-inner">
+                            <label for="fallbackHeight">Image Height:</label>
+                            <input type="number" id="fallbackHeight" value="512">
+                        </div>
+                    </div>
+                     <div class="controls"><button id="decodeAudioBtn">Decode to Image</button></div>
+                </div>
+                <div class="content-column">
+                    <h3>Reconstructed Image Output</h3>
+                    <canvas id="reconstructedImageCanvas"></canvas>
+                    <a id="downloadImageLink2" class="download-link" style="display: none;">Download Reconstructed Image</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const imageFileIn = document.getElementById('imageFile'),
+            imageDropZone = document.getElementById('imageDropZone'),
+            imageFileInfoDisplay = document.getElementById('imageFileInfoDisplay'),
+            inputImagePreviewCanvas = document.getElementById('inputImagePreviewCanvas'),
+            encodeImageBtn = document.getElementById('encodeImageBtn'),
+            encodedAudio = document.getElementById('encodedAudio'),
+            downloadAudioLink = document.getElementById('downloadAudioLink'),
+            qualitySelect = document.getElementById('qualitySelect'),
+            ignoreAlphaCheckbox = document.getElementById('ignoreAlphaCheckbox');
+
+        const audioFileIn = document.getElementById('audioFile'),
+            audioDropZone = document.getElementById('audioDropZone'),
+            audioFileInfoDisplay = document.getElementById('audioFileInfoDisplay'),
+            decodeAudioBtn = document.getElementById('decodeAudioBtn'),
+            reconstructedImageCanvas = document.getElementById('reconstructedImageCanvas'),
+            downloadImageLink2 = document.getElementById('downloadImageLink2'),
+            fallbackControls = document.getElementById('fallbackControls'),
+            fallbackWidthInput = document.getElementById('fallbackWidth'),
+            fallbackHeightInput = document.getElementById('fallbackHeight');
+
+        const statusDiv = document.getElementById('status');
+        
+        // --- Constants for Metadata Flags ---
+        const FLAG_LOSSY = 0x8000;
+        const FLAG_NO_ALPHA = 0x4000;
+
+        // --- Core Functions ---
+
+        function updateStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = `active ${type}`;
+        }
+
+        function updateFileInfoDisplay(file, displayElement) {
+            const defaultText = displayElement.id.includes('audio') ? 'No audio file selected.' : 'No image file selected.';
+            displayElement.textContent = file ? `File loaded: ${file.name}` : defaultText;
+            displayElement.classList.toggle('has-file', !!file);
+        }
+        
+        async function encodeImageToAudio() {
+            if (!imageFileIn.files[0]) {
+                updateStatus('Please select an image file first.', 'error');
+                return;
+            }
+            updateStatus('Encoding image to audio...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            try {
+                const width = inputImagePreviewCanvas.width;
+                const height = inputImagePreviewCanvas.height;
+                const ctx = inputImagePreviewCanvas.getContext('2d');
+                const pixels = ctx.getImageData(0, 0, width, height).data;
+                const numPixels = width * height;
+                const quality = qualitySelect.value;
+                const ignoreAlpha = ignoreAlphaCheckbox.checked;
+
+                let audioData;
+                let heightAndFlags = height;
+
+                if (quality === 'lossy') {
+                    heightAndFlags |= FLAG_LOSSY;
+                    audioData = new Int16Array(2 + numPixels);
+                    for (let i = 0; i < numPixels; i++) {
+                        const p = i * 4;
+                        const r = Math.floor(pixels[p] / 16);
+                        const g = Math.floor(pixels[p + 1] / 16);
+                        const b = Math.floor(pixels[p + 2] / 16);
+                        audioData[2 + i] = (r << 8) | (g << 4) | b;
+                    }
+                } else { // lossless
+                    if (ignoreAlpha) {
+                        heightAndFlags |= FLAG_NO_ALPHA;
+                        // For RGB only, we need 3 values, which fits into 2 samples (1.5, rounded up).
+                        audioData = new Int16Array(2 + numPixels * 2); 
+                        for (let i = 0; i < numPixels; i++) {
+                            const p = i * 4;
+                            // Pack R and G into the first sample
+                            audioData[2 + i * 2] = (pixels[p] << 8) | pixels[p + 1];
+                            // Pack B into the high byte of the second sample, low byte is unused.
+                            audioData[2 + i * 2 + 1] = (pixels[p + 2] << 8) | 255; 
+                        }
+                    } else {
+                        audioData = new Int16Array(2 + numPixels * 2);
+                        for (let i = 0; i < numPixels; i++) {
+                            const p = i * 4;
+                            audioData[2 + i * 2] = (pixels[p] << 8) | pixels[p + 1];
+                            audioData[2 + i * 2 + 1] = (pixels[p + 2] << 8) | pixels[p + 3];
+                        }
+                    }
+                }
+                
+                audioData[0] = width;
+                audioData[1] = heightAndFlags;
+                
+                const audioBlob = createWavFile(audioData, 44100);
+                const audioUrl = URL.createObjectURL(audioBlob);
+                encodedAudio.src = audioUrl;
+
+                const fileName = (imageFileIn.files[0].name.split('.').slice(0, -1).join('.') || 'encoded_image') + `_${quality}.wav`;
+                downloadAudioLink.href = audioUrl;
+                downloadAudioLink.download = fileName;
+                downloadAudioLink.style.display = 'block';
+
+                updateStatus('Image encoded successfully. Automatically decoding for verification...', 'success');
+
+                const audioFile = new File([audioBlob], fileName, { type: 'audio/wav' });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(audioFile);
+                audioFileIn.files = dataTransfer.files;
+                await handleAudioFileSelect(audioFile);
+                decodeAudioBtn.click();
+
+            } catch(e) {
+                updateStatus(`Error encoding image: ${e.message}`, 'error');
+            }
+        }
+
+        async function decodeAudioToImage() {
+            if (!audioFileIn.files[0]) {
+                updateStatus('Please select an audio file to decode.', 'error');
+                return;
+            }
+            updateStatus('Decoding audio...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            try {
+                const arrayBuffer = await audioFileIn.files[0].arrayBuffer();
+                const dataView = new DataView(arrayBuffer);
+                const headerSize = 44;
+                
+                if (arrayBuffer.byteLength < headerSize + 4) throw new Error("Invalid WAV file: too short.");
+                
+                const bitDepth = dataView.getUint16(34, true);
+                if (bitDepth !== 16) throw new Error(`Unsupported bit depth: ${bitDepth}. File must be 16-bit.`);
+                
+                const audioData = new Int16Array(arrayBuffer, headerSize);
+                
+                let width = audioData[0];
+                let heightAndFlags = audioData[1];
+                const isLossy = (heightAndFlags & FLAG_LOSSY) > 0;
+                const hasNoAlpha = (heightAndFlags & FLAG_NO_ALPHA) > 0;
+                let height = heightAndFlags & 0x3FFF;
+                
+                let requiredSamples = isLossy ? (2 + width * height) : (2 + width * height * 2);
+
+                let isFallback = false;
+                if (!width || !height || width <= 0 || height <= 0 || width > 8000 || height > 8000 || audioData.length < requiredSamples) { 
+                   isFallback = true;
+                }
+
+                fallbackControls.style.display = isFallback ? 'block' : 'none';
+
+                if (isFallback) {
+                    updateStatus('Not a valid image-audio file. Switched to Fallback Synthesis Mode.', 'info');
+                    width = parseInt(fallbackWidthInput.value, 10);
+                    height = parseInt(fallbackHeightInput.value, 10);
+                    if (!width || !height || width <= 0 || height <= 0) {
+                        updateStatus('Please provide valid dimensions for fallback synthesis.', 'error');
+                        return;
+                    }
+                }
+                
+                reconstructedImageCanvas.width = width;
+                reconstructedImageCanvas.height = height;
+                const ctx = reconstructedImageCanvas.getContext('2d');
+                const imageData = ctx.createImageData(width, height);
+                const pixels = imageData.data;
+
+                for (let i = 0; i < width * height; i++) {
+                    const p = i * 4;
+                    const audioIndex = isFallback ? i * 2 : 2 + i * 2;
+                    
+                    if (audioIndex + 1 >= audioData.length && !isLossy && !hasNoAlpha) break;
+                    if (isLossy && 2 + i >= audioData.length) break;
+
+                    if (isLossy) {
+                        const sample = audioData[2 + i];
+                        pixels[p] = ((sample >> 8) & 0x0F) * 17;
+                        pixels[p + 1] = ((sample >> 4) & 0x0F) * 17;
+                        pixels[p + 2] = (sample & 0x0F) * 17;
+                        pixels[p + 3] = 255;
+                    } else { // Lossless
+                        const rg = audioData[audioIndex];
+                        const ba = audioData[audioIndex + 1];
+                        pixels[p] = (rg >> 8) & 0xFF;
+                        pixels[p + 1] = rg & 0xFF;
+                        pixels[p + 2] = (ba >> 8) & 0xFF;
+                        pixels[p + 3] = hasNoAlpha ? 255 : (ba & 0xFF);
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                const fileName = (audioFileIn.files[0].name.split('.').slice(0, -1).join('.') || 'reconstructed_image') + '.png';
+                downloadImageLink2.href = reconstructedImageCanvas.toDataURL('image/png');
+                downloadImageLink2.download = fileName;
+                downloadImageLink2.style.display = 'block';
+
+                updateStatus(`Image ${isFallback ? 'synthesized' : 'reconstructed'} successfully.`, 'success');
+
+            } catch (e) {
+                updateStatus(`Error decoding audio: ${e.message}.`, 'error');
+            }
+        }
+        
+        function createWavFile(audioData, sampleRate) {
+            const bitDepth = 16;
+            const bytesPerSample = bitDepth / 8;
+            const buffer = new ArrayBuffer(44 + audioData.length * bytesPerSample);
+            const view = new DataView(buffer);
+            
+            writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + audioData.length * bytesPerSample, true);
+            writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * bytesPerSample, true);
+            view.setUint16(32, bytesPerSample, true); view.setUint16(34, bitDepth, true);
+            writeString(view, 36, 'data'); view.setUint32(40, audioData.length * bytesPerSample, true);
+
+            new Int16Array(buffer, 44).set(audioData);
+            
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
+        
+        async function handleImageFileSelect(file) {
+            if (!file) return;
+            updateFileInfoDisplay(file, imageFileInfoDisplay);
+            updateStatus('Image loaded. Ready to encode.', 'success');
+            await new Promise((resolve, reject) => {
+               const img = new Image();
+               img.src = URL.createObjectURL(file);
+               img.onload = () => {
+                   const ctx = inputImagePreviewCanvas.getContext('2d');
+                   inputImagePreviewCanvas.width = img.width;
+                   inputImagePreviewCanvas.height = img.height;
+                   ctx.drawImage(img, 0, 0);
+                   URL.revokeObjectURL(img.src);
+                   resolve();
+               };
+               img.onerror = reject;
+            }).catch(() => updateStatus('Error loading image preview.', 'error'));
+        }
+
+        async function handleAudioFileSelect(file) {
+             if (!file) return;
+             updateFileInfoDisplay(file, audioFileInfoDisplay);
+             updateStatus('Audio loaded. Ready to decode.', 'success');
+             fallbackControls.style.display = 'none';
+        }
+
+        // --- Event Listeners ---
+        encodeImageBtn.addEventListener('click', encodeImageToAudio);
+        decodeAudioBtn.addEventListener('click', decodeAudioToImage);
+        
+        imageFileIn.addEventListener('change', (e) => handleImageFileSelect(e.target.files[0]));
+        audioFileIn.addEventListener('change', (e) => handleAudioFileSelect(e.target.files[0]));
+
+        qualitySelect.addEventListener('change', () => {
+            const isLossy = qualitySelect.value === 'lossy';
+            ignoreAlphaCheckbox.checked = isLossy;
+            ignoreAlphaCheckbox.disabled = isLossy;
+        });
+
+        function setupDragAndDrop(dropZone, fileInput, fileHandler) {
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault(); dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileHandler(e.dataTransfer.files[0]); }
+            });
+        }
+        setupDragAndDrop(imageDropZone, imageFileIn, handleImageFileSelect);
+        setupDragAndDrop(audioDropZone, audioFileIn, handleAudioFileSelect);
+
+    </script>
+</body>
+</html>
