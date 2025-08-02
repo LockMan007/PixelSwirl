@@ -17,9 +17,11 @@ config = configparser.ConfigParser()
 
 # --- Global Variables for Settings ---
 GAIN_FACTOR = 5.0
-COLOR_MODE = 1
-OSCILLOSCOPE_ACTIVE = False
-SPECTRUM_ACTIVE = True  # NEW: Spectrum analyzer active by default
+COLOR_MODE = 2
+OSCILLOSCOPE_ACTIVE = True
+SPECTRUM_ACTIVE = True
+DEBUG_LINE_ACTIVE = False
+TARGET_BAR_COUNT = 60  # Desired number of bars to be displayed on screen.
 
 # --- Load Settings ---
 def load_settings():
@@ -27,6 +29,7 @@ def load_settings():
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
+    global DEBUG_LINE_ACTIVE
 
     if os.path.exists(SETTINGS_FILE):
         try:
@@ -36,7 +39,8 @@ def load_settings():
                 COLOR_MODE = int(config['SpectrumAnalyzer'].get('color_mode', COLOR_MODE))
                 OSCILLOSCOPE_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_active', OSCILLOSCOPE_ACTIVE)
                 SPECTRUM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrum_active', SPECTRUM_ACTIVE)
-                print(f"Settings loaded from {SETTINGS_FILE}: Gain={GAIN_FACTOR}, Color Mode={COLOR_MODE}, Oscilloscope={OSCILLOSCOPE_ACTIVE}, Spectrum={SPECTRUM_ACTIVE}")
+                DEBUG_LINE_ACTIVE = config['SpectrumAnalyzer'].getboolean('debug_line_active', DEBUG_LINE_ACTIVE)
+                print(f"Settings loaded from {SETTINGS_FILE}: Gain={GAIN_FACTOR}, Color Mode={COLOR_MODE}, Oscilloscope={OSCILLOSCOPE_ACTIVE}, Spectrum={SPECTRUM_ACTIVE}, Debug Line={DEBUG_LINE_ACTIVE}")
             else:
                 print(f"Warning: [SpectrumAnalyzer] section not found in {SETTINGS_FILE}. Using defaults.")
                 reset_default_settings()
@@ -56,6 +60,7 @@ def save_settings():
     config['SpectrumAnalyzer']['color_mode'] = str(COLOR_MODE)
     config['SpectrumAnalyzer']['oscilloscope_active'] = str(OSCILLOSCOPE_ACTIVE)
     config['SpectrumAnalyzer']['spectrum_active'] = str(SPECTRUM_ACTIVE)
+    config['SpectrumAnalyzer']['debug_line_active'] = str(DEBUG_LINE_ACTIVE)
     try:
         with open(SETTINGS_FILE, 'w') as configfile:
             config.write(configfile)
@@ -69,10 +74,12 @@ def reset_default_settings():
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
+    global DEBUG_LINE_ACTIVE
     GAIN_FACTOR = 5.0
     COLOR_MODE = 1
     OSCILLOSCOPE_ACTIVE = False
     SPECTRUM_ACTIVE = True
+    DEBUG_LINE_ACTIVE = False
 
 # Initial call to load settings or set defaults
 reset_default_settings()
@@ -81,7 +88,6 @@ load_settings()
 # --- Pygame Setup ---
 INITIAL_SCREEN_WIDTH = 800
 INITIAL_SCREEN_HEIGHT = 400
-TARGET_BAR_COUNT = 60
 
 pygame.init()
 
@@ -150,6 +156,7 @@ MENU_OPTIONS = [
     {"text": "Color: Gradient", "action": "color_gradient"},
     {"text": "Toggle Spectrum", "action": "toggle_spectrum"},
     {"text": "Toggle Oscilloscope", "action": "toggle_oscilloscope"},
+    {"text": "Toggle Debug Line", "action": "toggle_debug_line"},
     {"text": "Toggle Fullscreen", "action": "toggle_fullscreen"},
     {"text": "Save Settings", "action": "save_settings"},
     {"text": "Load Settings", "action": "load_settings"},
@@ -194,6 +201,7 @@ def handle_menu_click(mouse_pos):
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
+    global DEBUG_LINE_ACTIVE
     global running
     global is_fullscreen
     global screen
@@ -218,12 +226,15 @@ def handle_menu_click(mouse_pos):
             elif option["action"] == "color_gradient":
                 COLOR_MODE = 2
                 print("Color mode set to: Gradient")
-            elif option["action"] == "toggle_spectrum": # NEW: Handle spectrum toggle
+            elif option["action"] == "toggle_spectrum":
                 SPECTRUM_ACTIVE = not SPECTRUM_ACTIVE
                 print(f"Spectrum Analyzer is now {'ON' if SPECTRUM_ACTIVE else 'OFF'}.")
             elif option["action"] == "toggle_oscilloscope":
                 OSCILLOSCOPE_ACTIVE = not OSCILLOSCOPE_ACTIVE
                 print(f"Oscilloscope is now {'ON' if OSCILLOSCOPE_ACTIVE else 'OFF'}.")
+            elif option["action"] == "toggle_debug_line":
+                DEBUG_LINE_ACTIVE = not DEBUG_LINE_ACTIVE
+                print(f"Debug line is now {'ON' if DEBUG_LINE_ACTIVE else 'OFF'}.")
             elif option["action"] == "toggle_fullscreen":
                 is_fullscreen = not is_fullscreen
                 if is_fullscreen:
@@ -254,8 +265,14 @@ def main():
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
     global is_fullscreen
+    global DEBUG_LINE_ACTIVE
+    global TARGET_BAR_COUNT
+    global GAIN_FACTOR
 
     is_fullscreen = False
+
+    # Remove SCALED to avoid resolution conflicts
+    screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
     
     try:
         with sd.InputStream(samplerate=SAMPLING_RATE, channels=2, callback=audio_callback, blocksize=CHUNK_SIZE, device=DEVICE_ID):
@@ -276,54 +293,60 @@ def main():
                                 MENU_ACTIVE = False
                     elif event.type == pygame.VIDEORESIZE:
                         SCREEN_WIDTH, SCREEN_HEIGHT = event.size
+                        screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
                         print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
 
                 screen.fill((0, 0, 0))
 
-                # Draw the oscilloscope first (in the background)
                 if OSCILLOSCOPE_ACTIVE:
                     draw_oscilloscope()
-                
-                # Then draw the spectrum analyzer on top
-                if SPECTRUM_ACTIVE:
-                    if 'audio_data_buffer' in globals() and audio_data_buffer is not None:
-                        N = len(audio_data_buffer)
-                        yf = fft(audio_data_buffer * np.hanning(N))
-                        magnitudes = 2.0/N * np.abs(yf[0:N//2])
 
-                        BAR_WIDTH = max(1, int(SCREEN_WIDTH / (TARGET_BAR_COUNT * 1.5)))
-                        BAR_SPACING = max(1, int(BAR_WIDTH * 0.2))
-                        
-                        num_bars = int(SCREEN_WIDTH / (BAR_WIDTH + BAR_SPACING))
-                        if num_bars <= 0:
-                            num_bars = 1
-                        
-                        for i in range(num_bars):
-                            freq_bin_start = int(i * (N / 2) / num_bars)
-                            freq_bin_end = int((i + 1) * (N / 2) / num_bars)
-                            
-                            if freq_bin_start < len(magnitudes) and freq_bin_start < freq_bin_end:
-                                bar_magnitude = np.max(magnitudes[freq_bin_start:freq_bin_end])
-                            else:
-                                bar_magnitude = 0.0
+                if DEBUG_LINE_ACTIVE:
+                    pygame.draw.line(screen, (0, 255, 0), (0, SCREEN_HEIGHT - 1), (SCREEN_WIDTH, SCREEN_HEIGHT - 1), 1)
 
-                            bar_height = max(0, int(bar_magnitude * (SCREEN_HEIGHT / 2) * GAIN_FACTOR))
-                            if bar_height > SCREEN_HEIGHT:
-                                bar_height = SCREEN_HEIGHT
+                # --- Spectrum Analyzer ---
+                if SPECTRUM_ACTIVE and 'audio_data_buffer' in globals() and audio_data_buffer is not None:
+                    N = len(audio_data_buffer)
+                    yf = fft(audio_data_buffer * np.hanning(N))
+                    magnitudes = 2.0/N * np.abs(yf[0:N//2])
 
-                            x = i * (BAR_WIDTH + BAR_SPACING)
-                            y = SCREEN_HEIGHT - bar_height
+                    BAR_WIDTH = max(1, int(SCREEN_WIDTH / (TARGET_BAR_COUNT * 1.5)))
+                    BAR_SPACING = max(1, int(BAR_WIDTH * 0.2))
 
-                            if COLOR_MODE == 1:
-                                pygame.draw.rect(screen, (0, 255, 0), (x, y, BAR_WIDTH, bar_height))
-                            elif COLOR_MODE == 2:
-                                for h_pixel in range(bar_height):
-                                    if bar_height == 0: continue
-                                    percentage = h_pixel / bar_height
-                                    color = get_gradient_color(percentage)
-                                    pygame.draw.rect(screen, color, (x, SCREEN_HEIGHT - 1 - h_pixel, BAR_WIDTH, 1))
+                    num_bars = int(SCREEN_WIDTH / (BAR_WIDTH + BAR_SPACING))
+                    if num_bars <= 0:
+                        num_bars = 1
+
+                    for i in range(num_bars):
+                        freq_bin_start = int(i * (N / 2) / num_bars)
+                        freq_bin_end = int((i + 1) * (N / 2) / num_bars)
+
+                        if freq_bin_start < len(magnitudes) and freq_bin_start < freq_bin_end:
+                            bar_magnitude = np.max(magnitudes[freq_bin_start:freq_bin_end])
+                        else:
+                            bar_magnitude = 0.0
+
+                        bar_height = int(np.power(bar_magnitude, 0.5) * SCREEN_HEIGHT * GAIN_FACTOR)
+                        bar_height = max(0, min(bar_height, SCREEN_HEIGHT))
+
+                        x = i * (BAR_WIDTH + BAR_SPACING)
+                        y = SCREEN_HEIGHT - bar_height
+
+                        if COLOR_MODE == 1:
+                            pygame.draw.rect(screen, (0, 255, 0), (x, y, BAR_WIDTH, bar_height))
+                        elif COLOR_MODE == 2:
+                            for h_pixel in range(min(bar_height, SCREEN_HEIGHT)):
+                                percentage = h_pixel / bar_height if bar_height else 0
+                                color = get_gradient_color(percentage)
+                                y_pos = SCREEN_HEIGHT - 1 - h_pixel
+                                if y_pos >= 0:
+                                    pygame.draw.rect(screen, color, (x, y_pos, BAR_WIDTH, 1))
 
                 draw_menu()
+
+                # Optional visual bounds for debugging (delete if undesired)
+                pygame.draw.line(screen, (255, 0, 0), (0, 0), (SCREEN_WIDTH, 0), 1)  # Top
+                pygame.draw.line(screen, (255, 0, 0), (0, SCREEN_HEIGHT-1), (SCREEN_WIDTH, SCREEN_HEIGHT-1), 1)  # Bottom
 
                 pygame.display.flip()
                 clock.tick(60)
