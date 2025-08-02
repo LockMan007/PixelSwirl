@@ -5,6 +5,8 @@ import pygame
 import configparser
 import os
 import sys
+import ctypes
+from ctypes import wintypes
 
 # --- Configuration ---
 CHUNK_SIZE = 1024
@@ -20,8 +22,16 @@ GAIN_FACTOR = 5.0
 COLOR_MODE = 2
 OSCILLOSCOPE_ACTIVE = True
 SPECTRUM_ACTIVE = True
-DEBUG_LINE_ACTIVE = False
 TARGET_BAR_COUNT = 60  # Desired number of bars to be displayed on screen.
+
+# --- Global Variables for Window State ---
+INITIAL_SCREEN_WIDTH = 800
+INITIAL_SCREEN_HEIGHT = 400
+last_window_width = INITIAL_SCREEN_WIDTH
+last_window_height = INITIAL_SCREEN_HEIGHT
+last_window_x = 100
+last_window_y = 100
+is_fullscreen = False
 
 # --- Load Settings ---
 def load_settings():
@@ -29,7 +39,6 @@ def load_settings():
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
-    global DEBUG_LINE_ACTIVE
 
     if os.path.exists(SETTINGS_FILE):
         try:
@@ -39,8 +48,7 @@ def load_settings():
                 COLOR_MODE = int(config['SpectrumAnalyzer'].get('color_mode', COLOR_MODE))
                 OSCILLOSCOPE_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_active', OSCILLOSCOPE_ACTIVE)
                 SPECTRUM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrum_active', SPECTRUM_ACTIVE)
-                DEBUG_LINE_ACTIVE = config['SpectrumAnalyzer'].getboolean('debug_line_active', DEBUG_LINE_ACTIVE)
-                print(f"Settings loaded from {SETTINGS_FILE}: Gain={GAIN_FACTOR}, Color Mode={COLOR_MODE}, Oscilloscope={OSCILLOSCOPE_ACTIVE}, Spectrum={SPECTRUM_ACTIVE}, Debug Line={DEBUG_LINE_ACTIVE}")
+                print(f"Settings loaded from {SETTINGS_FILE}: Gain={GAIN_FACTOR}, Color Mode={COLOR_MODE}, Oscilloscope={OSCILLOSCOPE_ACTIVE}, Spectrum={SPECTRUM_ACTIVE}")
             else:
                 print(f"Warning: [SpectrumAnalyzer] section not found in {SETTINGS_FILE}. Using defaults.")
                 reset_default_settings()
@@ -60,7 +68,6 @@ def save_settings():
     config['SpectrumAnalyzer']['color_mode'] = str(COLOR_MODE)
     config['SpectrumAnalyzer']['oscilloscope_active'] = str(OSCILLOSCOPE_ACTIVE)
     config['SpectrumAnalyzer']['spectrum_active'] = str(SPECTRUM_ACTIVE)
-    config['SpectrumAnalyzer']['debug_line_active'] = str(DEBUG_LINE_ACTIVE)
     try:
         with open(SETTINGS_FILE, 'w') as configfile:
             config.write(configfile)
@@ -74,30 +81,54 @@ def reset_default_settings():
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
-    global DEBUG_LINE_ACTIVE
     GAIN_FACTOR = 5.0
     COLOR_MODE = 1
     OSCILLOSCOPE_ACTIVE = False
     SPECTRUM_ACTIVE = True
-    DEBUG_LINE_ACTIVE = False
 
 # Initial call to load settings or set defaults
 reset_default_settings()
 load_settings()
 
 # --- Pygame Setup ---
-INITIAL_SCREEN_WIDTH = 800
-INITIAL_SCREEN_HEIGHT = 400
-
 pygame.init()
-
-# The screen variable now holds a reference to the display surface.
-# It is important to set this up correctly to handle resizing.
 screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Spectrum Analyzer")
 clock = pygame.time.Clock()
 
 SCREEN_WIDTH, SCREEN_HEIGHT = INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT
+
+# --- ctypes for window positioning on Windows ---
+if sys.platform == "win32":
+    class RECT(ctypes.Structure):
+        _fields_ = [
+            ("left", ctypes.c_long),
+            ("top", ctypes.c_long),
+            ("right", ctypes.c_long),
+            ("bottom", ctypes.c_long),
+        ]
+    SWP_NOSIZE = 0x0001
+    SWP_NOMOVE = 0x0002
+    SWP_NOZORDER = 0x0004
+    SWP_FRAMECHANGED = 0x0020
+    SWP_SHOWWINDOW = 0x0040
+    HWND_TOPMOST = -1
+    HWND_NOTOPMOST = -2
+
+    def get_window_handle():
+        return pygame.display.get_wm_info()["window"]
+
+    def set_window_position(x, y, width, height):
+        hwnd = get_window_handle()
+        ctypes.windll.user32.SetWindowPos(
+            hwnd,
+            ctypes.wintypes.HWND(HWND_NOTOPMOST),
+            x,
+            y,
+            width,
+            height,
+            SWP_SHOWWINDOW | SWP_FRAMECHANGED
+        )
 
 # --- Audio Callback Function ---
 def audio_callback(indata, frames, time, status):
@@ -158,8 +189,7 @@ MENU_OPTIONS = [
     {"text": "Color: Gradient", "action": "color_gradient"},
     {"text": "Toggle Spectrum", "action": "toggle_spectrum"},
     {"text": "Toggle Oscilloscope", "action": "toggle_oscilloscope"},
-    {"text": "Toggle Debug Line", "action": "toggle_debug_line"},
-    {"text": "Toggle Fullscreen", "action": "toggle_fullscreen"},
+    {"text": "Toggle Fullscreen (F11)", "action": "toggle_fullscreen"},
     {"text": "Save Settings", "action": "save_settings"},
     {"text": "Load Settings", "action": "load_settings"},
     {"text": "Exit", "action": "exit"}
@@ -193,11 +223,59 @@ def draw_menu():
         text_surface = MENU_FONT.render(option["text"], True, MENU_TEXT_COLOR)
         text_rect = text_surface.get_rect(midleft=(draw_x + MENU_PADDING, draw_y + MENU_PADDING + i * MENU_ITEM_HEIGHT + MENU_ITEM_HEIGHT / 2))
         screen.blit(text_surface, text_rect)
-
         option['rect'] = text_rect.inflate(MENU_PADDING*2, 0)
     
-    # Store the final menu rect for click detection
     globals()['menu_rect'] = menu_rect
+
+# --- Fullscreen Toggle Function ---
+def toggle_fullscreen():
+    global is_fullscreen
+    global screen
+    global SCREEN_WIDTH, SCREEN_HEIGHT
+    global last_window_width, last_window_height
+    global last_window_x, last_window_y
+
+    is_fullscreen = not is_fullscreen
+
+    if is_fullscreen:
+        # Save current window position and size
+        last_window_width, last_window_height = screen.get_size()
+        try:
+            last_window_x, last_window_y = pygame.display.get_window_position()
+        except Exception:
+            pass
+
+        # Get primary monitor resolution
+        desktop_width, desktop_height = pygame.display.get_desktop_sizes()[0]
+        
+        # Recreate the window in borderless mode
+        screen = pygame.display.set_mode((desktop_width, desktop_height), pygame.NOFRAME)
+        SCREEN_WIDTH, SCREEN_HEIGHT = desktop_width, desktop_height
+        
+        # Force the window position to (0,0) on Windows using ctypes
+        if sys.platform == "win32":
+            try:
+                set_window_position(0, 0, desktop_width, desktop_height)
+                print(f"Windows API used to set window position to (0, 0)")
+            except Exception as e:
+                print(f"Error using ctypes to set window position: {e}", file=sys.stderr)
+
+        print(f"Window set to fullscreen: {SCREEN_WIDTH}x{SCREEN_HEIGHT} at position (0, 0)")
+
+    else:
+        # Restore window position
+        screen = pygame.display.set_mode((last_window_width, last_window_height), pygame.RESIZABLE)
+        SCREEN_WIDTH, SCREEN_HEIGHT = last_window_width, last_window_height
+        
+        # Restore the window position on Windows using ctypes
+        if sys.platform == "win32":
+            try:
+                set_window_position(last_window_x, last_window_y, last_window_width, last_window_height)
+                print(f"Windows API used to restore window position to ({last_window_x}, {last_window_y})")
+            except Exception as e:
+                print(f"Error using ctypes to restore window position: {e}", file=sys.stderr)
+        
+        print(f"Window restored to: {SCREEN_WIDTH}x{SCREEN_HEIGHT} at position ({last_window_x}, {last_window_y})")
 
 
 # --- Menu Click Handler ---
@@ -207,12 +285,8 @@ def handle_menu_click(mouse_pos):
     global COLOR_MODE
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
-    global DEBUG_LINE_ACTIVE
     global running
-    global is_fullscreen
-    global screen
-    global SCREEN_WIDTH, SCREEN_HEIGHT
-
+    
     if not MENU_ACTIVE:
         return
 
@@ -238,17 +312,8 @@ def handle_menu_click(mouse_pos):
             elif option["action"] == "toggle_oscilloscope":
                 OSCILLOSCOPE_ACTIVE = not OSCILLOSCOPE_ACTIVE
                 print(f"Oscilloscope is now {'ON' if OSCILLOSCOPE_ACTIVE else 'OFF'}.")
-            elif option["action"] == "toggle_debug_line":
-                DEBUG_LINE_ACTIVE = not DEBUG_LINE_ACTIVE
-                print(f"Debug line is now {'ON' if DEBUG_LINE_ACTIVE else 'OFF'}.")
             elif option["action"] == "toggle_fullscreen":
-                is_fullscreen = not is_fullscreen
-                if is_fullscreen:
-                    screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.SCALED | pygame.RESIZABLE)
-                else:
-                    screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
-                SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
-                print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
+                toggle_fullscreen()
             elif option["action"] == "save_settings":
                 save_settings()
                 print("Settings saved.")
@@ -271,14 +336,8 @@ def main():
     global OSCILLOSCOPE_ACTIVE
     global SPECTRUM_ACTIVE
     global is_fullscreen
-    global DEBUG_LINE_ACTIVE
     global TARGET_BAR_COUNT
     global GAIN_FACTOR
-
-    is_fullscreen = False
-    
-    # The screen variable now holds a reference to the display surface.
-    screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
     
     try:
         with sd.InputStream(samplerate=SAMPLING_RATE, channels=2, callback=audio_callback, blocksize=CHUNK_SIZE, device=DEVICE_ID):
@@ -294,24 +353,23 @@ def main():
                             MENU_X, MENU_Y = event.pos
                         elif event.button == 1:  # Left-click
                             if MENU_ACTIVE:
-                                # Check if the click was inside the menu
                                 if 'menu_rect' in globals() and globals()['menu_rect'].collidepoint(event.pos):
                                     handle_menu_click(event.pos)
                                 else:
                                     MENU_ACTIVE = False # Clicked outside the menu, so close it
                     elif event.type == pygame.VIDEORESIZE:
-                        SCREEN_WIDTH, SCREEN_HEIGHT = event.size
-                        # Recreate the screen surface with the new size
-                        screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
-                        print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
-
+                        if not is_fullscreen:
+                            SCREEN_WIDTH, SCREEN_HEIGHT = event.size
+                            screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
+                            print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_F11:
+                            toggle_fullscreen()
+                            
                 screen.fill((0, 0, 0))
 
                 if OSCILLOSCOPE_ACTIVE:
                     draw_oscilloscope()
-
-                if DEBUG_LINE_ACTIVE:
-                    pygame.draw.line(screen, (0, 255, 0), (0, SCREEN_HEIGHT - 1), (SCREEN_WIDTH, SCREEN_HEIGHT - 1), 1)
 
                 # --- Spectrum Analyzer ---
                 if SPECTRUM_ACTIVE and 'audio_data_buffer' in globals() and audio_data_buffer is not None:
