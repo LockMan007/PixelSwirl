@@ -91,7 +91,9 @@ INITIAL_SCREEN_HEIGHT = 400
 
 pygame.init()
 
-screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE | pygame.SCALED)
+# The screen variable now holds a reference to the display surface.
+# It is important to set this up correctly to handle resizing.
+screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Spectrum Analyzer")
 clock = pygame.time.Clock()
 
@@ -193,6 +195,10 @@ def draw_menu():
         screen.blit(text_surface, text_rect)
 
         option['rect'] = text_rect.inflate(MENU_PADDING*2, 0)
+    
+    # Store the final menu rect for click detection
+    globals()['menu_rect'] = menu_rect
+
 
 # --- Menu Click Handler ---
 def handle_menu_click(mouse_pos):
@@ -240,7 +246,7 @@ def handle_menu_click(mouse_pos):
                 if is_fullscreen:
                     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.SCALED | pygame.RESIZABLE)
                 else:
-                    screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE | pygame.SCALED)
+                    screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
                 SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
                 print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
             elif option["action"] == "save_settings":
@@ -270,8 +276,8 @@ def main():
     global GAIN_FACTOR
 
     is_fullscreen = False
-
-    # Remove SCALED to avoid resolution conflicts
+    
+    # The screen variable now holds a reference to the display surface.
     screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
     
     try:
@@ -283,16 +289,19 @@ def main():
                     if event.type == pygame.QUIT:
                         running = False
                     elif event.type == pygame.MOUSEBUTTONDOWN:
-                        if event.button == 3:
+                        if event.button == 3:  # Right-click
                             MENU_ACTIVE = not MENU_ACTIVE
                             MENU_X, MENU_Y = event.pos
-                        elif event.button == 1:
+                        elif event.button == 1:  # Left-click
                             if MENU_ACTIVE:
-                                handle_menu_click(event.pos)
-                            else:
-                                MENU_ACTIVE = False
+                                # Check if the click was inside the menu
+                                if 'menu_rect' in globals() and globals()['menu_rect'].collidepoint(event.pos):
+                                    handle_menu_click(event.pos)
+                                else:
+                                    MENU_ACTIVE = False # Clicked outside the menu, so close it
                     elif event.type == pygame.VIDEORESIZE:
                         SCREEN_WIDTH, SCREEN_HEIGHT = event.size
+                        # Recreate the screen surface with the new size
                         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.RESIZABLE)
                         print(f"Window resized to: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
 
@@ -312,7 +321,7 @@ def main():
 
                     BAR_WIDTH = max(1, int(SCREEN_WIDTH / (TARGET_BAR_COUNT * 1.5)))
                     BAR_SPACING = max(1, int(BAR_WIDTH * 0.2))
-
+                    
                     num_bars = int(SCREEN_WIDTH / (BAR_WIDTH + BAR_SPACING))
                     if num_bars <= 0:
                         num_bars = 1
@@ -320,7 +329,7 @@ def main():
                     for i in range(num_bars):
                         freq_bin_start = int(i * (N / 2) / num_bars)
                         freq_bin_end = int((i + 1) * (N / 2) / num_bars)
-
+                        
                         if freq_bin_start < len(magnitudes) and freq_bin_start < freq_bin_end:
                             bar_magnitude = np.max(magnitudes[freq_bin_start:freq_bin_end])
                         else:
@@ -344,10 +353,6 @@ def main():
 
                 draw_menu()
 
-                # Optional visual bounds for debugging (delete if undesired)
-                pygame.draw.line(screen, (255, 0, 0), (0, 0), (SCREEN_WIDTH, 0), 1)  # Top
-                pygame.draw.line(screen, (255, 0, 0), (0, SCREEN_HEIGHT-1), (SCREEN_WIDTH, SCREEN_HEIGHT-1), 1)  # Bottom
-
                 pygame.display.flip()
                 clock.tick(60)
 
@@ -359,4 +364,5 @@ def main():
 
 if __name__ == "__main__":
     audio_data_buffer = None
+    menu_rect = pygame.Rect(0, 0, 0, 0) # Initialize menu_rect
     main()
