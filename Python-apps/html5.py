@@ -573,8 +573,9 @@ class HTMLHelperApp(QMainWindow):
         section_start_line = -1
         section_content_lines = []
 
-        start_pattern = re.compile(r'// START (.+)')
-        end_pattern = re.compile(r'// END (.+)')
+        # Support both // START and ## START
+        start_pattern = re.compile(r'(//|##)\s*START\s+(.+)')
+        end_pattern = re.compile(r'(//|##)\s*END\s+(.+)')
 
         for i, line in enumerate(lines):
             start_match = start_pattern.search(line)
@@ -582,17 +583,18 @@ class HTMLHelperApp(QMainWindow):
 
             if start_match:
                 if current_section_name:
-                    self.update_status(f"Warning: Nested or unclosed section detected before '{start_match.group(1)}' at line {i+1}. This section will be ignored for now.")
+                    self.update_status(
+                        f"Warning: Nested or unclosed section detected before '{start_match.group(2)}' at line {i+1}. This section will be ignored.")
                     current_section_name = None
                     section_start_line = -1
                     section_content_lines = []
-                
-                current_section_name = start_match.group(1).strip()
+
+                current_section_name = start_match.group(2).strip()
                 section_start_line = i + 1
                 section_content_lines = []
-                
+
             elif end_match:
-                end_section_name = end_match.group(1).strip()
+                end_section_name = end_match.group(2).strip()
                 if current_section_name and current_section_name == end_section_name:
                     self.sections[current_section_name] = {
                         'start_line': section_start_line,
@@ -604,12 +606,15 @@ class HTMLHelperApp(QMainWindow):
                     section_start_line = -1
                     section_content_lines = []
                 else:
-                    self.update_status(f"Warning: Mismatched or unstarted END marker for '{end_section_name}' at line {i+1}. Ignoring.")
+                    self.update_status(
+                        f"Warning: Mismatched or unstarted END marker for '{end_section_name}' at line {i+1}. Ignoring.")
             elif current_section_name:
                 section_content_lines.append(line)
-        
+
         if current_section_name:
-            self.update_status(f"Warning: Section '{current_section_name}' started at line {section_start_line} but no END marker found. This section is incomplete and will not be listed.")
+            self.update_status(
+                f"Warning: Section '{current_section_name}' started at line {section_start_line} but no END marker found.")
+
 
     def display_selected_section(self):
         current_extra_selections = list(self.full_html_text.extraSelections())
