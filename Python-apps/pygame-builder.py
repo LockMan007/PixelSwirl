@@ -91,7 +91,12 @@ while is_running:
         if event.type == pygame.QUIT:
             is_running = False
 
-        if event.type == pygame_gui.UI_BUTTON_PRESSED and not just_added_element:
+        if (
+            event.type == pygame_gui.UI_BUTTON_PRESSED
+            and not just_added_element
+            and pygame.mouse.get_pos()[0] < 200
+	):
+
             button_id = event.ui_object_id
 
             for element_type in element_types:
