@@ -61,10 +61,22 @@ for element_type in element_types:
         object_id=pygame_gui.core.ObjectID(class_id=element_type['name'].replace(' ', '_').lower())
     )
     y_pos += 40
+
+# Save button
+save_button = pygame_gui.elements.UIButton(
+    relative_rect=pygame.Rect(10, y_pos + 10, 180, 30),
+    text="Save GUI",
+    manager=manager,
+    container=menu_panel
+)
 ## END panels and element definitions
 
+## START popup menu state
+popup_menu = None
+popup_menu_target = None
+## END popup menu state
+
 ## START state and clock
-# State
 canvas_elements = []
 selected_element = None
 drag_offset = (0, 0)
@@ -73,13 +85,8 @@ clock = pygame.time.Clock()
 is_running = True
 ## END state and clock
 
-## START popup menu state
-popup_menu = None
-popup_menu_target = None  # The element selected for deletion via popup
-## END popup menu state
-
 ## START main loop
-just_added_element = False  # Cooldown flag
+just_added_element = False
 
 while is_running:
     time_delta = clock.tick(60) / 1000.0
@@ -91,45 +98,93 @@ while is_running:
         if event.type == pygame.QUIT:
             is_running = False
 
+        # Add new UI element (only if clicked in menu)
         if (
             event.type == pygame_gui.UI_BUTTON_PRESSED
             and not just_added_element
             and pygame.mouse.get_pos()[0] < 200
-	):
+        ):
+            if event.ui_element == save_button:
+                with open("output_gui.py", "w") as f:
+                    f.write("import pygame\nimport pygame_gui\n\n")
+                    f.write("pygame.init()\nwindow = pygame.display.set_mode((1000, 700))\nmanager = pygame_gui.UIManager((1000, 700))\nclock = pygame.time.Clock()\n\n")
+                    f.write("# UI Elements\n")
+                    for i, element in enumerate(canvas_elements):
+                        pos = element.relative_rect.topleft
+                        size = element.relative_rect.size
+                        cls = element.__class__.__name__
 
-            button_id = event.ui_object_id
+                        if cls == "UIButton":
+                            f.write(f"button{i} = pygame_gui.elements.UIButton(pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), text='{element.text}', manager=manager)\n")
+                        elif cls == "UILabel":
+                            f.write(f"label{i} = pygame_gui.elements.UILabel(pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), text='{element.text}', manager=manager)\n")
+                        elif cls == "UITextBox":
+                            f.write(f"textbox{i} = pygame_gui.elements.UITextBox('{element.html_text}', pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), manager=manager)\n")
+                        elif cls == "UIHorizontalSlider":
+                            f.write(f"slider{i} = pygame_gui.elements.UIHorizontalSlider(pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), start_value={element.get_current_value()}, value_range=(0, 100), manager=manager)\n")
+                        elif cls == "UIProgressBar":
+                            f.write(f"progress{i} = pygame_gui.elements.UIProgressBar(pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), manager=manager)\n")
+                        elif cls == "UIDropDownMenu":
+                            # Convert options to strings (in case they are tuples)
+                            options = [opt[0] if isinstance(opt, tuple) else opt for opt in element.options_list]
+                            # Extract string from selected_option if it's a tuple
+                            selected = element.selected_option[0] if isinstance(element.selected_option, tuple) else element.selected_option
 
-            for element_type in element_types:
-                expected_id = f'panel.{element_type["name"].replace(" ", "_").lower()}'
-                if button_id == expected_id:
-                    element_offset = len(canvas_elements) * 10
-                    default_rect = pygame.Rect(50 + element_offset, 50 + element_offset, 150, 40)
+                            f.write(
+                               f"dropdown{i} = pygame_gui.elements.UIDropDownMenu("
+                                f"options_list={options}, "
+                                f"starting_option='{selected}', "
+                                f"relative_rect=pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), "
+                                f"manager=manager)\n"
+                            )
 
-                    args = {
-                        'relative_rect': default_rect,
-                        'manager': manager,
-                        'container': canvas_panel,
-                        'object_id': pygame_gui.core.ObjectID()
-                    }
 
-                    if 'text' in element_type:
-                        if element_type['class'] == pygame_gui.elements.UITextBox:
-                            args['html_text'] = element_type['text']
-                        else:
-                            args['text'] = element_type['text']
+                        elif cls == "UITextEntryLine":
+                            f.write(f"entry{i} = pygame_gui.elements.UITextEntryLine(pygame.Rect({pos[0]}, {pos[1]}, {size[0]}, {size[1]}), manager=manager)\n")
 
-                    if 'value_range' in element_type:
-                        args['value_range'] = element_type['value_range']
-                        args['start_value'] = element_type['start_value']
-                    if 'options_list' in element_type:
-                        args['options_list'] = element_type['options_list']
-                        args['starting_option'] = element_type['starting_option']
+                    f.write("\n# Main loop\nrunning = True\nwhile running:\n")
+                    f.write("    time_delta = clock.tick(60) / 1000.0\n")
+                    f.write("    for event in pygame.event.get():\n")
+                    f.write("        if event.type == pygame.QUIT:\n")
+                    f.write("            running = False\n")
+                    f.write("        manager.process_events(event)\n")
+                    f.write("    manager.update(time_delta)\n")
+                    f.write("    window.fill((30, 30, 30))\n")
+                    f.write("    manager.draw_ui(window)\n")
+                    f.write("    pygame.display.update()\n")
+                    f.write("pygame.quit()\n")
+            else:
+                button_id = event.ui_object_id
+                for element_type in element_types:
+                    expected_id = f'panel.{element_type["name"].replace(" ", "_").lower()}'
+                    if button_id == expected_id:
+                        element_offset = len(canvas_elements) * 10
+                        default_rect = pygame.Rect(50 + element_offset, 50 + element_offset, 150, 40)
 
-                    new_elem = element_type['class'](**args)
-                    canvas_elements.append(new_elem)
+                        args = {
+                            'relative_rect': default_rect,
+                            'manager': manager,
+                            'container': canvas_panel,
+                            'object_id': pygame_gui.core.ObjectID()
+                        }
 
-                    just_added_element = True  # Set cooldown flag
-                    break
+                        if 'text' in element_type:
+                            if element_type['class'] == pygame_gui.elements.UITextBox:
+                                args['html_text'] = element_type['text']
+                            else:
+                                args['text'] = element_type['text']
+
+                        if 'value_range' in element_type:
+                            args['value_range'] = element_type['value_range']
+                            args['start_value'] = element_type['start_value']
+                        if 'options_list' in element_type:
+                            args['options_list'] = element_type['options_list']
+                            args['starting_option'] = element_type['starting_option']
+
+                        new_elem = element_type['class'](**args)
+                        canvas_elements.append(new_elem)
+                        just_added_element = True
+                        break
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if canvas_panel_rect.collidepoint(mouse_pos):
@@ -146,45 +201,33 @@ while is_running:
             if selected_element:
                 new_x = local_mouse[0] - drag_offset[0]
                 new_y = local_mouse[1] - drag_offset[1]
-
                 new_x = max(0, min(new_x, canvas_panel_rect.width - selected_element.relative_rect.width))
                 new_y = max(0, min(new_y, canvas_panel_rect.height - selected_element.relative_rect.height))
-
                 selected_element.set_relative_position((new_x, new_y))
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             selected_element = None
-            just_added_element = False  # Reset cooldown on mouse release
+            just_added_element = False
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             if canvas_panel_rect.collidepoint(mouse_pos):
                 for element in reversed(canvas_elements):
                     if element.relative_rect.collidepoint(local_mouse):
-                        # If popup menu exists, remove it first
-                        if popup_menu is not None:
+                        if popup_menu:
                             popup_menu.kill()
-                            popup_menu = None
-                            popup_menu_target = None
-
-                        # Create popup menu with "Delete"
                         popup_menu = pygame_gui.elements.UISelectionList(
                             relative_rect=pygame.Rect(mouse_pos[0], mouse_pos[1], 120, 50),
                             item_list=["Delete"],
-                            manager=manager,
-                            container=None,
-                            object_id=pygame_gui.core.ObjectID(class_id='popup_menu')
+                            manager=manager
                         )
                         popup_menu_target = element
                         break
 
-
         elif event.type == pygame_gui.UI_SELECTION_LIST_NEW_SELECTION:
-            if popup_menu is not None and event.ui_element == popup_menu:
-                selected_text = event.text
-                if selected_text == "Delete" and popup_menu_target in canvas_elements:
+            if popup_menu and event.ui_element == popup_menu:
+                if event.text == "Delete" and popup_menu_target in canvas_elements:
                     popup_menu_target.kill()
                     canvas_elements.remove(popup_menu_target)
-
                 popup_menu.kill()
                 popup_menu = None
                 popup_menu_target = None
@@ -192,10 +235,8 @@ while is_running:
         manager.process_events(event)
 
     manager.update(time_delta)
-
     window_surface.blit(background, (0, 0))
     manager.draw_ui(window_surface)
-
     pygame.display.update()
 ## END main loop
 
