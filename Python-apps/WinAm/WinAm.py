@@ -496,18 +496,27 @@ def draw_settings_screen():
 
 
     # --- Draw Color Theme Selector ---
-    theme_box_x = 10
-    theme_box_y = 610
-    draw_label("Color Themes", (theme_box_x, theme_box_y - 25), bold=True)
-    draw_label(f"Selected: {SELECTED_SPECTRUM_THEME}", (theme_box_x + 130, theme_box_y - 25), bold=True)
-    
+    theme_box_x = 375
+    theme_box_y = 450
+    draw_label(f"Selected Theme: {SELECTED_SPECTRUM_THEME}", (theme_box_x + 55, theme_box_y - 25), bold=True)
+ 
     button_width = 110
     button_height = 30
-    
+ 
     # Draw preset theme buttons
     for i, theme_name in enumerate(SPECTRUM_THEMES):
-        x_offset = i * (button_width + 10)
-        button_rect = pygame.Rect(theme_box_x + x_offset, theme_box_y, button_width, button_height)
+        # Determine the x and y coordinates for each button
+        if i < 3:  # First three buttons
+            x = theme_box_x + i * (button_width + 10)
+            y = theme_box_y
+        elif i < 6:  # The 4th, 5th and 6th buttons
+            x = theme_box_x + (i - 3) * (button_width + 10)
+            y = theme_box_y + button_height + 10  # Move down by button_height + a small gap
+        else: # The 7th button (and any after)
+            x = theme_box_x + (i - 6) * (button_width + 10)
+            y = theme_box_y + (button_height + 10) * 2  # Move down another row
+ 
+        button_rect = pygame.Rect(x, y, button_width, button_height)
         color = GREEN if SELECTED_SPECTRUM_THEME == theme_name else DARK_GRAY
         draw_button(theme_name, button_rect, color=color)
         settings_ui[f'theme_button_{theme_name}'] = {'type': 'theme_button', 'rect': button_rect, 'theme': theme_name}
