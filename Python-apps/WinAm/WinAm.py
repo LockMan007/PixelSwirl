@@ -15,9 +15,13 @@ CHUNK_SIZE = 1024
 SAMPLING_RATE = 48000
 DEVICE_ID = 22
 
-# --- Settings File ---
 SETTINGS_FILE = 'settings.ini'
 config = configparser.ConfigParser()
+config.read(SETTINGS_FILE)
+
+# Get the settings with fallbacks to default values
+nperseg_setting = config.getint('Spectrogram', 'nperseg', fallback=256)
+noverlap_setting = config.getint('Spectrogram', 'noverlap', fallback=128)
 
 # --- Global Variables for Application State ---
 APP_STATE_MAIN = "main"
@@ -43,7 +47,7 @@ SPECTRUM_GRADIENT_ACTIVE = False
 SPECTROGRAM_COLORS = [(255, 0, 0)] # Default to red
 SPECTROGRAM_COLOR_COUNT = 1
 SPECTROGRAM_GRADIENT_ACTIVE = False
-SPECTROGRAM_BUFFER_SIZE = 200 # Number of spectrogram columns to store
+SPECTROGRAM_BUFFER_SIZE = 200 # Number of spectrogram columns to store, speed
 
 # --- Global Variables for Window State ---
 INITIAL_SCREEN_WIDTH = 800
@@ -171,6 +175,9 @@ BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 YELLOW = (255, 255, 0)
+
+#my own fix for aligning the spectrogram at launch
+screen = pygame.display.set_mode(screen_size, pygame.RESIZABLE)
 
 # --- ctypes for window positioning on Windows ---
 if sys.platform == "win32":
@@ -318,7 +325,7 @@ def draw_spectrogram(screen, spectrogram_buffer, colors, gradient_active):
             else:
                 # Map magnitude to brightness of the base color
                 base_color = colors[0] if colors else (255, 255, 255)
-                brightness = min(255, int(magnitude * 255 * GAIN_FACTOR * 0.2))
+                brightness = min(255, int(magnitude * 255 * GAIN_FACTOR * 1.0))   # *0.2 default, i changed to 1.0
                 color = (int(base_color[0] * brightness/255), int(base_color[1] * brightness/255), int(base_color[2] * brightness/255))
             
             pygame.draw.rect(screen, color, (x, y, bar_width, int(current_height/len(scaled_column))))
@@ -404,6 +411,7 @@ def draw_section(x, y, title, color_preview_color, active_var, gradient_var, col
             draw_color_preview(color_list[i], preview_rect)
             settings_ui[f'color_preview_{title}_{i}'] = {'type': 'color_preview', 'rect': preview_rect, 'color_list_name': colors, 'color_index': i}
 
+# Settings Screen
 def draw_settings_screen():
     global settings_ui
     screen.fill(BLACK)
@@ -697,7 +705,7 @@ def main():
 
                         # Spectrogram
                         if SPECTROGRAM_ACTIVE:
-                            f, t_spec, Sxx = spectrogram(cleaned_audio_buffer, SAMPLING_RATE, nperseg=256, noverlap=128)
+                            f, t_spec, Sxx = spectrogram(cleaned_audio_buffer, SAMPLING_RATE, nperseg=nperseg_setting, noverlap=noverlap_setting)
                             spectrogram_buffer.append(Sxx[:, 0]) # Append the first column (newest time slice)
                             draw_spectrogram(screen, spectrogram_buffer, SPECTROGRAM_COLORS, SPECTROGRAM_GRADIENT_ACTIVE)
 
