@@ -49,9 +49,13 @@ SPECTROGRAM_COLOR_COUNT = 1
 SPECTROGRAM_GRADIENT_ACTIVE = False
 SPECTROGRAM_BUFFER_SIZE = 200 # Number of spectrogram columns to store, speed
 
+# --- Global Variables for Color Theme
+SPECTRUM_THEMES = ["Fire", "Ice", "Melon", "Halloween", "Dracula","Frog","Custom"]
+SELECTED_SPECTRUM_THEME = "Custom" # Default selected theme
+
 # --- Global Variables for Window State ---
-INITIAL_SCREEN_WIDTH = 800
-INITIAL_SCREEN_HEIGHT = 400
+INITIAL_SCREEN_WIDTH = 1250
+INITIAL_SCREEN_HEIGHT = 750
 last_window_width = INITIAL_SCREEN_WIDTH
 last_window_height = INITIAL_SCREEN_HEIGHT
 last_window_x = 100
@@ -62,103 +66,151 @@ screen_size = (INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT)
 # --- Spectrogram Buffer ---
 spectrogram_buffer = collections.deque(maxlen=SPECTROGRAM_BUFFER_SIZE)
 
-# --- Load Settings ---
-def load_settings():
+# --- Reset Default Settings ---
+def reset_default_settings():
     global GAIN_FACTOR, OSCILLOSCOPE_ACTIVE, SPECTRUM_ACTIVE, SPECTROGRAM_ACTIVE, BACKGROUND_COLOR, \
            OSCILLOSCOPE_COLORS, OSCILLOSCOPE_COLOR_COUNT, OSCILLOSCOPE_GRADIENT_ACTIVE, \
            SPECTRUM_COLORS, SPECTRUM_COLOR_COUNT, SPECTRUM_GRADIENT_ACTIVE, \
-           SPECTROGRAM_COLORS, SPECTROGRAM_COLOR_COUNT, SPECTROGRAM_GRADIENT_ACTIVE
+           SPECTROGRAM_COLORS, SPECTROGRAM_COLOR_COUNT, SPECTROGRAM_GRADIENT_ACTIVE, \
+           SELECTED_SPECTRUM_THEME
+    
+    GAIN_FACTOR = 5.0
+    OSCILLOSCOPE_ACTIVE = True
+    SPECTRUM_ACTIVE = True
+    SPECTROGRAM_ACTIVE = True
+    BACKGROUND_COLOR = (0, 0, 0)
+    
+    OSCILLOSCOPE_COLORS = [(0, 0, 255)]
+    OSCILLOSCOPE_COLOR_COUNT = 1
+    OSCILLOSCOPE_GRADIENT_ACTIVE = False
+    
+    SPECTROGRAM_COLORS = [(255, 0, 0)]
+    SPECTROGRAM_COLOR_COUNT = 1
+    SPECTROGRAM_GRADIENT_ACTIVE = False
+    
+    SELECTED_SPECTRUM_THEME = "Custom"
+    apply_spectrum_theme(SELECTED_SPECTRUM_THEME)
 
-    if os.path.exists(SETTINGS_FILE):
-        try:
-            config.read(SETTINGS_FILE)
-            if 'SpectrumAnalyzer' in config:
-                GAIN_FACTOR = float(config['SpectrumAnalyzer'].get('gain_factor', GAIN_FACTOR))
-                OSCILLOSCOPE_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_active', OSCILLOSCOPE_ACTIVE)
-                SPECTRUM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrum_active', SPECTRUM_ACTIVE)
-                SPECTROGRAM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrogram_active', SPECTROGRAM_ACTIVE)
-                BACKGROUND_COLOR = eval(config['SpectrumAnalyzer'].get('background_color', str(BACKGROUND_COLOR)))
-                
-                OSCILLOSCOPE_COLOR_COUNT = int(config['SpectrumAnalyzer'].get('oscilloscope_color_count', OSCILLOSCOPE_COLOR_COUNT))
-                OSCILLOSCOPE_GRADIENT_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_gradient_active', OSCILLOSCOPE_GRADIENT_ACTIVE)
-                OSCILLOSCOPE_COLORS = [eval(config['SpectrumAnalyzer'][f'oscilloscope_color_{i+1}']) for i in range(OSCILLOSCOPE_COLOR_COUNT)]
-                
-                SPECTRUM_COLOR_COUNT = int(config['SpectrumAnalyzer'].get('spectrum_color_count', SPECTRUM_COLOR_COUNT))
-                SPECTRUM_GRADIENT_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrum_gradient_active', SPECTRUM_GRADIENT_ACTIVE)
-                SPECTRUM_COLORS = [eval(config['SpectrumAnalyzer'][f'spectrum_color_{i+1}']) for i in range(SPECTRUM_COLOR_COUNT)]
 
-                SPECTROGRAM_COLOR_COUNT = int(config['SpectrumAnalyzer'].get('spectrogram_color_count', SPECTROGRAM_COLOR_COUNT))
-                SPECTROGRAM_GRADIENT_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrogram_gradient_active', SPECTROGRAM_GRADIENT_ACTIVE)
-                SPECTROGRAM_COLORS = [eval(config['SpectrumAnalyzer'][f'spectrogram_color_{i+1}']) for i in range(SPECTROGRAM_COLOR_COUNT)]
-
-                print(f"Settings loaded from {SETTINGS_FILE}.")
-            else:
-                print(f"Warning: [SpectrumAnalyzer] section not found in {SETTINGS_FILE}. Using defaults.")
-                reset_default_settings()
-        except Exception as e:
-            print(f"Error reading {SETTINGS_FILE}: {e}. Using default settings.", file=sys.stderr)
-            reset_default_settings()
-    else:
-        print(f"Info: {SETTINGS_FILE} not found. Creating with default settings.")
-        reset_default_settings()
-    save_settings()
+# --- Save a specific theme to the config object ---
+def save_spectrum_theme(theme_name, colors, color_count, gradient_active):
+    if theme_name not in config:
+        config[theme_name] = {}
+    config[theme_name]['spectrum_color_count'] = str(color_count)
+    config[theme_name]['spectrum_gradient_active'] = str(gradient_active)
+    for i, color in enumerate(colors):
+        config[theme_name][f'spectrum_color_{i+1}'] = str(color)
 
 # --- Save Settings ---
 def save_settings():
+    # Only save the main application settings and the "Custom" theme.
+    
+    # 1. Update the [SpectrumAnalyzer] section with current settings
     if 'SpectrumAnalyzer' not in config:
         config['SpectrumAnalyzer'] = {}
+    
+    config['SpectrumAnalyzer']['selected_spectrum_theme'] = SELECTED_SPECTRUM_THEME
     config['SpectrumAnalyzer']['gain_factor'] = str(GAIN_FACTOR)
     config['SpectrumAnalyzer']['oscilloscope_active'] = str(OSCILLOSCOPE_ACTIVE)
     config['SpectrumAnalyzer']['spectrum_active'] = str(SPECTRUM_ACTIVE)
     config['SpectrumAnalyzer']['spectrogram_active'] = str(SPECTROGRAM_ACTIVE)
     config['SpectrumAnalyzer']['background_color'] = str(BACKGROUND_COLOR)
     
+    # ... (Keep the rest of the existing code for Oscilloscope and Spectrogram colors)
     config['SpectrumAnalyzer']['oscilloscope_color_count'] = str(OSCILLOSCOPE_COLOR_COUNT)
     config['SpectrumAnalyzer']['oscilloscope_gradient_active'] = str(OSCILLOSCOPE_GRADIENT_ACTIVE)
     for i, color in enumerate(OSCILLOSCOPE_COLORS):
         config['SpectrumAnalyzer'][f'oscilloscope_color_{i+1}'] = str(color)
         
-    config['SpectrumAnalyzer']['spectrum_color_count'] = str(SPECTRUM_COLOR_COUNT)
-    config['SpectrumAnalyzer']['spectrum_gradient_active'] = str(SPECTRUM_GRADIENT_ACTIVE)
-    for i, color in enumerate(SPECTRUM_COLORS):
-        config['SpectrumAnalyzer'][f'spectrum_color_{i+1}'] = str(color)
-
     config['SpectrumAnalyzer']['spectrogram_color_count'] = str(SPECTROGRAM_COLOR_COUNT)
     config['SpectrumAnalyzer']['spectrogram_gradient_active'] = str(SPECTROGRAM_GRADIENT_ACTIVE)
     for i, color in enumerate(SPECTROGRAM_COLORS):
         config['SpectrumAnalyzer'][f'spectrogram_color_{i+1}'] = str(color)
 
+    # 2. Only save the 'Custom' theme if it is the currently selected theme.
+    # The presets will not be overwritten.
+    if SELECTED_SPECTRUM_THEME == "Custom":
+        if 'Custom' not in config:
+            config['Custom'] = {}
+        config['Custom']['spectrum_color_count'] = str(SPECTRUM_COLOR_COUNT)
+        config['Custom']['spectrum_gradient_active'] = str(SPECTRUM_GRADIENT_ACTIVE)
+        for i, color in enumerate(SPECTRUM_COLORS):
+            config['Custom'][f'spectrum_color_{i+1}'] = str(color)
+
+    # 3. Write the updated config back to the file.
     try:
+        # Use 'with open' to ensure the file is closed properly
         with open(SETTINGS_FILE, 'w') as configfile:
             config.write(configfile)
         print(f"Settings saved to {SETTINGS_FILE}.")
     except Exception as e:
         print(f"Error saving {SETTINGS_FILE}: {e}", file=sys.stderr)
 
+# --- Load Settings ---
+def load_settings():
+    # ... (rest of your load_settings function, as provided in the previous step) ...
+    global GAIN_FACTOR, OSCILLOSCOPE_ACTIVE, SPECTRUM_ACTIVE, SPECTROGRAM_ACTIVE, BACKGROUND_COLOR, \
+           OSCILLOSCOPE_COLORS, OSCILLOSCOPE_COLOR_COUNT, OSCILLOSCOPE_GRADIENT_ACTIVE, \
+           SPECTROGRAM_COLORS, SPECTROGRAM_COLOR_COUNT, SPECTROGRAM_GRADIENT_ACTIVE, \
+           SELECTED_SPECTRUM_THEME
+
+    if 'SpectrumAnalyzer' in config:
+        try:
+            GAIN_FACTOR = float(config['SpectrumAnalyzer'].get('gain_factor', GAIN_FACTOR))
+            OSCILLOSCOPE_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_active', OSCILLOSCOPE_ACTIVE)
+            SPECTRUM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrum_active', SPECTRUM_ACTIVE)
+            SPECTROGRAM_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrogram_active', SPECTROGRAM_ACTIVE)
+            BACKGROUND_COLOR = eval(config['SpectrumAnalyzer'].get('background_color', str(BACKGROUND_COLOR)))
+            
+            SELECTED_SPECTRUM_THEME = config['SpectrumAnalyzer'].get('selected_spectrum_theme', SELECTED_SPECTRUM_THEME)
+            apply_spectrum_theme(SELECTED_SPECTRUM_THEME)
+
+            OSCILLOSCOPE_COLOR_COUNT = int(config['SpectrumAnalyzer'].get('oscilloscope_color_count', OSCILLOSCOPE_COLOR_COUNT))
+            OSCILLOSCOPE_GRADIENT_ACTIVE = config['SpectrumAnalyzer'].getboolean('oscilloscope_gradient_active', OSCILLOSCOPE_GRADIENT_ACTIVE)
+            OSCILLOSCOPE_COLORS = [eval(config['SpectrumAnalyzer'][f'oscilloscope_color_{i+1}']) for i in range(OSCILLOSCOPE_COLOR_COUNT)]
+            
+            SPECTROGRAM_COLOR_COUNT = int(config['SpectrumAnalyzer'].get('spectrogram_color_count', SPECTROGRAM_COLOR_COUNT))
+            SPECTROGRAM_GRADIENT_ACTIVE = config['SpectrumAnalyzer'].getboolean('spectrogram_gradient_active', SPECTROGRAM_GRADIENT_ACTIVE)
+            SPECTROGRAM_COLORS = [eval(config['SpectrumAnalyzer'][f'spectrogram_color_{i+1}']) for i in range(SPECTROGRAM_COLOR_COUNT)]
+            
+            print(f"Settings loaded from {SETTINGS_FILE}.")
+
+        except Exception as e:
+            print(f"Error reading {SETTINGS_FILE}: {e}. Using default settings.", file=sys.stderr)
+            reset_default_settings()
+            save_settings()
+    else:
+        print(f"Info: [SpectrumAnalyzer] section not found in {SETTINGS_FILE}. Using defaults.")
+        reset_default_settings()
+        save_settings()
+
 # --- Reset Default Settings ---
 def reset_default_settings():
     global GAIN_FACTOR, OSCILLOSCOPE_ACTIVE, SPECTRUM_ACTIVE, SPECTROGRAM_ACTIVE, BACKGROUND_COLOR, \
            OSCILLOSCOPE_COLORS, OSCILLOSCOPE_COLOR_COUNT, OSCILLOSCOPE_GRADIENT_ACTIVE, \
            SPECTRUM_COLORS, SPECTRUM_COLOR_COUNT, SPECTRUM_GRADIENT_ACTIVE, \
-           SPECTROGRAM_COLORS, SPECTROGRAM_COLOR_COUNT, SPECTROGRAM_GRADIENT_ACTIVE
+           SPECTROGRAM_COLORS, SPECTROGRAM_COLOR_COUNT, SPECTROGRAM_GRADIENT_ACTIVE, \
+           SELECTED_SPECTRUM_THEME
+    
     GAIN_FACTOR = 5.0
     OSCILLOSCOPE_ACTIVE = True
     SPECTRUM_ACTIVE = True
     SPECTROGRAM_ACTIVE = True
     BACKGROUND_COLOR = (0, 0, 0)
+    
     OSCILLOSCOPE_COLORS = [(0, 0, 255)]
     OSCILLOSCOPE_COLOR_COUNT = 1
     OSCILLOSCOPE_GRADIENT_ACTIVE = False
-    SPECTRUM_COLORS = [(0, 255, 0)]
-    SPECTRUM_COLOR_COUNT = 1
-    SPECTRUM_GRADIENT_ACTIVE = False
+    
     SPECTROGRAM_COLORS = [(255, 0, 0)]
     SPECTROGRAM_COLOR_COUNT = 1
     SPECTROGRAM_GRADIENT_ACTIVE = False
+    
+    # Reset the selected theme and apply its colors
+    SELECTED_SPECTRUM_THEME = "Custom"
+    apply_spectrum_theme(SELECTED_SPECTRUM_THEME)
 
-# Initial call to load settings or set defaults
-reset_default_settings()
-load_settings()
+
 
 # --- Pygame Setup ---
 pygame.init()
@@ -413,9 +465,9 @@ def draw_section(x, y, title, color_preview_color, active_var, gradient_var, col
 
 # Settings Screen
 def draw_settings_screen():
-    global settings_ui
-    screen.fill(BLACK)
-    settings_ui.clear()
+    global settings_ui, screen_size
+    settings_ui = {}
+    screen.fill(BACKGROUND_COLOR)
 
     # Top bar
     pygame.draw.rect(screen, GRAY, (0, 0, 1280, 30))
@@ -442,6 +494,26 @@ def draw_settings_screen():
     draw_section(20, 250, "Oscilloscope", GREEN, "OSCILLOSCOPE_ACTIVE", "OSCILLOSCOPE_GRADIENT_ACTIVE", "OSCILLOSCOPE_COLORS", "OSCILLOSCOPE_COLOR_COUNT")
     draw_section(20, 440, "Spectrogram", YELLOW, "SPECTROGRAM_ACTIVE", "SPECTROGRAM_GRADIENT_ACTIVE", "SPECTROGRAM_COLORS", "SPECTROGRAM_COLOR_COUNT")
 
+
+    # --- Draw Color Theme Selector ---
+    theme_box_x = 10
+    theme_box_y = 610
+    draw_label("Color Themes", (theme_box_x, theme_box_y - 25), bold=True)
+    draw_label(f"Selected: {SELECTED_SPECTRUM_THEME}", (theme_box_x + 130, theme_box_y - 25), bold=True)
+    
+    button_width = 110
+    button_height = 30
+    
+    # Draw preset theme buttons
+    for i, theme_name in enumerate(SPECTRUM_THEMES):
+        x_offset = i * (button_width + 10)
+        button_rect = pygame.Rect(theme_box_x + x_offset, theme_box_y, button_width, button_height)
+        color = GREEN if SELECTED_SPECTRUM_THEME == theme_name else DARK_GRAY
+        draw_button(theme_name, button_rect, color=color)
+        settings_ui[f'theme_button_{theme_name}'] = {'type': 'theme_button', 'rect': button_rect, 'theme': theme_name}
+
+
+
     # Bottom buttons
     buttons = ["Back to Main", "Save Settings", "Load Settings", "Toggle Fullscreen (F11)", "Exit"]
     actions = ["main", "save_settings", "load_settings", "toggle_fullscreen", "exit"]
@@ -450,70 +522,89 @@ def draw_settings_screen():
         draw_button(text, rect)
         settings_ui[f'button_{actions[i]}'] = {'type': 'button', 'rect': rect, 'action': actions[i]}
 
+# --- Handle_Settings_Click --- #
+
 def handle_settings_click(pos):
     global app_state, slider_dragging, GAIN_FACTOR, OSCILLOSCOPE_ACTIVE, SPECTRUM_ACTIVE, SPECTROGRAM_ACTIVE, \
            OSCILLOSCOPE_COLOR_COUNT, SPECTRUM_COLOR_COUNT, SPECTROGRAM_COLOR_COUNT, OSCILLOSCOPE_GRADIENT_ACTIVE, SPECTRUM_GRADIENT_ACTIVE, SPECTROGRAM_GRADIENT_ACTIVE
-    
+
     for key, ui_element in settings_ui.items():
-        if ui_element['type'] == 'slider' and ui_element['rect'].collidepoint(pos):
-            slider_dragging = ui_element
-            return
-        
-        if ui_element['type'] == 'button' and ui_element['rect'].collidepoint(pos):
-            action = ui_element['action']
-            if action == 'main':
-                app_state = APP_STATE_MAIN
-            elif action == 'save_settings':
-                save_settings()
-            elif action == 'load_settings':
-                load_settings()
-                # We don't need to re-initialize the UI here since it's redrawn every frame
-            elif action == 'toggle_fullscreen':
-                toggle_fullscreen()
-            elif action == 'exit':
-                pygame.quit()
-                sys.exit()
+        if ui_element['rect'].collidepoint(pos):
 
-        if ui_element['type'] == 'toggle' and ui_element['rect'].collidepoint(pos):
-            var_name = ui_element['var_name']
-            if var_name == "OSCILLOSCOPE_GRADIENT_ACTIVE":
-                OSCILLOSCOPE_GRADIENT_ACTIVE = not OSCILLOSCOPE_GRADIENT_ACTIVE
-            elif var_name == "SPECTRUM_GRADIENT_ACTIVE":
-                SPECTRUM_GRADIENT_ACTIVE = not SPECTRUM_GRADIENT_ACTIVE
-            elif var_name == "SPECTROGRAM_GRADIENT_ACTIVE":
-                SPECTROGRAM_GRADIENT_ACTIVE = not SPECTROGRAM_GRADIENT_ACTIVE
-            elif var_name == "OSCILLOSCOPE_ACTIVE":
-                OSCILLOSCOPE_ACTIVE = not OSCILLOSCOPE_ACTIVE
-            elif var_name == "SPECTRUM_ACTIVE":
-                SPECTRUM_ACTIVE = not SPECTRUM_ACTIVE
-            elif var_name == "SPECTROGRAM_ACTIVE":
-                SPECTROGRAM_ACTIVE = not SPECTROGRAM_ACTIVE
-
-        if ui_element['type'] == 'button_color_count' and ui_element['rect'].collidepoint(pos):
-            var_name = ui_element['var_name']
-            value = ui_element['value']
+            # --- Check for theme button clicks ---
+            if ui_element['type'] == 'theme_button':
+                theme_name = ui_element['theme']
+                # Check if the theme is one of the fixed presets
+                if theme_name in ["Fire", "Ice", "Melon", "Halloween", "Dracula", "Frog"]:
+                    # Load the theme, but don't allow saving over it
+                    # The apply_spectrum_theme function already handles this
+                    apply_spectrum_theme(theme_name)
+                    SELECTED_SPECTRUM_THEME = theme_name # Update the global variable
+                else:
+                    # For the "Custom" theme, allow full modification and saving
+                    apply_spectrum_theme(theme_name)
+                    SELECTED_SPECTRUM_THEME = theme_name
+                return
             
-            if var_name == "SPECTRUM_COLOR_COUNT":
-                globals()[var_name] = value
-                if len(SPECTRUM_COLORS) < value:
-                    for _ in range(value - len(SPECTRUM_COLORS)):
-                        SPECTRUM_COLORS.append((255, 255, 255))
-                elif len(SPECTRUM_COLORS) > value:
-                    SPECTRUM_COLORS[:] = SPECTRUM_COLORS[:value]
-            elif var_name == "OSCILLOSCOPE_COLOR_COUNT":
-                globals()[var_name] = value
-                if len(OSCILLOSCOPE_COLORS) < value:
-                    for _ in range(value - len(OSCILLOSCOPE_COLORS)):
-                        OSCILLOSCOPE_COLORS.append((255, 255, 255))
-                elif len(OSCILLOSCOPE_COLORS) > value:
-                    OSCILLOSCOPE_COLORS[:] = OSCILLOSCOPE_COLORS[:value]
-            elif var_name == "SPECTROGRAM_COLOR_COUNT":
-                globals()[var_name] = value
-                if len(SPECTROGRAM_COLORS) < value:
-                    for _ in range(value - len(SPECTROGRAM_COLORS)):
-                        SPECTROGRAM_COLORS.append((255, 255, 255))
-                elif len(SPECTROGRAM_COLORS) > value:
-                    SPECTROGRAM_COLORS[:] = SPECTROGRAM_COLORS[:value]
+            if ui_element['type'] == 'slider':
+                slider_dragging = ui_element
+                return
+        
+            if ui_element['type'] == 'button':
+                action = ui_element['action']
+                if action == 'main':
+                    app_state = APP_STATE_MAIN
+                elif action == 'save_settings':
+                    save_settings()
+                elif action == 'load_settings':
+                    load_settings()
+                    # We don't need to re-initialize the UI here since it's redrawn every frame
+                elif action == 'toggle_fullscreen':
+                    toggle_fullscreen()
+                elif action == 'exit':
+                    pygame.quit()
+                    sys.exit()
+                    
+            if ui_element['type'] == 'toggle':
+                var_name = ui_element['var_name']
+                if var_name == "OSCILLOSCOPE_GRADIENT_ACTIVE":
+                    OSCILLOSCOPE_GRADIENT_ACTIVE = not OSCILLOSCOPE_GRADIENT_ACTIVE
+                elif var_name == "SPECTRUM_GRADIENT_ACTIVE":
+                    SPECTRUM_GRADIENT_ACTIVE = not SPECTRUM_GRADIENT_ACTIVE
+                elif var_name == "SPECTROGRAM_GRADIENT_ACTIVE":
+                    SPECTROGRAM_GRADIENT_ACTIVE = not SPECTROGRAM_GRADIENT_ACTIVE
+                elif var_name == "OSCILLOSCOPE_ACTIVE":
+                    OSCILLOSCOPE_ACTIVE = not OSCILLOSCOPE_ACTIVE
+                elif var_name == "SPECTRUM_ACTIVE":
+                    SPECTRUM_ACTIVE = not SPECTRUM_ACTIVE
+                elif var_name == "SPECTROGRAM_ACTIVE":
+                    SPECTROGRAM_ACTIVE = not SPECTROGRAM_ACTIVE
+            
+            if ui_element['type'] == 'button_color_count':
+                var_name = ui_element['var_name']
+                value = ui_element['value']
+            
+                if var_name == "SPECTRUM_COLOR_COUNT":
+                    globals()[var_name] = value
+                    if len(SPECTRUM_COLORS) < value:
+                        for _ in range(value - len(SPECTRUM_COLORS)):
+                            SPECTRUM_COLORS.append((255, 255, 255))
+                    elif len(SPECTRUM_COLORS) > value:
+                        SPECTRUM_COLORS[:] = SPECTRUM_COLORS[:value]
+                elif var_name == "OSCILLOSCOPE_COLOR_COUNT":
+                    globals()[var_name] = value
+                    if len(OSCILLOSCOPE_COLORS) < value:
+                        for _ in range(value - len(OSCILLOSCOPE_COLORS)):
+                            OSCILLOSCOPE_COLORS.append((255, 255, 255))
+                    elif len(OSCILLOSCOPE_COLORS) > value:
+                        OSCILLOSCOPE_COLORS[:] = OSCILLOSCOPE_COLORS[:value]
+                elif var_name == "SPECTROGRAM_COLOR_COUNT":
+                    globals()[var_name] = value
+                    if len(SPECTROGRAM_COLORS) < value:
+                        for _ in range(value - len(SPECTROGRAM_COLORS)):
+                            SPECTROGRAM_COLORS.append((255, 255, 255))
+                    elif len(SPECTROGRAM_COLORS) > value:
+                        SPECTROGRAM_COLORS[:] = SPECTROGRAM_COLORS[:value]
 
 def handle_slider_drag(pos):
     global slider_dragging, GAIN_FACTOR
@@ -658,6 +749,48 @@ def toggle_fullscreen():
                 set_window_position(last_window_x, last_window_y, last_window_width, last_window_height)
             except Exception as e:
                 print(f"Error using ctypes to restore window position: {e}", file=sys.stderr)
+
+
+# --- Helper function for color strings ---
+def parse_color_string(color_str):
+    """Converts a string like '(255, 0, 0)' to a tuple (255, 0, 0)."""
+    try:
+        # Remove parentheses and split by comma
+        color_values = color_str.strip('()').split(',')
+        return tuple(int(c.strip()) for c in color_values)
+    except (ValueError, IndexError):
+        print(f"Error parsing color string: {color_str}. Using default color (0,0,0).")
+        return (0, 0, 0)
+
+# --- Apply Theme Function ---
+def apply_spectrum_theme(theme_name):
+    global SPECTRUM_COLORS, SPECTRUM_COLOR_COUNT, SPECTRUM_GRADIENT_ACTIVE, SELECTED_SPECTRUM_THEME, app_state
+    
+    if theme_name in config:
+        theme_config = config[theme_name]
+        try:
+            SPECTRUM_COLOR_COUNT = theme_config.getint('spectrum_color_count')
+            SPECTRUM_GRADIENT_ACTIVE = theme_config.getboolean('spectrum_gradient_active')
+            
+            new_colors = []
+            for i in range(1, SPECTRUM_COLOR_COUNT + 1):
+                color_str = theme_config.get(f'spectrum_color_{i}', fallback='(0,0,0)')
+                new_colors.append(parse_color_string(color_str))
+            
+            SPECTRUM_COLORS = new_colors
+            SELECTED_SPECTRUM_THEME = theme_name
+            
+            if 'draw_settings_screen' in globals() and app_state == APP_STATE_SETTINGS:
+                draw_settings_screen()
+                pygame.display.flip()
+
+        except configparser.Error as e:
+            print(f"Error reading theme '{theme_name}': {e}")
+
+# Initial call to load settings or set defaults
+reset_default_settings()
+load_settings()
+
 
 # --- Main Loop ---
 def main():
