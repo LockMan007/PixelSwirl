@@ -695,6 +695,11 @@ def main():
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_F11:
                             toggle_fullscreen()
+
+                        elif event.key == pygame.K_ESCAPE:
+                            if app_state == APP_STATE_SETTINGS:
+                                app_state = APP_STATE_MAIN
+
                 
                 if app_state == APP_STATE_MAIN:
                     screen.fill(BACKGROUND_COLOR)
