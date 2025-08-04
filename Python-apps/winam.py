@@ -158,9 +158,19 @@ load_settings()
 
 # --- Pygame Setup ---
 pygame.init()
-screen = pygame.display.set_mode((INITIAL_SCREEN_WIDTH, INITIAL_SCREEN_HEIGHT), pygame.RESIZABLE)
+screen = pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 pygame.display.set_caption("Spectrum Analyzer")
 clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 24)
+big_font = pygame.font.SysFont(None, 28)
+
+WHITE = (255, 255, 255)
+GRAY = (100, 100, 100)
+DARK_GRAY = (50, 50, 50)
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 
 # --- ctypes for window positioning on Windows ---
 if sys.platform == "win32":
@@ -288,7 +298,14 @@ def draw_spectrogram(screen, spectrogram_buffer, colors, gradient_active):
         
         # Scale magnitudes to a 0-1 range for color mapping
         scaled_column = np.log10(column + 1e-9) # Add a small value to avoid log(0)
-        scaled_column = (scaled_column - np.min(scaled_column)) / (np.max(scaled_column) - np.min(scaled_column))
+
+        # Check for a zero denominator to prevent division by zero
+        denominator = np.max(scaled_column) - np.min(scaled_column)
+
+        if denominator == 0:
+            scaled_column = np.zeros_like(scaled_column)
+        else:
+            scaled_column = (scaled_column - np.min(scaled_column)) / denominator
 
         # Draw each frequency bin as a pixel
         for j, magnitude in enumerate(scaled_column):
@@ -308,186 +325,122 @@ def draw_spectrogram(screen, spectrogram_buffer, colors, gradient_active):
 
 # --- Settings Screen UI Elements and State ---
 settings_ui = {}
-settings_font = pygame.font.Font(None, 24)
 slider_dragging = None
 
-def init_settings_ui():
-    global settings_ui
-    screen_width, screen_height = screen.get_size()
-    settings_ui.clear()
-    padding = 20
-    y_pos = padding
+def draw_label(text, pos, bold=False):
+    surf = (big_font if bold else font).render(text, True, WHITE)
+    screen.blit(surf, pos)
 
-    def create_slider(label, y, var_name, min_val, max_val, color_index=None, color_comp=None):
-        slider_rect = pygame.Rect(screen_width // 2 + 100, y, 200, 20)
-        value_rect = pygame.Rect(slider_rect.right + 10, y, 50, 20)
-        label_rect = pygame.Rect(padding, y, screen_width // 2 - padding - 10, 20)
-        settings_ui[f'slider_{var_name}_{color_index}_{color_comp}'] = {
+def draw_button(text, rect, color=DARK_GRAY):
+    pygame.draw.rect(screen, color, rect)
+    pygame.draw.rect(screen, WHITE, rect, 2)
+    label = font.render(text, True, WHITE)
+    label_rect = label.get_rect(center=rect.center)
+    screen.blit(label, label_rect)
+
+def draw_checkbox(checked, pos):
+    box = pygame.Rect(pos[0], pos[1], 20, 20)
+    pygame.draw.rect(screen, WHITE, box, 2)
+    if checked:
+        pygame.draw.rect(screen, GREEN, box.inflate(-4, -4))
+
+def draw_slider(x, y, value=0):
+    rect = pygame.Rect(x, y, 200, 10)
+    pygame.draw.rect(screen, GRAY, rect)
+    handle_x = x + int(value / 255 * 200)
+    pygame.draw.circle(screen, WHITE, (handle_x, y + 5), 8)
+    return rect
+
+def draw_color_preview(color, rect):
+    pygame.draw.rect(screen, color, rect)
+    pygame.draw.rect(screen, WHITE, rect, 2)
+
+def draw_color_sliders(base_x, base_y, label_prefix="1", colors=None, color_index=0, color_list_name="SPECTROGRAM_COLORS"):
+    for i, channel in enumerate(["R", "G", "B"]):
+        draw_label(f"{channel}", (base_x, base_y + i * 35))
+        slider_rect = draw_slider(base_x + 50, base_y + i * 35 + 5, value=colors[color_index][i] if colors else 0)
+        draw_label(str(colors[color_index][i] if colors else 0), (base_x + 260, base_y + i * 35))
+        # Store the slider info for interaction
+        settings_ui[f'slider_{label_prefix}_{channel}'] = {
             'type': 'slider',
             'rect': slider_rect,
-            'label_text': label,
-            'value_rect': value_rect,
-            'var_name': var_name,
-            'min': min_val,
-            'max': max_val,
+            'var_name': f'COLOR_SLIDER',
             'color_index': color_index,
-            'color_comp': color_comp
+            'color_comp': i,
+            'min': 0,
+            'max': 255,
+            'color_list_name': color_list_name
         }
-        return y + 30
 
-    def create_button(label, y, action, width=200):
-        button_rect = pygame.Rect(screen_width // 2 - width // 2, y, width, 40)
-        settings_ui[f'button_{action}'] = {
-            'type': 'button',
-            'rect': button_rect,
-            'label_text': label,
-            'action': action
-        }
-        return y + 50
-        
-    def create_toggle(label, y, var_name):
-        checkbox_rect = pygame.Rect(screen_width // 2 + 100, y, 20, 20)
-        label_rect = pygame.Rect(padding, y, screen_width // 2 - padding - 10, 20)
-        settings_ui[f'toggle_{var_name}'] = {
-            'type': 'toggle',
-            'rect': checkbox_rect,
-            'label_text': label,
-            'var_name': var_name
-        }
-        return y + 30
+def draw_section(x, y, title, color_preview_color, active_var, gradient_var, colors, color_count_var):
+    # Checkbox + Label
+    draw_checkbox(globals()[active_var], (x, y))
+    draw_label(title, (x + 30, y), bold=True)
+    settings_ui[f'toggle_{active_var}'] = {'type': 'toggle', 'rect': pygame.Rect(x, y, 20, 20), 'var_name': active_var}
 
-    def create_color_count_buttons(label, y, var_name):
-        label_rect = pygame.Rect(padding, y, screen_width // 2 - padding - 10, 20)
-        settings_ui[f'label_{var_name}_count'] = {'type': 'label', 'rect': label_rect, 'text': label}
-        
-        button_y = y - 5
-        buttons_x_start = screen_width // 2 + 100
-        for i in range(1, 4):
-            button_rect = pygame.Rect(buttons_x_start + (i-1)*50, button_y, 40, 30)
-            settings_ui[f'button_{var_name}_count_{i}'] = {
-                'type': 'button_color_count',
-                'rect': button_rect,
-                'label_text': str(i),
-                'action': f'set_{var_name}_count',
-                'value': i
-            }
-        return y + 30
-    
-    def create_color_preview(y, var_name):
-        preview_rect = pygame.Rect(screen_width // 2 - 50, y, 100, 50)
-        settings_ui[f'preview_{var_name}'] = {
-            'type': 'color_preview',
-            'rect': preview_rect,
-            'var_name': var_name
-        }
-        return y + 60
+    # Gradient checkbox
+    draw_checkbox(globals()[gradient_var], (x, y + 25))
+    draw_label("Gradient", (x + 30, y + 25))
+    settings_ui[f'toggle_{gradient_var}'] = {'type': 'toggle', 'rect': pygame.Rect(x, y + 25, 20, 20), 'var_name': gradient_var}
 
-    y_pos = create_toggle("Spectrogram Active", y_pos, "SPECTROGRAM_ACTIVE")
-    y_pos = create_color_count_buttons("Spectrogram Colors", y_pos, "spectrogram")
-    for i in range(SPECTROGRAM_COLOR_COUNT):
-        y_pos = create_color_preview(y_pos, f"SPECTROGRAM_COLORS[{i}]")
-        y_pos = create_slider(f"Spectrogram Color {i+1} R", y_pos, 'spectrogram_color', 0, 255, i, 0)
-        y_pos = create_slider(f"Spectrogram Color {i+1} G", y_pos, 'spectrogram_color', 0, 255, i, 1)
-        y_pos = create_slider(f"Spectrogram Color {i+1} B", y_pos, 'spectrogram_color', 0, 255, i, 2)
-    y_pos = create_toggle("Spectrogram Gradient", y_pos, "SPECTROGRAM_GRADIENT_ACTIVE")
-    
-    y_pos = create_toggle("Oscilloscope Active", y_pos, "OSCILLOSCOPE_ACTIVE")
-    y_pos = create_color_count_buttons("Oscilloscope Colors", y_pos, "oscilloscope")
-    # Oscilloscope Color Sliders
-    for i in range(OSCILLOSCOPE_COLOR_COUNT):
-        y_pos = create_color_preview(y_pos, f"OSCILLOSCOPE_COLORS[{i}]")
-        y_pos = create_slider(f"Oscilloscope Color {i+1} R", y_pos, 'oscilloscope_color', 0, 255, i, 0)
-        y_pos = create_slider(f"Oscilloscope Color {i+1} G", y_pos, 'oscilloscope_color', 0, 255, i, 1)
-        y_pos = create_slider(f"Oscilloscope Color {i+1} B", y_pos, 'oscilloscope_color', 0, 255, i, 2)
-    y_pos = create_toggle("Oscilloscope Gradient", y_pos, "OSCILLOSCOPE_GRADIENT_ACTIVE")
+    # Buttons 1 2 3
+    for i in range(1, 4):
+        rect = pygame.Rect(x + 120 + (i - 1) * 40, y + 20, 35, 30)
+        color = GREEN if globals()[color_count_var] == i else DARK_GRAY
+        draw_button(str(i), rect, color=color)
+        settings_ui[f'button_color_count_{color_count_var}_{i}'] = {'type': 'button_color_count', 'rect': rect, 'value': i, 'var_name': color_count_var}
 
-    y_pos = create_toggle("Spectrum Active", y_pos, "SPECTRUM_ACTIVE")
-    y_pos = create_color_count_buttons("Spectrum Colors", y_pos, "spectrum")
-    
-    # Spectrum Color Sliders
-    for i in range(SPECTRUM_COLOR_COUNT):
-        y_pos = create_color_preview(y_pos, f"SPECTRUM_COLORS[{i}]")
-        y_pos = create_slider(f"Spectrum Color {i+1} R", y_pos, 'spectrum_color', 0, 255, i, 0)
-        y_pos = create_slider(f"Spectrum Color {i+1} G", y_pos, 'spectrum_color', 0, 255, i, 1)
-        y_pos = create_slider(f"Spectrum Color {i+1} B", y_pos, 'spectrum_color', 0, 255, i, 2)
-    y_pos = create_toggle("Spectrum Gradient", y_pos, "SPECTRUM_GRADIENT_ACTIVE")
-    
-    y_pos = create_slider("Gain Factor", y_pos, "GAIN_FACTOR", 1, 20)
-    y_pos = create_button("Back to Main", y_pos, "main")
-    y_pos = create_button("Save Settings", y_pos, "save_settings")
-    y_pos = create_button("Load Settings", y_pos, "load_settings")
-    y_pos = create_button("Toggle Fullscreen (F11)", y_pos, "toggle_fullscreen")
-    y_pos = create_button("Exit", y_pos, "exit")
+    # Color sliders and previews
+    color_list = globals()[colors]
+    for i in range(globals()[color_count_var]):
+        x_offset = 0
+        if i == 1:
+            x_offset = 360
+        elif i == 2:
+            x_offset = 720
+        if len(color_list) > i:
+            draw_color_sliders(x + x_offset, y + 60, f"{title} Color {i+1}", colors=color_list, color_index=i, color_list_name=colors)
+            preview_rect = pygame.Rect(x + 300 + x_offset, y + 60, 40, 40)
+            draw_color_preview(color_list[i], preview_rect)
+            settings_ui[f'color_preview_{title}_{i}'] = {'type': 'color_preview', 'rect': preview_rect, 'color_list_name': colors, 'color_index': i}
 
 def draw_settings_screen():
     global settings_ui
-    screen.fill(BACKGROUND_COLOR)
-    
-    for key, ui_element in settings_ui.items():
-        element_type = ui_element['type']
-        
-        if element_type == 'label':
-            text_surface = settings_font.render(ui_element['text'], True, (255, 255, 255))
-            screen.blit(text_surface, ui_element['rect'])
-        
-        elif element_type == 'slider':
-            label_surface = settings_font.render(ui_element['label_text'], True, (255, 255, 255))
-            screen.blit(label_surface, ui_element['rect'].move(-300, 0))
+    screen.fill(BLACK)
+    settings_ui.clear()
 
-            pygame.draw.rect(screen, (100, 100, 100), ui_element['rect'])
-            
-            val = globals().get(ui_element['var_name'], None)
-            if val is None:
-                if 'color_index' in ui_element and 'color_comp' in ui_element:
-                    if ui_element['var_name'] == 'spectrum_color':
-                        val = SPECTRUM_COLORS[ui_element['color_index']][ui_element['color_comp']]
-                    elif ui_element['var_name'] == 'oscilloscope_color':
-                        val = OSCILLOSCOPE_COLORS[ui_element['color_index']][ui_element['color_comp']]
-                    else: # spectrogram_color
-                        val = SPECTROGRAM_COLORS[ui_element['color_index']][ui_element['color_comp']]
-            
-            if val is not None:
-                percent = (val - ui_element['min']) / (ui_element['max'] - ui_element['min'])
-                handle_x = ui_element['rect'].x + percent * ui_element['rect'].width
-                pygame.draw.circle(screen, (255, 255, 255), (int(handle_x), ui_element['rect'].centery), 10)
-                
-                value_surface = settings_font.render(str(int(val)), True, (255, 255, 255))
-                screen.blit(value_surface, ui_element['value_rect'])
+    # Top bar
+    pygame.draw.rect(screen, GRAY, (0, 0, 1280, 30))
+    draw_label("                                                                                                                                   Settings", (10, 5), bold=True)
 
-        elif element_type == 'button':
-            pygame.draw.rect(screen, (100, 100, 100), ui_element['rect'])
-            label_surface = settings_font.render(ui_element['label_text'], True, (255, 255, 255))
-            text_rect = label_surface.get_rect(center=ui_element['rect'].center)
-            screen.blit(label_surface, text_rect)
-            
-        elif element_type == 'toggle':
-            label_surface = settings_font.render(ui_element['label_text'], True, (255, 255, 255))
-            screen.blit(label_surface, ui_element['rect'].move(-300, 0))
-            pygame.draw.rect(screen, (100, 100, 100), ui_element['rect'], 2)
-            if globals()[ui_element['var_name']]:
-                pygame.draw.rect(screen, (0, 255, 0), ui_element['rect'].inflate(-4, -4))
-                
-        elif element_type == 'button_color_count':
-            label_surface = settings_font.render(ui_element['label_text'], True, (255, 255, 255))
-            text_rect = label_surface.get_rect(center=ui_element['rect'].center)
-            is_active = (
-                (ui_element['value'] == SPECTRUM_COLOR_COUNT and 'spectrum' in ui_element['action']) or
-                (ui_element['value'] == OSCILLOSCOPE_COLOR_COUNT and 'oscilloscope' in ui_element['action']) or
-                (ui_element['value'] == SPECTROGRAM_COLOR_COUNT and 'spectrogram' in ui_element['action'])
-            )
-            color = (0, 150, 0) if is_active else (100, 100, 100)
-            pygame.draw.rect(screen, color, ui_element['rect'])
-            screen.blit(label_surface, text_rect)
+    # Gain Factor
+    draw_label("Gain Factor", (520, 40))
+    gain_slider_rect = draw_slider(620, 45, value=int(GAIN_FACTOR * (255/20)))
+    draw_label(str(GAIN_FACTOR), (840, 40))
+    settings_ui['slider_GAIN_FACTOR'] = {'type': 'slider', 'rect': gain_slider_rect, 'var_name': 'GAIN_FACTOR', 'min': 1, 'max': 20}
 
-        elif element_type == 'color_preview':
-            try:
-                color_var_name = ui_element['var_name']
-                color_val = eval(color_var_name)
-                pygame.draw.rect(screen, color_val, ui_element['rect'])
-                pygame.draw.rect(screen, (255, 255, 255), ui_element['rect'], 2)
-            except NameError:
-                pass
+    # Horizontal lines
+    pygame.draw.line(screen, WHITE, (0, 114), (1280, 114), 1)
+    pygame.draw.line(screen, WHITE, (0, 240), (1280, 240), 1)
+    pygame.draw.line(screen, WHITE, (0, 420), (1280, 420), 1)
+    pygame.draw.line(screen, WHITE, (0, 620), (1280, 620), 1)
 
+    # Vertical lines
+    pygame.draw.line(screen, WHITE, (370, 114), (370, 620), 1)
+    pygame.draw.line(screen, WHITE, (730, 114), (730, 620), 1)
+
+    # Sections
+    draw_section(20, 60, "Spectrum", BLUE, "SPECTRUM_ACTIVE", "SPECTRUM_GRADIENT_ACTIVE", "SPECTRUM_COLORS", "SPECTRUM_COLOR_COUNT")
+    draw_section(20, 250, "Oscilloscope", GREEN, "OSCILLOSCOPE_ACTIVE", "OSCILLOSCOPE_GRADIENT_ACTIVE", "OSCILLOSCOPE_COLORS", "OSCILLOSCOPE_COLOR_COUNT")
+    draw_section(20, 440, "Spectrogram", YELLOW, "SPECTROGRAM_ACTIVE", "SPECTROGRAM_GRADIENT_ACTIVE", "SPECTROGRAM_COLORS", "SPECTROGRAM_COLOR_COUNT")
+
+    # Bottom buttons
+    buttons = ["Back to Main", "Save Settings", "Load Settings", "Toggle Fullscreen (F11)", "Exit"]
+    actions = ["main", "save_settings", "load_settings", "toggle_fullscreen", "exit"]
+    for i, text in enumerate(buttons):
+        rect = pygame.Rect(20 + i * 250, 650, 220, 40)
+        draw_button(text, rect)
+        settings_ui[f'button_{actions[i]}'] = {'type': 'button', 'rect': rect, 'action': actions[i]}
 
 def handle_settings_click(pos):
     global app_state, slider_dragging, GAIN_FACTOR, OSCILLOSCOPE_ACTIVE, SPECTRUM_ACTIVE, SPECTROGRAM_ACTIVE, \
@@ -506,7 +459,7 @@ def handle_settings_click(pos):
                 save_settings()
             elif action == 'load_settings':
                 load_settings()
-                init_settings_ui()
+                # We don't need to re-initialize the UI here since it's redrawn every frame
             elif action == 'toggle_fullscreen':
                 toggle_fullscreen()
             elif action == 'exit':
@@ -529,57 +482,51 @@ def handle_settings_click(pos):
                 SPECTROGRAM_ACTIVE = not SPECTROGRAM_ACTIVE
 
         if ui_element['type'] == 'button_color_count' and ui_element['rect'].collidepoint(pos):
-            action = ui_element['action']
+            var_name = ui_element['var_name']
             value = ui_element['value']
-            if 'spectrum' in action:
-                SPECTRUM_COLOR_COUNT = value
+            
+            if var_name == "SPECTRUM_COLOR_COUNT":
+                globals()[var_name] = value
                 if len(SPECTRUM_COLORS) < value:
                     for _ in range(value - len(SPECTRUM_COLORS)):
                         SPECTRUM_COLORS.append((255, 255, 255))
                 elif len(SPECTRUM_COLORS) > value:
                     SPECTRUM_COLORS[:] = SPECTRUM_COLORS[:value]
-            elif 'oscilloscope' in action:
-                OSCILLOSCOPE_COLOR_COUNT = value
+            elif var_name == "OSCILLOSCOPE_COLOR_COUNT":
+                globals()[var_name] = value
                 if len(OSCILLOSCOPE_COLORS) < value:
                     for _ in range(value - len(OSCILLOSCOPE_COLORS)):
                         OSCILLOSCOPE_COLORS.append((255, 255, 255))
                 elif len(OSCILLOSCOPE_COLORS) > value:
                     OSCILLOSCOPE_COLORS[:] = OSCILLOSCOPE_COLORS[:value]
-            elif 'spectrogram' in action:
-                SPECTROGRAM_COLOR_COUNT = value
+            elif var_name == "SPECTROGRAM_COLOR_COUNT":
+                globals()[var_name] = value
                 if len(SPECTROGRAM_COLORS) < value:
                     for _ in range(value - len(SPECTROGRAM_COLORS)):
                         SPECTROGRAM_COLORS.append((255, 255, 255))
                 elif len(SPECTROGRAM_COLORS) > value:
                     SPECTROGRAM_COLORS[:] = SPECTROGRAM_COLORS[:value]
-            init_settings_ui()
 
 def handle_slider_drag(pos):
-    global slider_dragging
+    global slider_dragging, GAIN_FACTOR
     if slider_dragging:
         x_norm = (pos[0] - slider_dragging['rect'].x) / slider_dragging['rect'].width
         x_norm = max(0.0, min(1.0, x_norm))
-        value = int(slider_dragging['min'] + x_norm * (slider_dragging['max'] - slider_dragging['min']))
         
         var_name = slider_dragging['var_name']
         if var_name == "GAIN_FACTOR":
-            globals()[var_name] = float(value)
-        elif 'color' in var_name:
-            color_list = None
-            if 'spectrum' in var_name:
-                color_list = SPECTRUM_COLORS
-            elif 'oscilloscope' in var_name:
-                color_list = OSCILLOSCOPE_COLORS
-            elif 'spectrogram' in var_name:
-                color_list = SPECTROGRAM_COLORS
-
-            if color_list:
-                color_index = slider_dragging['color_index']
-                color_comp = slider_dragging['color_comp']
-                
-                current_color = list(color_list[color_index])
-                current_color[color_comp] = value
-                color_list[color_index] = tuple(current_color)
+            value = slider_dragging['min'] + x_norm * (slider_dragging['max'] - slider_dragging['min'])
+            GAIN_FACTOR = value
+        elif var_name == 'COLOR_SLIDER':
+            value = int(slider_dragging['min'] + x_norm * (slider_dragging['max'] - slider_dragging['min']))
+            color_list_name = slider_dragging['color_list_name']
+            color_list = globals()[color_list_name]
+            color_index = slider_dragging['color_index']
+            color_comp = slider_dragging['color_comp']
+            
+            current_color = list(color_list[color_index])
+            current_color[color_comp] = value
+            color_list[color_index] = tuple(current_color)
 
 # --- Pop-up Menu Variables ---
 MENU_ACTIVE = False
@@ -666,7 +613,6 @@ def handle_menu_click(mouse_pos):
                 SPECTRUM_ACTIVE = not SPECTRUM_ACTIVE
             elif action == "open_settings":
                 app_state = APP_STATE_SETTINGS
-                init_settings_ui()
             elif action == "exit":
                 pygame.quit()
                 sys.exit()
