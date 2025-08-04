@@ -1,0 +1,15 @@
+run as admin:
+
+python check_sounddevice.py
+
+python -m venv myaudiospectrum_env
+myaudiospectrum_env\Scripts\activate  # On Windows
+python.exe -m pip install --upgrade pip
+pip install sounddevice
+pip install sounddevice numpy pygame
+pip install sounddevice numpy scipy pygame
+
+# Then run your script
+
+.\myaudiospectrum_env\Scripts\activate
+python winam.py
