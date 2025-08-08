@@ -30,9 +30,8 @@ def create_run_bat_file(repo_name, venv_name, install_path):
     """Creates a .bat file to activate the conda environment and run app.py."""
     try:
         bat_content = f"""@echo off
-set "CONDA_ENV_NAME={venv_name}"
-echo Activating Conda environment: %CONDA_ENV_NAME%
-call conda activate %CONDA_ENV_NAME%
+echo Activating Conda environment: {venv_path}
+call conda activate "{venv_path}"
 if errorlevel 1 (
     echo Error: Failed to activate Conda environment.
     goto end
@@ -113,8 +112,8 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
     # List of steps and their descriptions
     steps = [
         ("Cloning Repository...", ["git", "clone", github_url, full_install_path]),
-        ("Creating Conda Environment...", [f"conda create --prefix {venv_path} python=3.10 -y"]),
-        ("Activating Conda Environment...", [f"conda activate {venv_path}"]),
+        ("Creating Conda Environment...", [f'conda create --prefix "{venv_path}" python=3.10 -y']),
+        ("Activating Conda Environment...", [f'conda activate "{venv_path}"']),
         ("Updating pip...", ["python -m pip install --upgrade pip"]),
         ("Installing Dependencies...", [f"pip install -r {os.path.join(full_install_path, 'requirements.txt')}"]),
         ("Creating Shortcut and Batch File...", []),
