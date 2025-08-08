@@ -55,14 +55,14 @@ def run_commands(commands, cwd=None, log_area=None):
         log_area.insert(tk.END, f"🔄 Executing command: {' '.join(command)}\n")
         log_area.see(tk.END)
         try:
-            # Use subprocess.run for a cleaner approach
+            # pass the command as a list of arguments directly
             process = subprocess.run(
                 command,
                 cwd=cwd,
-                shell=True,
+                shell=True, # Keep shell=True to handle pathing correctly
                 capture_output=True,
                 text=True,
-                check=True  # This will raise an exception on a non-zero exit code
+                check=True
             )
             if process.stdout:
                 log_area.insert(tk.END, process.stdout)
@@ -112,7 +112,7 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
 
     # List of steps and their descriptions
     steps = [
-        ("Cloning Repository...", [f"git clone {github_url} {full_install_path}"]),
+        ("Cloning Repository...", ["git", "clone", github_url, full_install_path]),
         ("Creating Conda Environment...", [f"conda create --prefix {venv_path} python=3.10 -y"]),
         ("Activating Conda Environment...", [f"conda activate {venv_path}"]),
         ("Updating pip...", ["python -m pip install --upgrade pip"]),
