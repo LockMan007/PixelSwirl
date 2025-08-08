@@ -95,32 +95,30 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
     
     repo_name = os.path.basename(github_url).replace('.git', '')
     full_install_path = os.path.join(install_path, repo_name)
-
+    
+    # New logic to create the directory only if it doesn't exist
     if not os.path.exists(full_install_path):
-            try:
-                os.makedirs(full_install_path)
-                log_area.insert(tk.END, f"✅ Directory '{full_install_path}' created successfully.\n")
-            except Exception as e:
-                log_area.insert(tk.END, f"❌ Failed to create directory: {e}\n")
-                run_button.config(state=tk.NORMAL)
-                return
-            else:
-                log_area.insert(tk.END, f"⚠️ Directory '{full_install_path}' already exists. Skipping directory creation.\n")
+        try:
+            os.makedirs(full_install_path)
+            log_area.insert(tk.END, f"✅ Directory '{full_install_path}' created successfully.\n")
+        except Exception as e:
+            log_area.insert(tk.END, f"❌ Failed to create directory: {e}\n")
+            run_button.config(state=tk.NORMAL)
+            return
+    else:
+        log_area.insert(tk.END, f"⚠️ Directory '{full_install_path}' already exists. Skipping directory creation.\n")
 
-    venv_name = f"venv_{repo_name.lower()}"
+    venv_path = os.path.join(full_install_path, 'venv')
 
     # List of steps and their descriptions
-    git_clone_cmd = ["git", "clone", github_url, full_install_path]
     steps = [
-        ("Cloning Repository...", [git_clone_cmd]),
-        ("Creating Conda Environment...", [f"conda create --prefix {full_install_path}\\venv python=3.10 -y"]),
-        ("Activating Conda Environment...", [f"conda activate {full_install_path}\\venv"]),
+        ("Cloning Repository...", [f"git clone {github_url} {full_install_path}"]),
+        ("Creating Conda Environment...", [f"conda create --prefix {venv_path} python=3.10 -y"]),
+        ("Activating Conda Environment...", [f"conda activate {venv_path}"]),
         ("Updating pip...", ["python -m pip install --upgrade pip"]),
         ("Installing Dependencies...", [f"pip install -r {os.path.join(full_install_path, 'requirements.txt')}"]),
         ("Creating Shortcut and Batch File...", []),
     ]
-
-
 
     log_area.insert(tk.END, "🚀 Python Project Setup Automation Started!\n")
     log_area.see(tk.END)
@@ -129,28 +127,24 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
         status_bar.config(text=f"Step {i+1} of {len(steps)}: {message}")
         log_area.insert(tk.END, f"\n--- {message} ---\n")
 
-        if message == "Activating Conda Environment...":
-            # This step requires a separate process to activate the env for subsequent commands
-            # Conda activation is a bit tricky to manage in a simple subprocess call
-            # For this script, we'll assume the environment is available
-            pass
-        elif message == "Installing Dependencies..." and not os.path.exists(commands[0]):
-            log_area.insert(tk.END, "⚠️ Warning: 'requirements.txt' not found. Skipping dependency installation.\n")
-            continue
+        # Special handling for Conda environment commands and requirements.txt
+        if message == "Installing Dependencies...":
+            requirements_file = os.path.join(full_install_path, 'requirements.txt')
+            if not os.path.exists(requirements_file):
+                log_area.insert(tk.END, "⚠️ Warning: 'requirements.txt' not found. Skipping dependency installation.\n")
+                continue
         
-        # Adjusting how commands are passed
-        if commands:
-            for command_list in commands:
-                if not run_commands([command_list], cwd=full_install_path, log_area=log_area):
-                    status_bar.config(text="Failed")
-                    run_button.config(state=tk.NORMAL)
-                    return
+        # The `run_commands` function needs to handle the `cwd` correctly
+        if commands and not run_commands([commands], cwd=full_install_path, log_area=log_area):
+            status_bar.config(text="Failed")
+            run_button.config(state=tk.NORMAL)
+            return
 
     # Handle the final step separately
     status_bar.config(text=f"Step {len(steps)} of {len(steps)}: Creating Shortcut and Batch File...")
     log_area.insert(tk.END, "\n--- Creating Shortcut and Batch File ---\n")
     log_area.insert(tk.END, create_github_shortcut(repo_name, github_url, install_path) + "\n")
-    log_area.insert(tk.END, create_run_bat_file(repo_name, venv_name, install_path) + "\n")
+    log_area.insert(tk.END, create_run_bat_file(repo_name, 'venv', install_path) + "\n")
 
     status_bar.config(text="Done")
     log_area.insert(tk.END, "\n🎉 Setup complete! You can now navigate to the directory and run the .bat file.\n")
