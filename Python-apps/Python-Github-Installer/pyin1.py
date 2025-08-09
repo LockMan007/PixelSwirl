@@ -88,7 +88,7 @@ def run_commands(commands, cwd=None, log_area=None):
             return False
     return True
 
-def start_setup(install_path, github_url, log_area, run_button, status_bar):
+def start_setup(install_path, github_url, python_version, log_area, run_button, status_bar):
     """Orchestrates the setup process in a separate thread."""
     run_button.config(state=tk.DISABLED)
     log_area.delete('1.0', tk.END)
@@ -122,7 +122,7 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
     # List of steps and their descriptions
     steps = [
         ("Cloning Repository...", ["git", "clone", github_url, full_install_path]),
-        ("Creating Conda Environment...", [f'conda create --prefix "{venv_path}" python=3.11 -y']),
+        ("Creating Conda Environment...", [f'conda create --prefix "{venv_path}" python={python_version} -y']),
         ("Activating Conda Environment...", [f'conda activate "{venv_path}"']),
         ("Updating pip...", ["python -m pip install --upgrade pip"]),
         ("Installing Dependencies...", [f"pip install -r {os.path.join(full_install_path, 'requirements.txt')}"]),
@@ -162,9 +162,9 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
     run_button.config(state=tk.NORMAL)
     messagebox.showinfo("Success", "Project setup is complete!")
 
-def threaded_start_setup(install_path, github_url, log_area, run_button, status_bar):
+def threaded_start_setup(install_path, github_url, python_version, log_area, run_button, status_bar):
     """Starts the setup process in a new thread to keep the GUI responsive."""
-    thread = threading.Thread(target=start_setup, args=(install_path, github_url, log_area, run_button, status_bar))
+    thread = threading.Thread(target=start_setup, args=(install_path, github_url, python_version, log_area, run_button, status_bar))
     thread.daemon = True
     thread.start()
 
@@ -214,12 +214,22 @@ github_url_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
 control_frame = tk.Frame(main_frame)
 control_frame.pack(pady=10)
 
-run_button = tk.Button(control_frame, text="Run Setup", 
-                       command=lambda: threaded_start_setup(install_path_var.get(), github_url_var.get(), log_area, run_button, status_bar))
+run_button = tk.Button(control_frame, text="Run Setup",
+                       command=lambda: threaded_start_setup(install_path_var.get(), github_url_var.get(), python_version_var.get(), log_area, run_button, status_bar))
 run_button.pack(side=tk.LEFT, padx=10)
 
 exit_button = tk.Button(control_frame, text="Exit", command=root.destroy)
 exit_button.pack(side=tk.LEFT, padx=10)
+
+# Python Version Section
+python_version_frame = tk.Frame(main_frame)
+python_version_frame.pack(fill=tk.X, pady=5)
+
+tk.Label(python_version_frame, text="Python Version:").pack(side=tk.LEFT)
+python_version_var = tk.StringVar(value="3.11")
+python_version_entry = tk.Entry(python_version_frame, textvariable=python_version_var, width=10)
+python_version_entry.pack(side=tk.LEFT, padx=5)
+
 
 # Log Area
 log_frame = tk.LabelFrame(main_frame, text="Log Output", padx=5, pady=5)
