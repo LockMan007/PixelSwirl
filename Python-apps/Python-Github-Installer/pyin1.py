@@ -1,3 +1,5 @@
+# --- This is a test app
+
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox
 import os
