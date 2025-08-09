@@ -51,14 +51,24 @@ pause
 def run_commands(commands, cwd=None, log_area=None):
     """Executes a list of commands and prints the output to the GUI."""
     for command in commands:
-        log_area.insert(tk.END, f"🔄 Executing command: {' '.join(command)}\n")
+        # Check if the command is a list of strings
+        if isinstance(command, list):
+            command_str = " ".join(command)
+        else:
+            command_str = command
+            
+        log_area.insert(tk.END, f"🔄 Executing command: {command_str}\n")
         log_area.see(tk.END)
         try:
-            # pass the command as a list of arguments directly
+            # Use `conda run` to execute the command from the base environment.
+            # The `-n base` flag is crucial for this to work correctly.
+            # We'll use a single shell command string for better compatibility.
+            full_command = f"conda run -n base {command_str}"
+            
             process = subprocess.run(
-                command,
+                full_command,
                 cwd=cwd,
-                shell=True, # Keep shell=True to handle pathing correctly
+                shell=True,
                 capture_output=True,
                 text=True,
                 check=True
