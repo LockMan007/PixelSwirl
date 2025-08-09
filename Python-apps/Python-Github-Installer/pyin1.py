@@ -122,7 +122,7 @@ def start_setup(install_path, github_url, log_area, run_button, status_bar):
     # List of steps and their descriptions
     steps = [
         ("Cloning Repository...", ["git", "clone", github_url, full_install_path]),
-        ("Creating Conda Environment...", [f'conda create --prefix "{venv_path}" python=3.10 -y']),
+        ("Creating Conda Environment...", [f'conda create --prefix "{venv_path}" python=3.11 -y']),
         ("Activating Conda Environment...", [f'conda activate "{venv_path}"']),
         ("Updating pip...", ["python -m pip install --upgrade pip"]),
         ("Installing Dependencies...", [f"pip install -r {os.path.join(full_install_path, 'requirements.txt')}"]),
