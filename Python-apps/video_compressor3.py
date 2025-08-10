@@ -45,7 +45,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
         else:
             super().__init__()
         
-        self.title("MP4 Video Compressor")
+        self.title("Video Compressor (.mp4, .mov, .avi, .mkv, .webm)")
         self.geometry("600x450") # Increased window height to accommodate new widgets
         self.resizable(False, False)
 
@@ -93,7 +93,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
         dnd_canvas.dnd_bind('<<Drop>>', self.on_drop)
 
         # --- File Selection Button ---
-        select_button = Button(self, text="Select MP4 File", command=self.browse_file)
+        select_button = Button(self, text="Select mp4, mov, avi, mkv, or webm File", command=self.browse_file)
         select_button.place(relx=0.5, rely=0.43, anchor="center")
 
         # --- File Path Display ---
@@ -164,7 +164,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
 
     def browse_file(self):
         """Open a file dialog to select the video."""
-        file_path = filedialog.askopenfilename(filetypes=[("MP4 files", "*.mp4")])
+        file_path = filedialog.askopenfilename(filetypes = [("Video files", "*.mp4 *.mov *.avi"), ("All files", "*.*")])
         if file_path:
             self.set_file_path(file_path)
 
@@ -290,7 +290,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
                 original_size_bytes = os.path.getsize(self.source_file_path)
                 original_size_mb = original_size_bytes / (1024 * 1024)
 
-            if not self.source_file_path or not os.path.exists(self.source_file_path) or not self.source_file_path.endswith('.mp4'):
+            if not self.source_file_path or not os.path.exists(self.source_file_path) or not self.source_file_path.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm')):
                 messagebox.showerror("Error", "Please select a valid MP4 file.")
                 return
             
