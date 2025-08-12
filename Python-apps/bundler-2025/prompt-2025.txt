@@ -1,0 +1,7 @@
+I'm starting a new Python project. I will ask you to help me create a program. Please provide the code for this project broken down into separate, modular .py files. Each file should have a clear and distinct purpose, such as UI, data processing, or networking.
+
+I understand that large code files can be difficult for you to work with. Therefore, please be mindful of file size. If a logical section of code grows to more than approximately 500 lines, please create a new .py file to handle that distinct concern or functionality, and then import it into the original file.
+
+I will use my custom bundler-2025.py script to combine these files into a single executable file after our work is complete.
+
+I am ready for the description of the app I want to build.
