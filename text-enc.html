@@ -125,8 +125,8 @@
 
     <div class="main-container">
         <div class="text-area">
-            <textarea id="inputText" placeholder="Enter your original text here, and when you want to un-scramble or un-xor it, you need to also PASTE it in this TOP section..."></textarea>
-            <textarea id="outputText" placeholder="Scrambled/Unscrambled text results/output will appear here..." readonly></textarea>
+            <textarea id="inputText" placeholder="Enter your original text here..."></textarea>
+            <textarea id="outputText" placeholder="Scrambled/Unscrambled text will appear here..." readonly></textarea>
         </div>
 
         <div id="resizer"></div>
@@ -160,7 +160,7 @@
                 <hr>
                 <br>
                 <p>
-                    This tool applies a combination of shuffling and XOR encryption to text. It first shuffles the characters based on a seeded random number generator (PRNG) derived from your key and number. It then applies an XOR operation to each character's code, also based on your key. This two-step process makes the text appear as an unreadable jumble of characters.
+                    This tool applies a combination of shuffling and XOR encryption to text. It first shuffles the characters based on a seeded random number generator (PRNG) derived from your key and number. It then applies an XOR operation to each character's code, also based on your key. This two-step process makes the text appear as an unreadable jumble of characters. To ensure the output remains valid text, the result is encoded in Base64.
                 </p>
                 <br>
                 <br>
@@ -192,6 +192,7 @@
         let isResizing = false;
         let scrambledApplied = false;
         let xorApplied = false;
+        let isBase64 = false;
 
         // --- Resizer Functions ---
         resizer.addEventListener('mousedown', function(e) {
@@ -224,6 +225,9 @@
         function showMessage(msg, type = 'error') {
             messageElement.textContent = msg;
             messageElement.style.color = type === 'success' ? 'green' : 'red';
+            setTimeout(() => {
+                messageElement.textContent = '';
+            }, 5000);
         }
 
         function getSeed(key) {
@@ -235,7 +239,7 @@
             let m = 2**35 - 31;
             let a = 185852;
             let c = parseInt(cInput.value);
-            let s = (seed + c) % m; // Use both seed and c for a more robust start
+            let s = (seed + c) % m;
 
             return function() {
                 s = (a * s + c) % m;
@@ -254,41 +258,54 @@
             return indices;
         }
 
-        // --- Core Text Manipulation Functions ---
-
-        function xorText(text, key) {
-            const charCodes = text.split('').map(char => char.charCodeAt(0));
-            const size = charCodes.length;
-            const seed = getSeed(key);
-            const seededRandomXOR = createSeededRandom(seed);
-
-            const xoredCharCodes = charCodes.map(code => {
-                const xorValue = Math.floor(seededRandomXOR() * 256);
-                return code ^ xorValue;
+        // --- Base64 Utility Functions ---
+        function toBase64(byteArray) {
+            let binary = '';
+            byteArray.forEach(byte => {
+                binary += String.fromCharCode(byte);
             });
-            
-            xorApplied = !xorApplied;
-            return String.fromCharCode(...xoredCharCodes);
+            return btoa(binary);
         }
 
-        function scrambleText(text, key) {
-            const charCodes = text.split('').map(char => char.charCodeAt(0));
-            const size = charCodes.length;
+        function fromBase64(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes;
+        }
+
+        // --- Core Text Manipulation Functions ---
+
+        function xorBytes(byteArray, key) {
+            const size = byteArray.length;
+            const seed = getSeed(key);
+            const seededRandomXOR = createSeededRandom(seed);
+            const xoredByteArray = new Uint8Array(size);
+
+            for (let i = 0; i < size; i++) {
+                const xorValue = Math.floor(seededRandomXOR() * 256);
+                xoredByteArray[i] = byteArray[i] ^ xorValue;
+            }
+            return xoredByteArray;
+        }
+
+        function scrambleBytes(byteArray, key) {
+            const size = byteArray.length;
             const seed = getSeed(key);
             const scrambleMap = generateShuffleMap(size, seed);
             
-            const scrambledCharCodes = new Array(size);
+            const scrambledBytes = new Uint8Array(size);
             for (let i = 0; i < size; i++) {
-                scrambledCharCodes[scrambleMap[i]] = charCodes[i];
+                scrambledBytes[scrambleMap[i]] = byteArray[i];
             }
-            
-            scrambledApplied = !scrambledApplied;
-            return String.fromCharCode(...scrambledCharCodes);
+            return scrambledBytes;
         }
         
-        function reverseScrambleText(text, key) {
-            const charCodes = text.split('').map(char => char.charCodeAt(0));
-            const size = charCodes.length;
+        function reverseScrambleBytes(byteArray, key) {
+            const size = byteArray.length;
             const seed = getSeed(key);
             const scrambleMap = generateShuffleMap(size, seed);
 
@@ -297,13 +314,11 @@
                 reverseScrambleMap[scrambleMap[i]] = i;
             }
 
-            const unscrambledCharCodes = new Array(size);
+            const unscrambledBytes = new Uint8Array(size);
             for (let i = 0; i < size; i++) {
-                unscrambledCharCodes[reverseScrambleMap[i]] = charCodes[i];
+                unscrambledBytes[reverseScrambleMap[i]] = byteArray[i];
             }
-
-            scrambledApplied = !scrambledApplied;
-            return String.fromCharCode(...unscrambledCharCodes);
+            return unscrambledBytes;
         }
 
         // --- Event Listeners ---
@@ -314,11 +329,19 @@
                 showMessage('Please enter text and a key.');
                 return;
             }
-            let result = textToScramble;
-            result = scrambleText(result, key);
-            result = xorText(result, key);
+            
+            const textEncoder = new TextEncoder();
+            const originalBytes = textEncoder.encode(textToScramble);
+
+            const scrambledBytes = scrambleBytes(originalBytes, key);
+            const xoredBytes = xorBytes(scrambledBytes, key);
+            const result = toBase64(xoredBytes);
+            
             outputTextarea.value = result;
-            showMessage('Text scrambled and XORed!', 'success');
+            scrambledApplied = true;
+            xorApplied = true;
+            isBase64 = true;
+            showMessage('Text scrambled and XORed! (Base64 encoded)', 'success');
         });
 
         reverseScrambleBtn.addEventListener('click', () => {
@@ -328,79 +351,122 @@
                 showMessage('Please enter scrambled text and the key.');
                 return;
             }
-            let result = textToUnscramble;
-            result = xorText(result, key); // XORing twice undoes the operation
-            result = reverseScrambleText(result, key);
-            outputTextarea.value = result;
-            showMessage('Text restored!', 'success');
+            
+            try {
+                const xoredBytes = fromBase64(textToUnscramble);
+                const scrambledBytes = xorBytes(xoredBytes, key);
+                const originalBytes = reverseScrambleBytes(scrambledBytes, key);
+                
+                const textDecoder = new TextDecoder();
+                const result = textDecoder.decode(originalBytes);
+                
+                outputTextarea.value = result;
+                scrambledApplied = false;
+                xorApplied = false;
+                isBase64 = false;
+                showMessage('Text restored!', 'success');
+            } catch (e) {
+                showMessage('Invalid Base64 format or incorrect key. Please check your input.');
+            }
         });
 
         justScrambleBtn.addEventListener('click', () => {
             const key = keyInput.value.trim();
-            const textToScramble = inputTextarea.value;
-            if (!textToScramble || !key) {
+            const text = inputTextarea.value;
+            if (!text || !key) {
                 showMessage('Please enter text and a key.');
                 return;
             }
-            if (scrambledApplied) {
-                showMessage('Text is already scrambled.');
+            if (scrambledApplied || isBase64) {
+                showMessage('Text is already scrambled or encoded.');
                 return;
             }
-            const result = scrambleText(textToScramble, key);
-            outputTextarea.value = result;
+            
+            const textEncoder = new TextEncoder();
+            const originalBytes = textEncoder.encode(text);
+            const scrambledBytes = scrambleBytes(originalBytes, key);
+            
+            const textDecoder = new TextDecoder();
+            outputTextarea.value = textDecoder.decode(scrambledBytes);
+            scrambledApplied = true;
             showMessage('Text scrambled!', 'success');
         });
 
         justUnscrambleBtn.addEventListener('click', () => {
             const key = keyInput.value.trim();
-            const textToUnscramble = inputTextarea.value;
-            if (!textToUnscramble || !key) {
+            const text = inputTextarea.value;
+            if (!text || !key) {
                 showMessage('Please enter scrambled text and the key.');
                 return;
             }
-            if (!scrambledApplied) {
-                showMessage('Text is not scrambled.');
+            if (!scrambledApplied || isBase64) {
+                showMessage('Text is not in a scrambled state or is Base64 encoded.');
                 return;
             }
-            const result = reverseScrambleText(textToUnscramble, key);
-            outputTextarea.value = result;
+            
+            const textEncoder = new TextEncoder();
+            const scrambledBytes = textEncoder.encode(text);
+            const originalBytes = reverseScrambleBytes(scrambledBytes, key);
+            
+            const textDecoder = new TextDecoder();
+            outputTextarea.value = textDecoder.decode(originalBytes);
+            scrambledApplied = false;
             showMessage('Text unscrambled!', 'success');
         });
 
         justXORBtn.addEventListener('click', () => {
             const key = keyInput.value.trim();
-            const textToXOR = inputTextarea.value;
-            if (!textToXOR || !key) {
+            const text = inputTextarea.value;
+            if (!text || !key) {
                 showMessage('Please enter text and a key.');
                 return;
             }
-            if (xorApplied) {
-                showMessage('Text is already XORed.');
+            if (xorApplied || isBase64) {
+                showMessage('Text is already XORed or encoded.');
                 return;
             }
-            const result = xorText(textToXOR, key);
+            
+            const textEncoder = new TextEncoder();
+            const originalBytes = textEncoder.encode(text);
+            const xoredBytes = xorBytes(originalBytes, key);
+            const result = toBase64(xoredBytes);
+            
             outputTextarea.value = result;
-            showMessage('Text XORed!', 'success');
+            xorApplied = true;
+            isBase64 = true;
+            showMessage('Text XORed! (Base64 encoded)', 'success');
         });
 
         justUnXORBtn.addEventListener('click', () => {
             const key = keyInput.value.trim();
-            const textToUnXOR = inputTextarea.value;
-            if (!textToUnXOR || !key) {
+            const text = inputTextarea.value;
+            if (!text || !key) {
                 showMessage('Please enter XORed text and the key.');
                 return;
             }
-            if (!xorApplied) {
-                showMessage('Text is not XORed.');
+            if (!xorApplied || !isBase64) {
+                showMessage('Text is not in an XORed state or is not Base64 encoded.');
                 return;
             }
-            const result = xorText(textToUnXOR, key); // XORing twice undoes the operation
-            outputTextarea.value = result;
-            showMessage('Text un-XORed!', 'success');
+            
+            try {
+                const xoredBytes = fromBase64(text);
+                const originalBytes = xorBytes(xoredBytes, key);
+                
+                const textDecoder = new TextDecoder();
+                const result = textDecoder.decode(originalBytes);
+                
+                outputTextarea.value = result;
+                xorApplied = false;
+                isBase64 = false;
+                showMessage('Text un-XORed!', 'success');
+            } catch (e) {
+                showMessage('Invalid Base64 format or incorrect key.');
+            }
         });
 
         window.addEventListener('load', () => {
-            showMessage('Enter your text, key, and click "Apply Scramble & XOR".', 'info');
+            showMessage('Enter text, a key, and click a button to begin.', 'info');
         });
     </script>
 </body>
