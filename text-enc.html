@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key-Based Text Scrambler</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            color: #a0a0a0;
+            background-color: #161616;
+        }
+        .main-container {
+            display: flex;
+            width: 95vw;
+            height: 100%;
+        }
+        .text-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            overflow: auto;
+            min-width: 300px;
+        }
+        textarea {
+            width: calc(100% - 20px);
+            flex-grow: 1;
+            margin: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #222;
+            color: #eee;
+            border: 1px solid #444;
+            border-radius: 5px;
+            resize: none;
+            box-sizing: border-box;
+        }
+        #resizer {
+            width: 5px;
+            cursor: ew-resize;
+            background-color: #444;
+            flex-shrink: 0;
+        }
+        .controls-sidebar {
+            width: 350px;
+            min-width: 250px;
+            max-width: 600px;
+            background-color: #1a1a1a;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            align-items: center;
+        }
+        .controls {
+            margin-top: 10px;
+            text-align: center;
+            width: 100%;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            width: calc(100% - 16px);
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px 0;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            width: calc(100% - 10px);
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        #applyScrambleBtn, #reverseScrambleBtn {
+            background-color: #007bff;
+        }
+        #justScrambleBtn, #justXORBtn {
+            background-color: #28a745;
+        }
+        #justUnscrambleBtn, #justUnXORBtn {
+            background-color: #ff69b4;
+        }
+
+        #message {
+            margin-top: 10px;
+            color: red;
+            width: 100%;
+            text-align: center;
+        }
+        hr {
+            border-color: #555;
+            width: 100%;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="text-area">
+            <textarea id="inputText" placeholder="Enter your original text here..."></textarea>
+            <textarea id="outputText" placeholder="Scrambled/Unscrambled text will appear here..." readonly></textarea>
+        </div>
+
+        <div id="resizer"></div>
+        
+        <div class="controls-sidebar">
+            <p id="message"></p>
+
+            <div class="controls">
+                <label for="keyInput">Key (ASCII characters, your passphrase/password):</label><br>
+                <input type="text" id="keyInput" placeholder="Enter your secret key">
+                <br>
+                <label for="cInput">Choose a number between 1 and 34,359,738,336. default is 11111.<br>Both people must know this number. Default is fine.</label><br>
+                <input type="number" id="cInput" placeholder="11111" value="11111" min="1" max="34359738336">
+                <br>
+                <button id="applyScrambleBtn">Apply Scramble & XOR</button>
+                <button id="reverseScrambleBtn">Reverse Scramble & XOR</button>
+                <br>
+
+                <hr>
+
+                <button id="justScrambleBtn">Just Scramble</button>
+                <button id="justUnscrambleBtn">Just Un-Scramble</button>
+                <br>
+                <button id="justXORBtn">Just XOR</button>
+                <button id="justUnXORBtn">Just Un-XOR</button>
+                <p>
+                    **To Reverse:** Copy the scrambled text from the output to the input, enter the **same key**, and click "Reverse".
+                </p>
+                <br>
+                <br>
+                <hr>
+                <br>
+                <p>
+                    This tool applies a combination of shuffling and XOR encryption to text. It first shuffles the characters based on a seeded random number generator (PRNG) derived from your key and number. It then applies an XOR operation to each character's code, also based on your key. This two-step process makes the text appear as an unreadable jumble of characters.
+                </p>
+                <br>
+                <br>
+                <hr>
+                <br><a href="https://lockman007.github.io/PixelSwirl/">Homepage [back]</a>
+                <br>
+                <br><a href="https://github.com/LockMan007/PixelSwirl">github repo</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputTextarea = document.getElementById('inputText');
+        const outputTextarea = document.getElementById('outputText');
+        const keyInput = document.getElementById('keyInput');
+        const cInput = document.getElementById('cInput');
+
+        const applyScrambleBtn = document.getElementById('applyScrambleBtn');
+        const reverseScrambleBtn = document.getElementById('reverseScrambleBtn');
+        const justScrambleBtn = document.getElementById('justScrambleBtn');
+        const justUnscrambleBtn = document.getElementById('justUnscrambleBtn');
+        const justXORBtn = document.getElementById('justXORBtn');
+        const justUnXORBtn = document.getElementById('justUnXORBtn');
+
+        const messageElement = document.getElementById('message');
+        const controlsSidebar = document.querySelector('.controls-sidebar');
+        const resizer = document.getElementById('resizer');
+
+        let isResizing = false;
+        let scrambledApplied = false;
+        let xorApplied = false;
+
+        // --- Resizer Functions ---
+        resizer.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'ew-resize';
+        });
+
+        function resize(e) {
+            if (!isResizing) return;
+            const newSidebarWidth = document.body.offsetWidth - e.clientX;
+            const minWidth = parseInt(getComputedStyle(controlsSidebar).minWidth);
+            const maxWidth = parseInt(getComputedStyle(controlsSidebar).maxWidth);
+            if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
+                controlsSidebar.style.width = newSidebarWidth + 'px';
+            }
+        }
+
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+            document.body.style.userSelect = '';
+            document.body.style.cursor = '';
+        }
+
+        // --- Utility Functions ---
+        function showMessage(msg, type = 'error') {
+            messageElement.textContent = msg;
+            messageElement.style.color = type === 'success' ? 'green' : 'red';
+        }
+
+        function getSeed(key) {
+            return key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        }
+
+        // Simple PRNG (Pseudo-Random Number Generator) using a seed
+        function createSeededRandom(seed) {
+            let m = 2**35 - 31;
+            let a = 185852;
+            let c = parseInt(cInput.value);
+            let s = (seed + c) % m; // Use both seed and c for a more robust start
+
+            return function() {
+                s = (a * s + c) % m;
+                return s / m;
+            };
+        }
+
+        // Generate a shuffle map based on a seeded random number generator
+        function generateShuffleMap(size, seed) {
+            const indices = Array.from({ length: size }, (_, i) => i);
+            const seededRandom = createSeededRandom(seed);
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(seededRandom() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            return indices;
+        }
+
+        // --- Core Text Manipulation Functions ---
+
+        function xorText(text, key) {
+            const charCodes = text.split('').map(char => char.charCodeAt(0));
+            const size = charCodes.length;
+            const seed = getSeed(key);
+            const seededRandomXOR = createSeededRandom(seed);
+
+            const xoredCharCodes = charCodes.map(code => {
+                const xorValue = Math.floor(seededRandomXOR() * 256);
+                return code ^ xorValue;
+            });
+            
+            xorApplied = !xorApplied;
+            return String.fromCharCode(...xoredCharCodes);
+        }
+
+        function scrambleText(text, key) {
+            const charCodes = text.split('').map(char => char.charCodeAt(0));
+            const size = charCodes.length;
+            const seed = getSeed(key);
+            const scrambleMap = generateShuffleMap(size, seed);
+            
+            const scrambledCharCodes = new Array(size);
+            for (let i = 0; i < size; i++) {
+                scrambledCharCodes[scrambleMap[i]] = charCodes[i];
+            }
+            
+            scrambledApplied = !scrambledApplied;
+            return String.fromCharCode(...scrambledCharCodes);
+        }
+        
+        function reverseScrambleText(text, key) {
+            const charCodes = text.split('').map(char => char.charCodeAt(0));
+            const size = charCodes.length;
+            const seed = getSeed(key);
+            const scrambleMap = generateShuffleMap(size, seed);
+
+            const reverseScrambleMap = new Array(size);
+            for (let i = 0; i < size; i++) {
+                reverseScrambleMap[scrambleMap[i]] = i;
+            }
+
+            const unscrambledCharCodes = new Array(size);
+            for (let i = 0; i < size; i++) {
+                unscrambledCharCodes[reverseScrambleMap[i]] = charCodes[i];
+            }
+
+            scrambledApplied = !scrambledApplied;
+            return String.fromCharCode(...unscrambledCharCodes);
+        }
+
+        // --- Event Listeners ---
+        applyScrambleBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToScramble = inputTextarea.value;
+            if (!textToScramble || !key) {
+                showMessage('Please enter text and a key.');
+                return;
+            }
+            let result = textToScramble;
+            result = scrambleText(result, key);
+            result = xorText(result, key);
+            outputTextarea.value = result;
+            showMessage('Text scrambled and XORed!', 'success');
+        });
+
+        reverseScrambleBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToUnscramble = inputTextarea.value;
+            if (!textToUnscramble || !key) {
+                showMessage('Please enter scrambled text and the key.');
+                return;
+            }
+            let result = textToUnscramble;
+            result = xorText(result, key); // XORing twice undoes the operation
+            result = reverseScrambleText(result, key);
+            outputTextarea.value = result;
+            showMessage('Text restored!', 'success');
+        });
+
+        justScrambleBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToScramble = inputTextarea.value;
+            if (!textToScramble || !key) {
+                showMessage('Please enter text and a key.');
+                return;
+            }
+            if (scrambledApplied) {
+                showMessage('Text is already scrambled.');
+                return;
+            }
+            const result = scrambleText(textToScramble, key);
+            outputTextarea.value = result;
+            showMessage('Text scrambled!', 'success');
+        });
+
+        justUnscrambleBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToUnscramble = inputTextarea.value;
+            if (!textToUnscramble || !key) {
+                showMessage('Please enter scrambled text and the key.');
+                return;
+            }
+            if (!scrambledApplied) {
+                showMessage('Text is not scrambled.');
+                return;
+            }
+            const result = reverseScrambleText(textToUnscramble, key);
+            outputTextarea.value = result;
+            showMessage('Text unscrambled!', 'success');
+        });
+
+        justXORBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToXOR = inputTextarea.value;
+            if (!textToXOR || !key) {
+                showMessage('Please enter text and a key.');
+                return;
+            }
+            if (xorApplied) {
+                showMessage('Text is already XORed.');
+                return;
+            }
+            const result = xorText(textToXOR, key);
+            outputTextarea.value = result;
+            showMessage('Text XORed!', 'success');
+        });
+
+        justUnXORBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            const textToUnXOR = inputTextarea.value;
+            if (!textToUnXOR || !key) {
+                showMessage('Please enter XORed text and the key.');
+                return;
+            }
+            if (!xorApplied) {
+                showMessage('Text is not XORed.');
+                return;
+            }
+            const result = xorText(textToUnXOR, key); // XORing twice undoes the operation
+            outputTextarea.value = result;
+            showMessage('Text un-XORed!', 'success');
+        });
+
+        window.addEventListener('load', () => {
+            showMessage('Enter your text, key, and click "Apply Scramble & XOR".', 'info');
+        });
+    </script>
+</body>
+</html>
