@@ -190,9 +190,6 @@
         const resizer = document.getElementById('resizer');
 
         let isResizing = false;
-        let scrambledApplied = false;
-        let xorApplied = false;
-        let isBase64 = false;
 
         // --- Resizer Functions ---
         resizer.addEventListener('mousedown', function(e) {
@@ -232,6 +229,15 @@
 
         function getSeed(key) {
             return key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        }
+
+        function isValidBase64(str) {
+            if (str.length % 4 !== 0) return false;
+            try {
+                return btoa(atob(str)) == str;
+            } catch (err) {
+                return false;
+            }
         }
 
         // Simple PRNG (Pseudo-Random Number Generator) using a seed
@@ -278,13 +284,11 @@
         }
 
         // --- Core Text Manipulation Functions ---
-
         function xorBytes(byteArray, key) {
             const size = byteArray.length;
             const seed = getSeed(key);
             const seededRandomXOR = createSeededRandom(seed);
             const xoredByteArray = new Uint8Array(size);
-
             for (let i = 0; i < size; i++) {
                 const xorValue = Math.floor(seededRandomXOR() * 256);
                 xoredByteArray[i] = byteArray[i] ^ xorValue;
@@ -296,7 +300,6 @@
             const size = byteArray.length;
             const seed = getSeed(key);
             const scrambleMap = generateShuffleMap(size, seed);
-            
             const scrambledBytes = new Uint8Array(size);
             for (let i = 0; i < size; i++) {
                 scrambledBytes[scrambleMap[i]] = byteArray[i];
@@ -308,12 +311,10 @@
             const size = byteArray.length;
             const seed = getSeed(key);
             const scrambleMap = generateShuffleMap(size, seed);
-
             const reverseScrambleMap = new Array(size);
             for (let i = 0; i < size; i++) {
                 reverseScrambleMap[scrambleMap[i]] = i;
             }
-
             const unscrambledBytes = new Uint8Array(size);
             for (let i = 0; i < size; i++) {
                 unscrambledBytes[reverseScrambleMap[i]] = byteArray[i];
@@ -329,18 +330,12 @@
                 showMessage('Please enter text and a key.');
                 return;
             }
-            
             const textEncoder = new TextEncoder();
             const originalBytes = textEncoder.encode(textToScramble);
-
             const scrambledBytes = scrambleBytes(originalBytes, key);
             const xoredBytes = xorBytes(scrambledBytes, key);
             const result = toBase64(xoredBytes);
-            
             outputTextarea.value = result;
-            scrambledApplied = true;
-            xorApplied = true;
-            isBase64 = true;
             showMessage('Text scrambled and XORed! (Base64 encoded)', 'success');
         });
 
@@ -351,19 +346,17 @@
                 showMessage('Please enter scrambled text and the key.');
                 return;
             }
-            
+            if (!isValidBase64(textToUnscramble)) {
+                showMessage('Invalid Base64 format. This text cannot be reversed.');
+                return;
+            }
             try {
                 const xoredBytes = fromBase64(textToUnscramble);
                 const scrambledBytes = xorBytes(xoredBytes, key);
                 const originalBytes = reverseScrambleBytes(scrambledBytes, key);
-                
                 const textDecoder = new TextDecoder();
                 const result = textDecoder.decode(originalBytes);
-                
                 outputTextarea.value = result;
-                scrambledApplied = false;
-                xorApplied = false;
-                isBase64 = false;
                 showMessage('Text restored!', 'success');
             } catch (e) {
                 showMessage('Invalid Base64 format or incorrect key. Please check your input.');
@@ -377,19 +370,12 @@
                 showMessage('Please enter text and a key.');
                 return;
             }
-            if (scrambledApplied || isBase64) {
-                showMessage('Text is already scrambled or encoded.');
-                return;
-            }
-            
             const textEncoder = new TextEncoder();
             const originalBytes = textEncoder.encode(text);
             const scrambledBytes = scrambleBytes(originalBytes, key);
-            
-            const textDecoder = new TextDecoder();
-            outputTextarea.value = textDecoder.decode(scrambledBytes);
-            scrambledApplied = true;
-            showMessage('Text scrambled!', 'success');
+            const result = toBase64(scrambledBytes);
+            outputTextarea.value = result;
+            showMessage('Text scrambled! (Base64 encoded)', 'success');
         });
 
         justUnscrambleBtn.addEventListener('click', () => {
@@ -399,19 +385,20 @@
                 showMessage('Please enter scrambled text and the key.');
                 return;
             }
-            if (!scrambledApplied || isBase64) {
-                showMessage('Text is not in a scrambled state or is Base64 encoded.');
+            if (!isValidBase64(text)) {
+                showMessage('Input is not a valid Base64 string. Cannot unscramble.');
                 return;
             }
-            
-            const textEncoder = new TextEncoder();
-            const scrambledBytes = textEncoder.encode(text);
-            const originalBytes = reverseScrambleBytes(scrambledBytes, key);
-            
-            const textDecoder = new TextDecoder();
-            outputTextarea.value = textDecoder.decode(originalBytes);
-            scrambledApplied = false;
-            showMessage('Text unscrambled!', 'success');
+            try {
+                const scrambledBytes = fromBase64(text);
+                const originalBytes = reverseScrambleBytes(scrambledBytes, key);
+                const textDecoder = new TextDecoder();
+                const result = textDecoder.decode(originalBytes);
+                outputTextarea.value = result;
+                showMessage('Text unscrambled!', 'success');
+            } catch (e) {
+                showMessage('Invalid Base64 format or incorrect key. Cannot unscramble.');
+            }
         });
 
         justXORBtn.addEventListener('click', () => {
@@ -421,19 +408,11 @@
                 showMessage('Please enter text and a key.');
                 return;
             }
-            if (xorApplied || isBase64) {
-                showMessage('Text is already XORed or encoded.');
-                return;
-            }
-            
             const textEncoder = new TextEncoder();
             const originalBytes = textEncoder.encode(text);
             const xoredBytes = xorBytes(originalBytes, key);
             const result = toBase64(xoredBytes);
-            
             outputTextarea.value = result;
-            xorApplied = true;
-            isBase64 = true;
             showMessage('Text XORed! (Base64 encoded)', 'success');
         });
 
@@ -444,21 +423,16 @@
                 showMessage('Please enter XORed text and the key.');
                 return;
             }
-            if (!xorApplied || !isBase64) {
-                showMessage('Text is not in an XORed state or is not Base64 encoded.');
+            if (!isValidBase64(text)) {
+                showMessage('Input is not a valid Base64 string. Cannot un-XOR.');
                 return;
             }
-            
             try {
                 const xoredBytes = fromBase64(text);
                 const originalBytes = xorBytes(xoredBytes, key);
-                
                 const textDecoder = new TextDecoder();
                 const result = textDecoder.decode(originalBytes);
-                
                 outputTextarea.value = result;
-                xorApplied = false;
-                isBase64 = false;
                 showMessage('Text un-XORed!', 'success');
             } catch (e) {
                 showMessage('Invalid Base64 format or incorrect key.');
