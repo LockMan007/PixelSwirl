@@ -56,5 +56,6 @@ def move_windows(source_monitor_index, destination_monitor_index):
     except Exception as e:
         print(f"An error occurred: {e}")
 
+# change the numbers 2 and 0 to the monitors of your choice. Starting with 0, so 3 monitors = 0,1,2.
 move_windows(2, 0)
 input("Press Enter to exit...")
