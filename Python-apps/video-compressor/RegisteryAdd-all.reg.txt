@@ -1,0 +1,56 @@
+Windows Registry Editor Version 5.00
+
+; Find/Replace in notepad these with what they should be. 
+; Correct the drive letters and paths, only change the path section, don't delete the \" \"%1\""
+; D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
+; C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\
+
+; optional, add an icon, replace the below line with something like: "Icon"="\"D:\\♣path\\♣to\\♣pythonvideoicon.ico♣\",0"
+; "Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+
+; Below is the actual registery
+
+
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mp4\shell\ShrinkVideo]
+"Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+"Position"="top"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mp4\shell\ShrinkVideo\command]
+@="\"C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\" \"D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
+
+
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mov\shell\ShrinkVideo]
+"Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+"Position"="top"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mov\shell\ShrinkVideo\command]
+@="\"C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\" \"D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
+
+
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.avi\shell\ShrinkVideo]
+"Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+"Position"="top"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.avi\shell\ShrinkVideo\command]
+@="\"C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\" \"D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
+
+
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mkv\shell\ShrinkVideo]
+"Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+"Position"="top"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.mkv\shell\ShrinkVideo\command]
+@="\"C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\" \"D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
+
+
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.webm\shell\ShrinkVideo]
+"Icon"="\"D:\\♣path\\♣to\\♣video_compressor3.py♣\",0"
+"Position"="top"
+
+[HKEY_CLASSES_ROOT\SystemFileAssociations\.webm\shell\ShrinkVideo\command]
+@="\"C:\\Users\\♣♣USERNAME♣♣\\AppData\\Local\\Programs\\Python\\♣♣Python312♣♣\\pythonw.exe\" \"D:\\♣path\\♣to\\♣video_compressor3.py♣\" \"%1\""
