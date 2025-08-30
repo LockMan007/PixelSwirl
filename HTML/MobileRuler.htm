@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Simple Web Ruler</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            /* Disable text selection for ruler interaction */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: pan-y; /* Allow vertical scrolling, but prevent horizontal gesture interference */
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .unit-buttons button {
+            padding: 8px 15px;
+            font-size: 1em;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #eee;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .unit-buttons button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .unit-buttons button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .calibration-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            box-sizing: border-box;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .calibration-section p {
+            margin: 0 0 10px 0;
+            line-height: 1.4;
+            color: #555;
+        }
+
+        #calibrationSlider {
+            width: 90%;
+            max-width: 400px;
+            margin: 10px 0;
+        }
+
+        #calibrationValue {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 120px;
+            text-align: center;
+            font-size: 1em;
+        }
+
+        .calibration-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .calibration-buttons button {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            cursor: pointer;
+            border: 1px solid #007bff;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .calibration-buttons button:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        .ruler-container {
+            width: calc(100% - 20px); /* Full width minus padding */
+            max-width: 95%; /* Adjust based on desired phone edge measurement */
+            height: 50px; /* Height of the ruler visually */
+            background-color: #fff;
+            border: 1px solid #333;
+            margin-top: auto; /* Push ruler to bottom */
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden; /* Hide marks outside the container */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* Marks grow from bottom */
+            border-radius: 5px;
+        }
+
+        .ruler-marks-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .mark {
+            position: absolute;
+            background-color: #333;
+            width: 1px;
+            bottom: 0; /* Align marks to the bottom of the ruler */
+            transform: translateX(-50%); /* Center the 1px line */
+            -webkit-transform: translateX(-50%);
+        }
+
+        .mark.major {
+            height: 100%;
+            font-size: 0.7em;
+            color: #333;
+            top: 0;
+            display: flex;
+            align-items: flex-start; /* Place number at the top */
+            justify-content: center;
+            padding-top: 2px;
+            font-weight: bold;
+        }
+
+        .mark.half {
+            height: 70%;
+        }
+
+        .mark.quarter {
+            height: 50%;
+        }
+
+        .mark.eighth {
+            height: 30%;
+        }
+
+        .mark.sixteenth {
+            height: 20%;
+        }
+
+        .mark span {
+            position: absolute;
+            top: 0;
+            transform: translateX(50%); /* Adjust text position relative to mark */
+            -webkit-transform: translateX(50%);
+            white-space: nowrap; /* Prevent numbers from wrapping */
+        }
+
+        .reference-line {
+            height: 20px;
+            background-color: #e0f0ff; /* Light blue for visibility */
+            margin-top: 10px;
+            width: var(--reference-width, 96px); /* Default 1 inch at 96 DPI */
+            border-right: 2px dashed red;
+            position: relative;
+            box-sizing: border-box; /* Ensure border is included in width */
+            border-top: 1px solid #007bff;
+            border-bottom: 1px solid #007bff;
+        }
+
+        .reference-line::before {
+            content: "0";
+            position: absolute;
+            left: 0;
+            top: -18px;
+            font-size: 0.8em;
+            color: #555;
+            transform: translateX(-50%);
+        }
+        .reference-line::after {
+            content: "1 unit mark";
+            position: absolute;
+            right: 0;
+            top: -18px;
+            font-size: 0.8em;
+            color: #555;
+            transform: translateX(50%);
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Web Ruler</h1>
+
+    <div class="controls">
+        <div class="unit-buttons">
+            <button id="inchBtn" class="active">Inches</button>
+            <button id="cmBtn">CM</button>
+            <button id="mmBtn">MM</button>
+        </div>
+    </div>
+
+    <div class="calibration-section">
+        <p><strong>Calibration:</strong> Place a real ruler on your screen. Adjust the slider until the blue reference bar (with the red dashed line at "1 unit mark") matches 1 inch or 1 cm on your physical ruler.</p>
+        <div class="reference-line" id="referenceLine"></div>
+        <label for="calibrationSlider">Adjust 1 unit width (pixels):</label>
+        <input type="range" id="calibrationSlider" min="10" max="500" value="96">
+        <label for="calibrationValue">Pixels per current unit:</label>
+        <input type="text" id="calibrationValue" readonly>
+        <div class="calibration-buttons">
+            <button id="saveCalibrationBtn">Save Calibration</button>
+            <button id="loadCalibrationBtn">Load Calibration</button>
+        </div>
+    </div>
+
+    <div class="ruler-container" id="rulerContainer">
+        <div class="ruler-marks-container" id="rulerMarksContainer"></div>
+    </div>
+
+    <script>
+        const inchBtn = document.getElementById('inchBtn');
+        const cmBtn = document.getElementById('cmBtn');
+        const mmBtn = document.getElementById('mmBtn');
+        const calibrationSlider = document.getElementById('calibrationSlider');
+        const calibrationValueInput = document.getElementById('calibrationValue');
+        const saveCalibrationBtn = document.getElementById('saveCalibrationBtn');
+        const loadCalibrationBtn = document.getElementById('loadCalibrationBtn');
+        const rulerMarksContainer = document.getElementById('rulerMarksContainer');
+        const referenceLine = document.getElementById('referenceLine');
+
+        let currentUnit = 'inch'; // Default unit
+        let pixelsPerInch = 96; // Default standard web DPI value for 1 inch
+        let pixelsPerCm = pixelsPerInch / 2.54; // Derived from inches (1 inch = 2.54 cm)
+        let pixelsPerMm = pixelsPerCm / 10; // Derived from cm (1 cm = 10 mm)
+
+        const storageKey = 'webRulerCalibration';
+
+        // Sets the slider value and updates the reference line width based on the current unit's pixels per unit
+        function setSliderValue() {
+            let valueToSet;
+            if (currentUnit === 'inch') {
+                valueToSet = pixelsPerInch;
+            } else if (currentUnit === 'cm') {
+                valueToSet = pixelsPerCm;
+            } else if (currentUnit === 'mm') {
+                valueToSet = pixelsPerMm;
+            }
+            calibrationSlider.value = valueToSet.toFixed(2);
+            calibrationValueInput.value = valueToSet.toFixed(2);
+            referenceLine.style.setProperty('--reference-width', `${valueToSet.toFixed(2)}px`);
+        }
+
+        // Updates all calibration values based on the new value for the current unit
+        function updateCalibration(newValue) {
+            newValue = parseFloat(newValue);
+
+            if (currentUnit === 'inch') {
+                pixelsPerInch = newValue;
+                pixelsPerCm = pixelsPerInch / 2.54;
+                pixelsPerMm = pixelsPerCm / 10;
+            } else if (currentUnit === 'cm') {
+                pixelsPerCm = newValue;
+                pixelsPerInch = pixelsPerCm * 2.54;
+                pixelsPerMm = pixelsPerCm / 10;
+            } else if (currentUnit === 'mm') {
+                pixelsPerMm = newValue;
+                pixelsPerCm = pixelsPerMm * 10;
+                pixelsPerInch = pixelsPerCm * 2.54;
+            }
+            calibrationValueInput.value = newValue.toFixed(2);
+            referenceLine.style.setProperty('--reference-width', `${newValue.toFixed(2)}px`);
+        }
+
+        // Generates the ruler marks dynamically
+        function generateRulerMarks() {
+            rulerMarksContainer.innerHTML = ''; // Clear existing marks
+            const rulerWidth = rulerMarksContainer.offsetWidth;
+            let pps; // pixels per step (e.g., pixels per 1/16 inch, pixels per mm)
+            let unitToDisplayLabel;
+
+            if (currentUnit === 'inch') {
+                pps = pixelsPerInch / 16; // 1/16th inch
+                unitToDisplayLabel = 'in';
+
+                const totalSixteenths = Math.floor(rulerWidth / pps) + 1;
+
+                for (let i = 0; i <= totalSixteenths; i++) {
+                    const markPosition = i * pps;
+                    const mark = document.createElement('div');
+                    mark.classList.add('mark');
+                    mark.style.left = `${markPosition}px`;
+
+                    if (i % 16 === 0) { // Full inch mark (0, 1, 2, ...)
+                        mark.classList.add('major');
+                        const number = i / 16;
+                        mark.innerHTML = `<span>${number}${unitToDisplayLabel}</span>`;
+                    } else if (i % 8 === 0) { // Half inch mark
+                        mark.classList.add('half');
+                    } else if (i % 4 === 0) { // Quarter inch mark
+                        mark.classList.add('quarter');
+                    } else if (i % 2 === 0) { // Eighth inch mark
+                        mark.classList.add('eighth');
+                    } else { // Sixteenth inch mark
+                        mark.classList.add('sixteenth');
+                    }
+                    rulerMarksContainer.appendChild(mark);
+                }
+            } else if (currentUnit === 'cm') {
+                pps = pixelsPerCm / 10; // 1 mm
+                unitToDisplayLabel = 'cm';
+
+                const totalMm = Math.floor(rulerWidth / pps) + 1;
+
+                for (let i = 0; i <= totalMm; i++) {
+                    const markPosition = i * pps;
+                    const mark = document.createElement('div');
+                    mark.classList.add('mark');
+                    mark.style.left = `${markPosition}px`;
+
+                    if (i % 10 === 0) { // Full cm mark
+                        mark.classList.add('major');
+                        const number = i / 10;
+                        mark.innerHTML = `<span>${number}${unitToDisplayLabel}</span>`;
+                    } else if (i % 5 === 0) { // Half cm mark (e.g., 0.5cm, 1.5cm)
+                        mark.classList.add('half');
+                    } else { // mm mark
+                        mark.classList.add('quarter'); // Use quarter height for mm
+                    }
+                    rulerMarksContainer.appendChild(mark);
+                }
+            } else if (currentUnit === 'mm') {
+                pps = pixelsPerMm; // 1 mm
+                unitToDisplayLabel = 'mm';
+
+                const totalMm = Math.floor(rulerWidth / pps) + 1;
+
+                for (let i = 0; i <= totalMm; i++) {
+                    const markPosition = i * pps;
+                    const mark = document.createElement('div');
+                    mark.classList.add('mark');
+                    mark.style.left = `${markPosition}px`;
+
+                    if (i % 10 === 0) { // Every 10 mm (1cm)
+                        mark.classList.add('major');
+                        const number = i;
+                        mark.innerHTML = `<span>${number}${unitToDisplayLabel}</span>`;
+                    } else if (i % 5 === 0) { // Every 5 mm
+                        mark.classList.add('half');
+                    } else { // 1 mm mark
+                        mark.classList.add('quarter');
+                    }
+                    rulerMarksContainer.appendChild(mark);
+                }
+            }
+        }
+
+        // Update active unit button styling
+        function updateUnitButtons(activeButtonId) {
+            inchBtn.classList.remove('active');
+            cmBtn.classList.remove('active');
+            mmBtn.classList.remove('active');
+            document.getElementById(activeButtonId).classList.add('active');
+        }
+
+        // Combined update function to refresh UI
+        function updateRuler() {
+            setSliderValue(); // Update slider based on current unit's pixel value
+            generateRulerMarks();
+        }
+
+        // Event Listeners for unit selection
+        inchBtn.addEventListener('click', () => {
+            currentUnit = 'inch';
+            updateUnitButtons('inchBtn');
+            updateRuler();
+        });
+
+        cmBtn.addEventListener('click', () => {
+            currentUnit = 'cm';
+            updateUnitButtons('cmBtn');
+            updateRuler();
+        });
+
+        mmBtn.addEventListener('click', () => {
+            currentUnit = 'mm';
+            updateUnitButtons('mmBtn');
+            updateRuler();
+        });
+
+        // Event Listener for calibration slider input
+        calibrationSlider.addEventListener('input', (event) => {
+            updateCalibration(event.target.value);
+            generateRulerMarks(); // Regenerate marks with new calibration
+        });
+
+        // Event Listener for Save Calibration button
+        saveCalibrationBtn.addEventListener('click', () => {
+            const calibrationData = {
+                pixelsPerInch: pixelsPerInch,
+                pixelsPerCm: pixelsPerCm,
+                pixelsPerMm: pixelsPerMm,
+                currentUnit: currentUnit
+            };
+            localStorage.setItem(storageKey, JSON.stringify(calibrationData));
+            alert('Calibration saved!');
+        });
+
+        // Event Listener for Load Calibration button
+        loadCalibrationBtn.addEventListener('click', () => {
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                const calibrationData = JSON.parse(savedData);
+                pixelsPerInch = calibrationData.pixelsPerInch;
+                pixelsPerCm = calibrationData.pixelsPerCm;
+                pixelsPerMm = calibrationData.pixelsPerMm;
+                currentUnit = calibrationData.currentUnit;
+
+                updateUnitButtons(currentUnit + 'Btn');
+                updateRuler(); // Redraw with loaded values
+                alert('Calibration loaded!');
+            } else {
+                alert('No saved calibration found. Please calibrate first.');
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            loadCalibrationBtn.click(); // Try to load saved calibration
+            if (!localStorage.getItem(storageKey)) { // If no calibration loaded, ensure defaults are set
+                 updateUnitButtons(currentUnit + 'Btn'); // Set active unit button
+                 updateRuler(); // Initial render with default values
+            }
+        });
+
+        // Regenerate marks if window resizes (e.g., phone rotation)
+        window.addEventListener('resize', generateRulerMarks);
+    </script>
+</body>
+</html>
