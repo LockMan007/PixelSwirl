@@ -87,6 +87,14 @@
             margin: 10px 0;
         }
 
+        .calibration-value-group { /* NEW STYLING FOR INPUT AND BUTTONS */
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            justify-content: center;
+        }
+
         #calibrationValue {
             padding: 8px;
             border: 1px solid #ccc;
@@ -94,12 +102,34 @@
             width: 120px;
             text-align: center;
             font-size: 1em;
+            -moz-appearance: textfield; /* Hide Firefox number input arrows */
         }
+        #calibrationValue::-webkit-outer-spin-button, /* Hide Chrome/Safari number input arrows */
+        #calibrationValue::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .calibration-value-group button { /* Styling for new +/- buttons */
+            padding: 8px 12px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #eee;
+            border-radius: 4px;
+            outline: none;
+            line-height: 1; /* Adjust vertical alignment of text */
+        }
+
+        .calibration-value-group button:hover {
+            background-color: #e0e0e0;
+        }
+
 
         .calibration-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 5px;
+            margin-top: 15px; /* Added spacing from new buttons */
         }
 
         .calibration-buttons button {
@@ -232,12 +262,18 @@
     </div>
 
     <div class="calibration-section">
-        <p><strong>Calibration:</strong> Place a real ruler on your screen. Adjust the slider until the blue reference bar (with the red dashed line at "1 unit mark") matches 1 inch or 1 cm on your physical ruler.</p>
+        <p><strong>Calibration:</strong> Place a real ruler on your screen. Adjust the slider or use +/- buttons until the blue reference bar (with the red dashed line at "1 unit mark") matches 1 inch or 1 cm on your physical ruler.</p>
         <div class="reference-line" id="referenceLine"></div>
         <label for="calibrationSlider">Adjust 1 unit width (pixels):</label>
-        <input type="range" id="calibrationSlider" min="10" max="500" value="96">
+        <input type="range" id="calibrationSlider" min="10" max="500" value="96" step="0.1"> <!-- Added step for slider -->
         <label for="calibrationValue">Pixels per current unit:</label>
-        <input type="text" id="calibrationValue" readonly>
+        <!-- NEW: Wrapper for input and buttons -->
+        <div class="calibration-value-group">
+            <button id="decrementBtn">-</button>
+            <input type="number" id="calibrationValue" readonly>
+            <button id="incrementBtn">+</button>
+        </div>
+        <!-- END NEW -->
         <div class="calibration-buttons">
             <button id="saveCalibrationBtn">Save Calibration</button>
             <button id="loadCalibrationBtn">Load Calibration</button>
@@ -256,6 +292,10 @@
         const calibrationValueInput = document.getElementById('calibrationValue');
         const saveCalibrationBtn = document.getElementById('saveCalibrationBtn');
         const loadCalibrationBtn = document.getElementById('loadCalibrationBtn');
+        // NEW: Increment/Decrement buttons
+        const incrementBtn = document.getElementById('incrementBtn');
+        const decrementBtn = document.getElementById('decrementBtn');
+        // END NEW
         const rulerMarksContainer = document.getElementById('rulerMarksContainer');
         const referenceLine = document.getElementById('referenceLine');
 
@@ -265,6 +305,7 @@
         let pixelsPerMm = pixelsPerCm / 10; // Derived from cm (1 cm = 10 mm)
 
         const storageKey = 'webRulerCalibration';
+        const fineTuneStep = 0.1; // Small step for +/- buttons
 
         // Sets the slider value and updates the reference line width based on the current unit's pixels per unit
         function setSliderValue() {
@@ -298,6 +339,8 @@
                 pixelsPerCm = pixelsPerMm * 10;
                 pixelsPerInch = pixelsPerCm * 2.54;
             }
+            // Ensure the slider also reflects the change
+            calibrationSlider.value = newValue.toFixed(2);
             calibrationValueInput.value = newValue.toFixed(2);
             referenceLine.style.setProperty('--reference-width', `${newValue.toFixed(2)}px`);
         }
@@ -423,6 +466,20 @@
             updateCalibration(event.target.value);
             generateRulerMarks(); // Regenerate marks with new calibration
         });
+
+        // NEW: Event Listeners for Increment/Decrement buttons
+        incrementBtn.addEventListener('click', () => {
+            let currentValue = parseFloat(calibrationValueInput.value);
+            updateCalibration((currentValue + fineTuneStep).toFixed(2));
+            generateRulerMarks();
+        });
+
+        decrementBtn.addEventListener('click', () => {
+            let currentValue = parseFloat(calibrationValueInput.value);
+            updateCalibration((currentValue - fineTuneStep).toFixed(2));
+            generateRulerMarks();
+        });
+        // END NEW
 
         // Event Listener for Save Calibration button
         saveCalibrationBtn.addEventListener('click', () => {
