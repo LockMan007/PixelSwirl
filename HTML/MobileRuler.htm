@@ -86,8 +86,15 @@
             max-width: 400px;
             margin: 10px 0;
         }
+        /* Style for disabled slider */
+        #calibrationSlider:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
-        .calibration-value-group { /* NEW STYLING FOR INPUT AND BUTTONS */
+
+        .calibration-value-group {
             display: flex;
             align-items: center;
             gap: 5px;
@@ -109,6 +116,12 @@
             -webkit-appearance: none;
             margin: 0;
         }
+        /* Style for disabled input */
+        #calibrationValue:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
         .calibration-value-group button { /* Styling for new +/- buttons */
             padding: 8px 12px;
@@ -124,12 +137,20 @@
         .calibration-value-group button:hover {
             background-color: #e0e0e0;
         }
+        /* Style for disabled +/- buttons */
+        .calibration-value-group button:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
 
         .calibration-buttons {
             display: flex;
             gap: 10px;
             margin-top: 15px; /* Added spacing from new buttons */
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
         }
 
         .calibration-buttons button {
@@ -146,6 +167,23 @@
         .calibration-buttons button:hover {
             background-color: #0056b3;
             border-color: #0056b3;
+        }
+        /* Style for disabled save/load buttons */
+        .calibration-buttons button:disabled {
+            background-color: #adb5bd; /* Lighter blue for disabled */
+            border-color: #adb5bd;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #lockBtn { /* Specific styling for the lock button */
+            background-color: #6c757d;
+            border-color: #6c757d;
+            margin-bottom: 10px; /* Space below it */
+        }
+        #lockBtn:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
         }
 
         .ruler-container {
@@ -262,18 +300,17 @@
     </div>
 
     <div class="calibration-section">
+        <button id="lockBtn">Lock Controls</button> <!-- NEW LOCK BUTTON -->
         <p><strong>Calibration:</strong> Place a real ruler on your screen. Adjust the slider or use +/- buttons until the blue reference bar (with the red dashed line at "1 unit mark") matches 1 inch or 1 cm on your physical ruler.</p>
         <div class="reference-line" id="referenceLine"></div>
         <label for="calibrationSlider">Adjust 1 unit width (pixels):</label>
-        <input type="range" id="calibrationSlider" min="10" max="500" value="96" step="0.1"> <!-- Added step for slider -->
+        <input type="range" id="calibrationSlider" min="10" max="500" value="96" step="0.1">
         <label for="calibrationValue">Pixels per current unit:</label>
-        <!-- NEW: Wrapper for input and buttons -->
         <div class="calibration-value-group">
             <button id="decrementBtn">-</button>
             <input type="number" id="calibrationValue" readonly>
             <button id="incrementBtn">+</button>
         </div>
-        <!-- END NEW -->
         <div class="calibration-buttons">
             <button id="saveCalibrationBtn">Save Calibration</button>
             <button id="loadCalibrationBtn">Load Calibration</button>
@@ -292,17 +329,17 @@
         const calibrationValueInput = document.getElementById('calibrationValue');
         const saveCalibrationBtn = document.getElementById('saveCalibrationBtn');
         const loadCalibrationBtn = document.getElementById('loadCalibrationBtn');
-        // NEW: Increment/Decrement buttons
         const incrementBtn = document.getElementById('incrementBtn');
         const decrementBtn = document.getElementById('decrementBtn');
-        // END NEW
         const rulerMarksContainer = document.getElementById('rulerMarksContainer');
         const referenceLine = document.getElementById('referenceLine');
+        const lockBtn = document.getElementById('lockBtn'); // NEW: Lock button reference
 
         let currentUnit = 'inch'; // Default unit
         let pixelsPerInch = 96; // Default standard web DPI value for 1 inch
         let pixelsPerCm = pixelsPerInch / 2.54; // Derived from inches (1 inch = 2.54 cm)
         let pixelsPerMm = pixelsPerCm / 10; // Derived from cm (1 cm = 10 mm)
+        let isLocked = false; // NEW: Lock state variable
 
         const storageKey = 'webRulerCalibration';
         const fineTuneStep = 0.1; // Small step for +/- buttons
@@ -442,6 +479,23 @@
             generateRulerMarks();
         }
 
+        // NEW: Function to toggle the lock state of controls
+        function toggleLockState(lock) {
+            isLocked = lock;
+            calibrationSlider.disabled = isLocked;
+            calibrationValueInput.disabled = isLocked;
+            incrementBtn.disabled = isLocked;
+            decrementBtn.disabled = isLocked;
+            saveCalibrationBtn.disabled = isLocked; // Also disable save when locked
+            // Load button can remain enabled, as it doesn't change current calibration directly
+            lockBtn.textContent = isLocked ? 'Unlock Controls' : 'Lock Controls';
+            lockBtn.style.backgroundColor = isLocked ? '#28a745' : '#6c757d'; /* Green for unlocked, grey for locked */
+            lockBtn.style.borderColor = isLocked ? '#28a745' : '#6c757d';
+            lockBtn.style.setProperty('--hover-bg', isLocked ? '#218838' : '#5a6268'); /* Adjust hover color */
+            lockBtn.style.setProperty('--hover-border', isLocked ? '#1e7e34' : '#545b62');
+        }
+        // END NEW
+
         // Event Listeners for unit selection
         inchBtn.addEventListener('click', () => {
             currentUnit = 'inch';
@@ -467,7 +521,7 @@
             generateRulerMarks(); // Regenerate marks with new calibration
         });
 
-        // NEW: Event Listeners for Increment/Decrement buttons
+        // Event Listeners for Increment/Decrement buttons
         incrementBtn.addEventListener('click', () => {
             let currentValue = parseFloat(calibrationValueInput.value);
             updateCalibration((currentValue + fineTuneStep).toFixed(2));
@@ -479,7 +533,6 @@
             updateCalibration((currentValue - fineTuneStep).toFixed(2));
             generateRulerMarks();
         });
-        // END NEW
 
         // Event Listener for Save Calibration button
         saveCalibrationBtn.addEventListener('click', () => {
@@ -505,11 +558,18 @@
 
                 updateUnitButtons(currentUnit + 'Btn');
                 updateRuler(); // Redraw with loaded values
+                toggleLockState(false); // Unlock controls when loading new calibration
                 alert('Calibration loaded!');
             } else {
                 alert('No saved calibration found. Please calibrate first.');
             }
         });
+
+        // NEW: Event Listener for Lock/Unlock button
+        lockBtn.addEventListener('click', () => {
+            toggleLockState(!isLocked); // Toggle the lock state
+        });
+        // END NEW
 
         // Initialize on page load
         window.addEventListener('load', () => {
@@ -517,6 +577,10 @@
             if (!localStorage.getItem(storageKey)) { // If no calibration loaded, ensure defaults are set
                  updateUnitButtons(currentUnit + 'Btn'); // Set active unit button
                  updateRuler(); // Initial render with default values
+                 toggleLockState(false); // Ensure unlocked for initial calibration
+            } else {
+                // If a calibration was loaded successfully, lock the controls by default for safety
+                toggleLockState(true);
             }
         });
 
