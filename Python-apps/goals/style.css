@@ -1,0 +1,60 @@
+body {
+    font-family: sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    color: #333;
+}
+
+.goal-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.goal-column {
+    width: 150px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+}
+
+.goal-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+    text-align: center;
+}
+
+.timer {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.canvas-wrapper {
+    width: 120px;
+    height: 400px;
+    position: relative;
+    border: 1px solid #ddd;
+    overflow: hidden;
+}
+
+.balloon-image {
+    width: 100px;
+    height: 100px;
+    position: absolute;
+    left: 10px;
+    transition: top 1s ease-in-out, background-color 1s;
+    pointer-events: none;
+}
