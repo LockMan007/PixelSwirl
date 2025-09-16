@@ -1,0 +1,39 @@
+I added "audio_alert" in version 04,
+but to enable it on old saves, you need to add a command after the image_path "" and the audio_alert, like this:
+Now you can click on the column to edit and toggle alert sound.
+
+Change this:
+            "image_path": ""
+            },
+
+to this:
+
+            "image_path": "",
+            "audio_alert": false
+            },
+
+
+            below is an example
+
+        {
+            "id": 22,
+            "name": "Demo 1",
+            "frequency_days": 1,
+            "frequency_hours": 0,
+            "frequency_minutes": 0,
+            "last_completed_date": "2025-09-16T01:48:39.127868",
+            "image_path": "",
+            "audio_alert": false
+        },
+        {
+            "id": 23,
+            "name": "Demo Last Entry",
+            "frequency_days": 0,
+            "frequency_hours": 0,
+            "frequency_minutes": 1,
+            "last_completed_date": "2025-09-16T02:58:41.113878",
+            "image_path": "",
+            "audio_alert": false
+        }
+    ]
+}
