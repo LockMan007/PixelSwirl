@@ -1,3 +1,14 @@
+# README: 
+# tkinterdnd2 (493kb)
+# ttkbootstrap (5.5kb + 152kb), pillow (9.3kb + 2.6mb)
+#
+# INSTALL THESE 2: 
+# pip install tkinterdnd2
+# pip install ttkbootstrap
+# 
+# python video_compressor3.py
+
+
 import os
 import sys
 import shutil
@@ -33,7 +44,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
             self.style = Style(theme="flatly")
         else:
             super().__init__()
-            
+        
         self.title("Video Compressor (.mp4, .mov, .avi, .mkv, .webm)")
         self.geometry("600x450") # Increased window height to accommodate new widgets
         self.resizable(False, False)
@@ -42,8 +53,6 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
         self.source_file_path = None
         self.compression_process = None
         self.delete_logs_var = BooleanVar(value=True)
-        # --- NEW: BooleanVar for the Pop-up Checkbox ---
-        self.display_popup_var = BooleanVar(value=False)
 
         # Create GUI elements
         self.create_widgets()
@@ -113,18 +122,10 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
         # This line ensures the calculation updates when the size_var changes
         self.size_var.trace_add("write", lambda *args: self.calculate_compression_percentage())
 
-        # --- NEW: Display Pop-up Checkbox ---
-        self.display_popup_checkbox = Checkbutton(self, 
-                                                  text="Display Pop-up on completion", 
-                                                  variable=self.display_popup_var)
-        # Place it right below the "Target Size (MB)" input
-        self.display_popup_checkbox.place(relx=0.05, rely=0.82) 
-
         # --- File Size Information ---
         size_info_canvas = Canvas(self, relief="groove", borderwidth=0)
         size_info_canvas.configure(bg='white')
-        # Adjusted rely to not conflict with new checkbox
-        size_info_canvas.place(relx=0.45, rely=0.82, relwidth=0.25, relheight=0.08) 
+        size_info_canvas.place(relx=0.45, rely=0.82, relwidth=0.25, relheight=0.08)
 
         # Labels for displaying size information
         self.original_size_label = Label(size_info_canvas, text="Original Size: N/A", style='Normal.TLabel') # Using ttk.Label
@@ -141,8 +142,8 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
 
         # --- Compress Button ---
         self.compress_button = Button(self, 
-                                      text="Compress Video", 
-                                      command=self.start_compression_thread)
+                                     text="Compress Video", 
+                                     command=self.start_compression_thread)
         self.compress_button.place(relx=0.95, rely=0.86, anchor="e", relwidth=0.25, relheight=0.15)
         
         # Initialize status label with default style
@@ -158,7 +159,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
         file_path = event.data
         if "{" in file_path and "}" in file_path:
             file_path = file_path.strip("{}")
-            
+        
         self.set_file_path(file_path)
 
     def browse_file(self):
@@ -378,9 +379,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
             if process.returncode == 0:
                 self.status_label.config(text="Status: Compression Complete!", style='Normal.TLabel')
                 self.progress_bar['value'] = 100
-                # --- NEW: Conditional Pop-up ---
-                if self.display_popup_var.get():
-                    messagebox.showinfo("Success", "Video compressed successfully!")
+                messagebox.showinfo("Success", "Video compressed successfully!")
             else:
                 stderr_output = process.stderr.read()
                 raise subprocess.CalledProcessError(process.returncode, pass2_command, stderr=stderr_output)
