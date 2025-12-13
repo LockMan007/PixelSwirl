@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Keyboard Instrument</title>
+    <style>
+        /* CSS Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        #app-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #4a90e2;
+            margin-bottom: 20px;
+        }
+
+        #keyboard-layout {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .key-btn {
+            background-color: #333;
+            color: white;
+            border: 2px solid #555;
+            border-radius: 4px;
+            width: 40px;
+            height: 60px;
+            margin: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-around;
+            cursor: pointer;
+            transition: background-color 0.1s, transform 0.05s, box-shadow 0.1s;
+            user-select: none;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .key-note {
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+
+        .key-btn:hover {
+            background-color: #555;
+        }
+
+        .key-btn.active {
+            background-color: #4a90e2; /* Blue for pressed key */
+            box-shadow: 0 0 15px #4a90e2;
+            transform: scale(0.98);
+        }
+
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 20px;
+            border-top: 1px solid #eee;
+            text-align: left;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            flex: 0 0 100px;
+            font-weight: bold;
+        }
+
+        .control-group input[type="range"], .control-group select {
+            flex-grow: 1;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <h1>Web Keyboard Instrument</h1>
+
+        <div id="keyboard-layout">
+            </div>
+
+        <div id="controls">
+            <h2>Instrument Controls</h2>
+
+            <div class="control-group">
+                <label for="volume-slider">Volume</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label for="effect-select">Effect</label>
+                <select id="effect-select">
+                    <option value="none">Clean Tone (None)</option>
+                    <option value="distortion">Electric Guitar (Distortion)</option>
+                    <option value="chorus">Chorus (Wobbly)</option>
+                </select>
+            </div>
+
+            <div class="control-group" id="distortion-amount-group" style="display: none;">
+                <label for="distortion-amount">Distortion Amt</label>
+                <input type="range" id="distortion-amount" min="0" max="1" step="0.01" value="0.5">
+            </div>
+
+            <div class="control-group">
+                <label for="octave-select">Octave</label>
+                <select id="octave-select">
+                    <option value="3">Octave 3</option>
+                    <option value="4" selected>Octave 4</option>
+                    <option value="5">Octave 5</option>
+                </select>
+            </div>
+        </div>
+
+        <p>Press the keys: QWERTY...ASDFG...ZXCVB... to play!</p>
+    </div>
+
+    <script>
+        // JavaScript Logic
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Configuration ---
+            const KEY_MAP = {
+                'q': { note: 'C',  octave: 4 }, 'w': { note: 'C#', octave: 4 }, 'e': { note: 'D',  octave: 4 },
+                'r': { note: 'D#', octave: 4 }, 't': { note: 'E',  octave: 4 }, 'y': { note: 'F',  octave: 4 },
+                'u': { note: 'F#', octave: 4 }, 'i': { note: 'G',  octave: 4 }, 'o': { note: 'G#', octave: 4 },
+                'p': { note: 'A',  octave: 4 },
+
+                'a': { note: 'A#', octave: 4 }, 's': { note: 'B',  octave: 4 }, 'd': { note: 'C',  octave: 5 },
+                'f': { note: 'C#', octave: 5 }, 'g': { note: 'D',  octave: 5 }, 'h': { note: 'D#', octave: 5 },
+                'j': { note: 'E',  octave: 5 }, 'k': { note: 'F',  octave: 5 }, 'l': { note: 'F#', octave: 5 },
+
+                'z': { note: 'G',  octave: 5 }, 'x': { note: 'G#', octave: 5 }, 'c': { note: 'A',  octave: 5 },
+                'v': { note: 'A#', octave: 5 }, 'b': { note: 'B',  octave: 5 }, 'n': { note: 'C',  octave: 6 },
+                'm': { note: 'C#', octave: 6 },
+            };
+
+            // Used to track which keys are currently being held down to prevent re-triggering
+            const activeNotes = new Map();
+            let audioCtx;
+            let gainNode;
+            let effectNode; // The active effect node (e.g., Distortion, Chorus)
+
+            // Get elements
+            const keyboardLayout = document.getElementById('keyboard-layout');
+            const volumeSlider = document.getElementById('volume-slider');
+            const effectSelect = document.getElementById('effect-select');
+            const distortionAmountSlider = document.getElementById('distortion-amount');
+            const distortionAmountGroup = document.getElementById('distortion-amount-group');
+            const octaveSelect = document.getElementById('octave-select');
+
+            // --- Utility Functions ---
+
+            // Function to convert note name (e.g., 'A4') to a frequency in Hz
+            // This is a simplified calculation based on A4 = 440Hz
+            function noteToFrequency(note, octave) {
+                const notesInOctave = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const A4_FREQ = 440;
+                const A4_INDEX = notesInOctave.indexOf('A') + (4 * 12); // Index of A4 in a hypothetical full scale
+                const noteIndex = notesInOctave.indexOf(note) + (octave * 12);
+                const stepFromA4 = noteIndex - A4_INDEX;
+                return A4_FREQ * Math.pow(2, stepFromA4 / 12);
+            }
+
+            // Function to create and configure the necessary audio nodes
+            function setupAudioNodes() {
+                // Initialize AudioContext on user interaction
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // 1. Master Volume (Gain Node)
+                if (!gainNode) {
+                    gainNode = audioCtx.createGain();
+                    gainNode.gain.value = parseFloat(volumeSlider.value);
+                    gainNode.connect(audioCtx.destination);
+                }
+
+                // 2. Set up the initial effect (connects before the gainNode)
+                updateEffectChain();
+            }
+
+            // --- Effects Setup ---
+
+            // Simple distortion curve function
+            function makeDistortionCurve(amount) {
+                const k = typeof amount === 'number' ? amount : 0;
+                const n_samples = 44100;
+                const curve = new Float32Array(n_samples);
+                const deg = Math.PI / 180;
+                for (let i = 0; i < n_samples; ++i) {
+                    const x = i * 2 / n_samples - 1;
+                    curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+                }
+                return curve;
+            }
+
+            // Function to update the main effect chain
+            function updateEffectChain() {
+                // Disconnect the current effect node from the gain node
+                if (effectNode && effectNode.disconnect) {
+                    effectNode.disconnect(gainNode);
+                }
+
+                const selectedEffect = effectSelect.value;
+
+                if (selectedEffect === 'distortion') {
+                    distortionAmountGroup.style.display = 'flex';
+                    // Create WaveShaperNode for distortion
+                    effectNode = audioCtx.createWaveShaper();
+                    const amount = parseFloat(distortionAmountSlider.value);
+                    effectNode.curve = makeDistortionCurve(amount * 100); // Scale 0-1 to 0-100
+                    effectNode.connect(gainNode);
+
+                } else if (selectedEffect === 'chorus') {
+                    distortionAmountGroup.style.display = 'none';
+                    // Create DelayNode for a simple chorus/flange effect
+                    const delay = audioCtx.createDelay();
+                    delay.delayTime.value = 0.02; // Small delay for chorus effect
+                    const feedback = audioCtx.createGain();
+                    feedback.gain.value = 0.5; // Feedback amount
+                    const dry = audioCtx.createGain();
+                    dry.gain.value = 0.5; // Dry signal level
+
+                    // Connect path: Source -> Delay -> Feedback -> Gain (Wet) -> GainNode
+                    delay.connect(feedback);
+                    feedback.connect(delay); // Feedback loop
+                    // Create an effect container node
+                    effectNode = audioCtx.createGain();
+                    effectNode.connect(delay); // Connect source into the delay line
+                    effectNode.connect(dry); // Connect source to the dry line
+
+                    delay.connect(gainNode);
+                    dry.connect(gainNode);
+
+                } else {
+                    distortionAmountGroup.style.display = 'none';
+                    // No effect, connect directly to gainNode
+                    effectNode = gainNode;
+                }
+            }
+
+            // --- Instrument Logic ---
+
+            function playNote(noteKey, frequency) {
+                // 1. Create Oscillator
+                const oscillator = audioCtx.createOscillator();
+                oscillator.type = 'sawtooth'; // A good "electric" sound
+                oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+
+                // 2. Simple Attack/Decay/Sustain/Release Envelope (ADSR)
+                const noteGain = audioCtx.createGain();
+                noteGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                // Attack: Quick ramp up
+                noteGain.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.02);
+                // Sustain: Drop to a sustain level
+                noteGain.gain.linearRampToValueAtTime(0.7, audioCtx.currentTime + 0.1);
+
+                // 3. Connect nodes: Oscillator -> NoteGain -> Effect -> Master Gain -> Destination
+                oscillator.connect(noteGain);
+                noteGain.connect(effectNode);
+
+                // 4. Start the oscillator
+                oscillator.start();
+
+                // Store the note's oscillator and gain node to stop it later
+                activeNotes.set(noteKey, { oscillator, noteGain });
+            }
+
+            function stopNote(noteKey) {
+                if (activeNotes.has(noteKey)) {
+                    const { oscillator, noteGain } = activeNotes.get(noteKey);
+                    const now = audioCtx.currentTime;
+
+                    // Release: Quick ramp down to zero
+                    noteGain.gain.cancelScheduledValues(now);
+                    noteGain.gain.setValueAtTime(noteGain.gain.value, now);
+                    noteGain.gain.linearRampToValueAtTime(0.0001, now + 0.2); // Release time
+
+                    // Stop the oscillator after the release phase is complete
+                    oscillator.stop(now + 0.2);
+                    oscillator.onended = () => {
+                        // Disconnect nodes to free up resources
+                        noteGain.disconnect();
+                        oscillator.disconnect();
+                    };
+
+                    activeNotes.delete(noteKey);
+                }
+            }
+
+            // --- Visual and Event Handlers ---
+
+            function generateKeyboardVisuals() {
+                for (const [keyChar, noteData] of Object.entries(KEY_MAP)) {
+                    const keyDiv = document.createElement('div');
+                    keyDiv.classList.add('key-btn');
+                    keyDiv.id = `key-${keyChar}`;
+                    keyDiv.dataset.key = keyChar;
+
+                    // The keyboard letter
+                    const keyCharSpan = document.createElement('span');
+                    keyCharSpan.textContent = keyChar.toUpperCase();
+                    keyDiv.appendChild(keyCharSpan);
+
+                    // The musical note
+                    const keyNoteSpan = document.createElement('span');
+                    keyNoteSpan.classList.add('key-note');
+                    keyNoteSpan.textContent = `${noteData.note}${noteData.octave}`;
+                    keyDiv.appendChild(keyNoteSpan);
+
+                    keyboardLayout.appendChild(keyDiv);
+                }
+            }
+
+            // Keyboard Press (KeyDown) Handler
+            document.addEventListener('keydown', (event) => {
+                // Prevent playing if the user is typing in a control element
+                if (event.repeat || event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') {
+                    return;
+                }
+
+                const key = event.key.toLowerCase();
+
+                if (KEY_MAP[key]) {
+                    // Start the audio context and set up nodes on first interaction
+                    if (!audioCtx) {
+                        setupAudioNodes();
+                    }
+
+                    // Only play the note if it's not currently active (prevents key repeats)
+                    if (!activeNotes.has(key)) {
+                        const noteData = KEY_MAP[key];
+                        // Get the base octave from the map, and override with the user's selected octave
+                        const selectedOctave = parseInt(octaveSelect.value, 10);
+                        const frequency = noteToFrequency(noteData.note, selectedOctave);
+
+                        playNote(key, frequency);
+
+                        // Visual indicator
+                        const keyElement = document.getElementById(`key-${key}`);
+                        if (keyElement) {
+                            keyElement.classList.add('active');
+                            keyElement.querySelector('.key-note').textContent = `${noteData.note}${selectedOctave}`;
+                        }
+                    }
+                }
+            });
+
+            // Keyboard Release (KeyUp) Handler
+            document.addEventListener('keyup', (event) => {
+                const key = event.key.toLowerCase();
+                if (KEY_MAP[key]) {
+                    stopNote(key);
+
+                    // Visual indicator removal
+                    const keyElement = document.getElementById(`key-${key}`);
+                    if (keyElement) {
+                        keyElement.classList.remove('active');
+                    }
+                }
+            });
+
+            // Volume Slider Handler
+            volumeSlider.addEventListener('input', () => {
+                if (gainNode) {
+                    gainNode.gain.setValueAtTime(parseFloat(volumeSlider.value), audioCtx.currentTime);
+                }
+            });
+
+            // Effect Select Handler
+            effectSelect.addEventListener('change', updateEffectChain);
+
+            // Distortion Amount Slider Handler
+            distortionAmountSlider.addEventListener('input', () => {
+                if (effectSelect.value === 'distortion' && effectNode) {
+                    const amount = parseFloat(distortionAmountSlider.value);
+                    effectNode.curve = makeDistortionCurve(amount * 100);
+                }
+            });
+
+            // Octave Change Handler
+            octaveSelect.addEventListener('change', () => {
+                 // Update the note display on the keys
+                const selectedOctave = parseInt(octaveSelect.value, 10);
+                for (const [keyChar, noteData] of Object.entries(KEY_MAP)) {
+                    const keyElement = document.getElementById(`key-${keyChar}`);
+                    if (keyElement) {
+                        keyElement.querySelector('.key-note').textContent = `${noteData.note}${selectedOctave}`;
+                    }
+                }
+            });
+
+            // Initialize the app
+            generateKeyboardVisuals();
+            // Note: setupAudioNodes is called on the first key press for browser compatibility.
+        });
+    </script>
+</body>
+</html>
