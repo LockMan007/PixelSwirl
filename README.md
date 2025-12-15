@@ -1,3 +1,6 @@
+I love AI.
+This github is just where i am dumping stuff I am working on or successfully finished.
+
 View HTML5 projects:
 
 [https://lockman007.github.io/PixelSwirl/](https://lockman007.github.io/PixelSwirl/)
