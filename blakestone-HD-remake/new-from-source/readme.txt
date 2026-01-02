@@ -6,7 +6,10 @@ I'm doing tons of seeds and changing lots of settings to try to get images simil
 
 using a prompt that i change a lot, that is basically a form of this:
 
-Lab technician in white long sleeve lab coat uniform, black hair, holding the side of a black bordered clipboard, yellow paper with sideways written text on it beside him in one hand, fuchsia background, cartoon graphics, blue eyes, high resolution, black shoes, wide fat head
+Lab technician in white long sleeve lab coat uniform, black hair, holding the side of a black bordered clipboard, yellow paper with sideways written text on it beside him in one hand, fuchsia background, cartoon graphics, blue eyes, high resolution, black shoes, wide fat head, 2 black shirt buttons, expressionless, focused attention
+
+negative prompt:
+beard, mustache, shadow, pixels, pixelated, lowres, low resolution, bad quality, blurry, blocky, voxel, voxels, cubes, blurry, happy, smile, angry, mad, grin, cheerful, jovial, smirk, sneer, excited
 
 using 0.65 deoise, 7 steps, 1 cfg 
 Model: z-image
