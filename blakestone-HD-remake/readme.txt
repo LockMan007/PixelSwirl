@@ -1,3 +1,7 @@
+WARNING! I AM CURRENTLY IN THE PROCESS OF RESIZING THE IMAGES.
+It is faster for me to just resize and replace, than to go through and delete these one by one.
+For now, the subfolder for original size, is what most of these are.
+
 THIS IS INCOMPLETE.
 A WORK IN PROGRESS.
 I still need to do 270-305 (35 frames)
