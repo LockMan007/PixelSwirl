@@ -23,6 +23,9 @@ I'm using Z-Image on my local GPU and photoshop.
 It takes a lot of attempts to get a face that matches and a minimal amount of image defects.
 Often the informant clipboard is wrong and i have to manually fix it, as long as it gets the size close enough, sometimes it makes it square.
 
+i've generated about 250 images, and done countless photo edits, to just get 13 frames done.
+It takes a lot of work.
+
 Fan made Source Port required:
 https://github.com/bibendovsky/bstone/releases/
 
@@ -35,3 +38,19 @@ https://www.youtube.com/watch?v=4_3rdT0c8i0
 
 My images here are for addictions to the Fan made AI Upscale, as an alternative for this one character in the game.
 The person who made teh AI upscale is currently working on doing it themselves with their own art style, to fix the issues.
+
+
+---------------------------------------------------------------------------------------
+the process, now that i got it down is:
+- take original sprite sheet.
+- copy/paste out 1 frame
+- resize with "nearest neighbor" to keep pixels, from 64x64 to 1024x1024
+- change background to WHITE.
+- if needed, edit some in photoshop first, it helps a ton.
+- bring into ComfyUI, Denoise 50-80% (typically 65 is working most of the time best) Z-IMAGE
+prompting to describe, waiting for a good output.
+- bring it back into photoshop, make fixes to problems
+- delete the background.
+- add a black stroke to the middle edge of the image,
+- go and manually erase all the tiny specs that shouldn't be there on the edges
+- save
