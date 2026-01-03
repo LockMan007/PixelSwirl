@@ -5,9 +5,13 @@ I still need to do 270-305 (35 frames)
 check out the preview: https://github.com/LockMan007/PixelSwirl/blob/main/blakestone-HD-remake/preview-low-res.png
 
 UPDATE 1/3/2026:
-I just found out that i have to squash all my images by 20% vertically, because the source port stretches them.
+I just found out that i have to stretch all my images by 20% horizontally, because the source port stretches them.
 If i understand correctly, the 1024x1024 must remain the same size,
-but the sprite in the image, needs to be resized down by 20%.
+but the sprite in the image, needs to be resized to be 20% wider.
+1024 x 1024
+becomes
+1229 x 1024
+then copy/paste back into a 1024x1024 image.
 
 -------------------------------------------------------------------------------------------
 Quote:
