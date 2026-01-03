@@ -1,3 +1,7 @@
+THIS IS INCOMPLETE.
+A WORK IN PROGRESS.
+I still need to do 270-305 (35 frames)
+
 getting rid of fuchsia color background is a MASSIVE pain.
 The fuchsia color acts like a light and shines onto the character, which makes it very difficult to remove without destroying the image.
 
