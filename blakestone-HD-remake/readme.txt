@@ -20,5 +20,18 @@ UPDATED method: I am now using a white background.
 There is no need to use Fuchsia in 2025, it's just going to cause problems unless you are doing pixel by pixel editing and no transparency.
 
 I'm using Z-Image on my local GPU and photoshop.
+It takes a lot of attempts to get a face that matches and a minimal amount of image defects.
+Often the informant clipboard is wrong and i have to manually fix it, as long as it gets the size close enough, sometimes it makes it square.
 
-https://www.nexusmods.com/blakestonealiensofgold/mods/1?tab=posts&BH=0
+Fan made Source Port required:
+https://github.com/bibendovsky/bstone/releases/
+
+Fan made AI Upscale:
+https://www.nexusmods.com/blakestonealiensofgold/mods/1?tab=description
+
+Youtube video made by the person who made the AI upscale images:
+https://www.youtube.com/watch?v=4_3rdT0c8i0
+
+
+My images here are for addictions to the Fan made AI Upscale, as an alternative for this one character in the game.
+The person who made teh AI upscale is currently working on doing it themselves with their own art style, to fix the issues.
