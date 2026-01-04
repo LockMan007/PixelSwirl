@@ -4,6 +4,12 @@ I still need to do 270-305 (35 frames)
 
 check out the preview: https://github.com/LockMan007/PixelSwirl/blob/main/blakestone-HD-remake/preview-low-res.png
 
+update: 1/4/2026:
+if you are trying out my graphics, let me know.
+Be aware that i am over-writing the files several times a day with what I believe are "improvements".
+https://github.com/LockMan007/PixelSwirl/discussions/2
+
+
 UPDATE 1/3/2026:
 I just found out that i have to stretch all my images by 20% horizontally, because the source port stretches them.
 If i understand correctly, the 1024x1024 must remain the same size,
