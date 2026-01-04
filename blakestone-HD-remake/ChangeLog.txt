@@ -1,3 +1,7 @@
+1/4/2025:
+did gun number 2 sprite animation of shooting.
+Unfortunately elements might not be the right aspect ratio, but the gun should be.
+
 1/3/2025 b:
 Confirmed that the sprite sheet for the walking animations doesn't math the AI upscale order.
 I'm not sure which is wrong. The sprite sheet order makes more sense, whereas the AI upscale order is every 8th image, then changes
