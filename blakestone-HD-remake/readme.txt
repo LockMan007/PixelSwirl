@@ -5,9 +5,9 @@ I still need to do 270-305 (35 frames)
 check out the preview: https://github.com/LockMan007/PixelSwirl/blob/main/blakestone-HD-remake/preview-low-res.png
 
 update: 1/4/2026:
-if you are trying out my graphics, let me know.
+if you are trying out my graphics, let me know. https://github.com/LockMan007/PixelSwirl/discussions/2 <-- click to leave a comment
 Be aware that i am over-writing the files several times a day with what I believe are "improvements".
-https://github.com/LockMan007/PixelSwirl/discussions/2
+
 
 
 UPDATE 1/3/2026:
