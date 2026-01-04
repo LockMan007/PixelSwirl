@@ -53,6 +53,8 @@ https://www.nexusmods.com/blakestonealiensofgold/mods/1?tab=description
 Youtube video made by the person who made the AI upscale images:
 https://www.youtube.com/watch?v=4_3rdT0c8i0
 
+sneak peek:
+https://artinpinkerton.com/2025/10/26/blakestone-hd-textures-sneak-peak/
 
 My images here are for addictions to the Fan made AI Upscale, as an alternative for this one character in the game.
 The person who made teh AI upscale is currently working on doing it themselves with their own art style, to fix the issues.
