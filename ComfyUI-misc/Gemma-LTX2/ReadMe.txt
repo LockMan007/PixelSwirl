@@ -1,7 +1,10 @@
-Misc files for ComfyUI.
+Downlaod the missing files from here:
+https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/tree/main
 
+To make it easier, i have made a zip of the files below called:
 Gemma-missing the 32mb Tokenizer.json and large model files.zip
-includes:
+
+The zip includes:
 
 README.md
 added_tokens.json
@@ -15,6 +18,9 @@ special_tokens_map.json
 tokenizer.model
 tokenizer_config.json
 
+################################################
+HOWEVER IT IS MISSING THE LARGE 32 Megabyte tokenizer.json and file and the model file(s)
+################################################
 
 MISSING:
 tokenizer.json
