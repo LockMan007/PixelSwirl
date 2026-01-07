@@ -20,6 +20,8 @@ tokenizer_config.json
 
 ################################################
 HOWEVER IT IS MISSING THE LARGE 32 Megabyte tokenizer.json and file and the model file(s)
+Download the big files from: https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/tree/main
+or you can download all the files 1 by one, I'm just trying to make it easier, because it is dumb to click several times to download many 1KB files.
 ################################################
 
 MISSING:
