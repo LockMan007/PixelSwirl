@@ -34,3 +34,4 @@ model-00005-of-00005.safetensors
 
 Also doesn't include
 gemma_3_12B_it_fp8_e4m3fn.safetensors
+https://huggingface.co/GitMylo/LTX-2-comfy_gemma_fp8_e4m3fn/tree/main
