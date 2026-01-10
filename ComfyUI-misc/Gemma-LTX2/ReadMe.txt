@@ -1,3 +1,13 @@
+I'm now hosting my Comfyui LTX-2 workflow here.
+I recommend setting your Windows System Page File Maximum to 100gb, but you can go higher.
+I've seen mine use a total of 122gb committed, which means system RAM+Page file.
+So if you have only 16GB System RAM, then you would benefit from setting the maximum page file size higher,
+otherwise it will crash if it goes above 116gb, such as my 122gb.
+
+So maybe set it to 150gb or 200gb maximum page file size and it shouldn't be a problem.
+It's up to you.
+
+
 Downlaod the missing files from here:
 https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/tree/main
 
