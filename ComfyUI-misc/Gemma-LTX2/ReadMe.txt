@@ -8,6 +8,14 @@ So maybe set it to 150gb or 200gb maximum page file size and it shouldn't be a p
 It's up to you.
 
 
+######################################################################
+######################################################################
+You can't bypass the new CRF node, but you can set the CRF to zero.
+I'll fix the notes and reupload after i have fun with it.
+######################################################################
+######################################################################
+
+
 Downlaod the missing files from here:
 https://huggingface.co/google/gemma-3-12b-it-qat-q4_0-unquantized/tree/main
 
@@ -45,3 +53,4 @@ model-00005-of-00005.safetensors
 Also doesn't include
 gemma_3_12B_it_fp8_e4m3fn.safetensors
 https://huggingface.co/GitMylo/LTX-2-comfy_gemma_fp8_e4m3fn/tree/main
+
