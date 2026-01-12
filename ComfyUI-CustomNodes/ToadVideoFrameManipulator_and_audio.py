@@ -45,13 +45,13 @@ class ToadVideoFrameManipulator:
                 # Time-Based Audio settings
                 "audio_stutter_on": ("BOOLEAN", {"default": True}),
                 "audio_stutter_probability": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "audio_stutter_clip": ("FLOAT", {"default": 0.1, "min": 0.01, "max": 10.0, "step": 0.01}),
-                "audio_stutter_duration": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_stutter_clip": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_stutter_duration": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
                 
                 "audio_reverse_on": ("BOOLEAN", {"default": True}),
-                "audio_reverse_probability": ("FLOAT", {"default": 0.02, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "audio_reverse_clip": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
-                "audio_reverse_duration": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_reverse_probability": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "audio_reverse_clip": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_reverse_duration": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
             },
             "optional": {
                 "video_info": ("VHS_VIDEOINFO",),
