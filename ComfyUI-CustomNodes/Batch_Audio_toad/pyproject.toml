@@ -1,0 +1,12 @@
+[project]
+name = "Batch_Audio_toad"
+description = "A node for concatenating multiple audio clips with dynamic input slots."
+version = "1.0.0"
+dependencies = ["torch", "torchaudio"]
+
+[project.urls]
+Repository = "https://github.com/LockMan007/PixelSwirl/new/main/ComfyUI-CustomNodes/Batch_Audio_toad"
+
+[tool.comfyui]
+display_name = "Batch Audio toad"
+author = "Toad and Google Gemini"
