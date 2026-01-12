@@ -10,7 +10,7 @@ It's up to you.
 
 ######################################################################
 ######################################################################
-You can't simplu "bypass" the new CRF node, but you can set the CRF to zero.
+You can't simply "bypass" the new CRF node, but you can set the CRF to zero.
 I'll fix the notes and reupload after i have fun with it.
 
 "SageAttention generally causes some quality degradation, especially noticeable in fine details and motion (like hands/limbs), compared to standard attention (SDPA/xformers), but it offers significant speedups (often 20-40% faster), making it a trade-off for quicker previews or seed hunting before final renders. The quality drop can manifest as ghosting or smudging"
