@@ -11,9 +11,9 @@ class ToadVideoFrameManipulator:
                 "images": ("IMAGE",),
                 "audio": ("AUDIO",),
                 
-                # Video settings (Original Logic Restored)
+                # Video settings
                 "color_to_bw_on": ("BOOLEAN", {"default": True}),
-                "color_to_bw_probability": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "color_to_bw_probability": ("FLOAT", {"default": 0.1, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "bw_duration": ("INT", {"default": 5, "min": 1}),
                 "flip_on": ("BOOLEAN", {"default": True}),
                 "flip_probability": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
@@ -42,16 +42,16 @@ class ToadVideoFrameManipulator:
                 "pixelate_probability": ("FLOAT", {"default": 0.10, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "pixelate_factor": ("INT", {"default": 4, "min": 2, "max": 50}),
 
-                # Time-Based Audio settings (Manual Probabilities Only)
+                # Time-Based Audio settings
                 "audio_stutter_on": ("BOOLEAN", {"default": True}),
                 "audio_stutter_probability": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "audio_stutter_clip": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
-                "audio_stutter_duration": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_stutter_clip": ("FLOAT", {"default": 0.1, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_stutter_duration": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
                 
                 "audio_reverse_on": ("BOOLEAN", {"default": True}),
-                "audio_reverse_probability": ("FLOAT", {"default": 0.05, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "audio_reverse_clip": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
-                "audio_reverse_duration": ("FLOAT", {"default": 0.25, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_reverse_probability": ("FLOAT", {"default": 0.02, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "audio_reverse_clip": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
+                "audio_reverse_duration": ("FLOAT", {"default": 0.5, "min": 0.01, "max": 10.0, "step": 0.01}),
             },
             "optional": {
                 "video_info": ("VHS_VIDEOINFO",),
@@ -84,7 +84,10 @@ class ToadVideoFrameManipulator:
 
         waveform = audio["waveform"].clone().to(device).float()
         sample_rate = audio["sample_rate"]
-        if len(waveform.shape) == 3: waveform = waveform[0]
+        
+        # Standardize waveform shape to [channels, samples]
+        if len(waveform.shape) == 3:
+            waveform = waveform[0]
             
         num_channels, total_samples = waveform.shape
         batch_size = images.shape[0]
@@ -96,8 +99,9 @@ class ToadVideoFrameManipulator:
             start_sample = i * samples_per_frame
             end_sample = min(start_sample + samples_per_frame, total_samples)
             current_frame_size = end_sample - start_sample
+            audio_segment = waveform[:, start_sample:end_sample]
 
-            # --- VIDEO EFFECTS (Logic from) ---
+            # --- VIDEO EFFECTS ---
             if kwargs.get("color_to_bw_on"):
                 if self.bw_counter > 0:
                     frame = cv2.cvtColor(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), cv2.COLOR_GRAY2RGB)
@@ -160,12 +164,11 @@ class ToadVideoFrameManipulator:
                 elif random.random() < kwargs.get("pixelate_probability"):
                     self.pixelate_counter = pf
 
-            # --- AUDIO EFFECTS (Purely Probability Based) ---
+            # --- AUDIO EFFECTS ---
             
-            # 1. Stutter Logic
+            # 1. Stutter Logic (With Channel Mismatch Fix)
             if kwargs.get("audio_stutter_on"):
                 if self.audio_stutter_remaining <= 0:
-                    # Removed 'glitch_triggered' dependency
                     if random.random() < kwargs.get("audio_stutter_probability"):
                         clip_s = int(kwargs.get("audio_stutter_clip") * sample_rate)
                         self.audio_stutter_remaining = int(kwargs.get("audio_stutter_duration") * sample_rate)
@@ -173,21 +176,28 @@ class ToadVideoFrameManipulator:
                         self.audio_stutter_chunk = waveform[:, c_start:max(c_start + 1, start_sample)]
                 
                 if self.audio_stutter_remaining > 0 and self.audio_stutter_chunk is not None:
+                    # Fix channel mismatch if user switched videos
+                    if self.audio_stutter_chunk.shape[0] != num_channels:
+                        self.audio_stutter_chunk = self.audio_stutter_chunk[0:1].repeat(num_channels, 1)
+
                     cl = self.audio_stutter_chunk.shape[1]
                     waveform[:, start_sample:end_sample] = self.audio_stutter_chunk.repeat(1, (current_frame_size // cl) + 1)[:, :current_frame_size]
                     self.audio_stutter_remaining -= current_frame_size
 
-            # 2. Reverse Logic
+            # 2. Reverse Logic (With Channel Mismatch Fix)
             if kwargs.get("audio_reverse_on"):
                 if self.audio_reverse_remaining <= 0:
                     if random.random() < kwargs.get("audio_reverse_probability"):
                         rev_clip_s = int(kwargs.get("audio_reverse_clip") * sample_rate)
                         self.audio_reverse_remaining = int(kwargs.get("audio_reverse_duration") * sample_rate)
-                        # Sample the clip to be played in reverse
                         c_start = max(0, start_sample - rev_clip_s)
                         self.audio_reverse_buffer = torch.flip(waveform[:, c_start:max(c_start + 1, start_sample)], [1])
                 
                 if self.audio_reverse_remaining > 0 and self.audio_reverse_buffer is not None:
+                    # Fix channel mismatch if user switched videos
+                    if self.audio_reverse_buffer.shape[0] != num_channels:
+                        self.audio_reverse_buffer = self.audio_reverse_buffer[0:1].repeat(num_channels, 1)
+
                     rl = self.audio_reverse_buffer.shape[1]
                     waveform[:, start_sample:end_sample] = self.audio_reverse_buffer.repeat(1, (current_frame_size // rl) + 1)[:, :current_frame_size]
                     self.audio_reverse_remaining -= current_frame_size
