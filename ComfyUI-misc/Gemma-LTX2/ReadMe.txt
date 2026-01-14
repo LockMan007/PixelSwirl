@@ -1,4 +1,4 @@
-These settings seem to give good quality output on LTX-2:
+These settings seem to give good quality output on LTX-2: (there may be better settings)
 
 LTX-2-19b-distilled-fp8.safetensors
 gemma_3_12B_it_fp8_e4m3fn.safetensors
