@@ -1,3 +1,17 @@
+These settings seem to give good quality output on LTX-2:
+
+LTX-2-19b-distilled-fp8.safetensors
+gemma_3_12B_it_fp8_e4m3fn.safetensors
+ltx-2-19b-ic-lora-detailer.safetensors      strength: 2.00
+euler_ancestral
+sgm_uniform     16 steps
+Framerate:      60
+Length:         97
+Resolution:     1024x1024 (not upscaled)
+LTX Spatio Temporal Tiled VAE Decode settings: (4, 1, 16, 1, false, auto, auto)
+
+=================================================================================
+
 I'm now hosting my Comfyui LTX-2 workflow here.
 I recommend setting your Windows System Page File Maximum to 100gb, but you can go higher.
 I've seen mine use a total of 122gb committed, which means system RAM+Page file.
