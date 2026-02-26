@@ -1,5 +1,6 @@
-This is a work in progress.
-You only need the highest version number.
+This is a work in progress. You only need the highest version number.
+
+Requirements: pyvista numpy struct
 
 No guarantees for anything.
 Newer versions might fix something or add a feature, while possibly breaking previous functions.
