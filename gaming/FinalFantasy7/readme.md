@@ -6,7 +6,7 @@ That way if something used to work and is broken in the newer version, the code 
 
 After you extract the files from the LGP, This will let you load the vertex colored model and change colors and save it so that you can add it back to the LGP and load it in the game.
 
-![Alt text](FF7-Battle-Model-Color-Change_v0.0004.png)
+![Alt text](FF7-Battle-Model-Color-Change_v0.0004_examples.png)
 
 If you are unfamiliar, this is NOT for textures.
 Vertexes are for assigning colors to points which translates to the blurred color transitions you see on character models.
