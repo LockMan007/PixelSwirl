@@ -1,4 +1,6 @@
 This is a work in progress.
+You only need the highest version number.
+
 No guarantees for anything.
 Newer versions might fix something or add a feature, while possibly breaking previous functions.
 This is why i am uploaded all of them.
