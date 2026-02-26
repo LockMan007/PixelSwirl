@@ -6,6 +6,16 @@ That way if something used to work and is broken in the newer version, the code 
 
 After you extract the files from the LGP, This will let you load the vertex colored model and change colors and save it so that you can add it back to the LGP and load it in the game.
 
+If you are unfamiliar, this is NOT for textures.
+Vertexes are for assigning colors to points which translates to the blurred color transitions you see on character models.
+If you look at the character models (like Cloud and Tifa), you will see their eyes and lips are detailed, because those are textures, however the rest of their body is just made of solid colors.
+The solid color body is what this app i made can modify.
+
+Lets say you want Tifa to have a blue shirt, you can do this.
+Lets say you want Cloud to have red pants, you can do this.
+
+Lets say you want Tifa to have a logo on her shirt, you can NOT do this with this tool, since that would require a texture file and I have no idea if that is possible and is beyond the scope of this project.
+
 To view and load/extract/replace and recompile back into LGP.
 https://maciej-trebacz.github.io/ff7-lgp-explorer/
 
