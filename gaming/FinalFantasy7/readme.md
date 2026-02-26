@@ -32,13 +32,23 @@ This took a TON of trial and error and a ton of AI giving me broken code over an
 Here are sources I gave it that helped, but isn't enough on it's own to make it code correctly.
 
 ===========================================================================================================
+
+Sources i gave to AI to help code this, also feel free to use my project files to help make your own BETTER version or integrate functions to make your app do more:
+
 https://github.com/maciej-trebacz/ff7-lgp-explorer/tree/main/src
+
 https://raw.githubusercontent.com/maciej-trebacz/ff7-lgp-explorer/refs/heads/main/src/rsdfile.ts
+
 https://raw.githubusercontent.com/maciej-trebacz/ff7-lgp-explorer/refs/heads/main/src/texfile.ts
+
 https://raw.githubusercontent.com/maciej-trebacz/ff7-lgp-explorer/refs/heads/main/src/utils/fileService.ts
+
 https://raw.githubusercontent.com/maciej-trebacz/ff7-lgp-explorer/refs/heads/main/src/utils/pfileRenderer.js
+
 https://raw.githubusercontent.com/maciej-trebacz/ff7-lgp-explorer/refs/heads/main/src/utils/settings.ts
+
 https://wiki.ffrtt.ru/index.php/FF7/P
+
 https://namelivia.com/final-fantasy-7-character-modelling-research/
 
 https://maciej-trebacz.github.io/ff7-lgp-explorer/
