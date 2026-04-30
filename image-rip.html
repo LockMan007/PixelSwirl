@@ -6,33 +6,32 @@
     <title>Key-Based Image Scrambler</title>
     <style>
         html, body {
-            height: 100%; /* Ensure html and body take full viewport height */
+            height: 100%;
             margin: 0;
-            overflow: hidden; /* Hide scrollbars on main body if content overflows */
+            overflow: hidden;
         }
         body {
             font-family: sans-serif;
-            display: flex; /* Use flexbox for main layout */
+            display: flex;
             justify-content: center;
-            align-items: flex-start; /* Align content to the top */
-            color: #a0a0a0; /* Retained original body text color */
-            background-color: #161616; /* Single background color for the whole page */
+            align-items: flex-start;
+            color: #a0a0a0;
+            background-color: #161616;
         }
         .main-container {
             display: flex;
-            width: 95vw; /* Take most of the viewport width */
-            height: 100%; /* Ensure main container takes full available height */
-            /* Removed border, box-shadow, and background-color for the "frame" effect */
+            width: 95vw;
+            height: 100%;
         }
         .image-area {
-            flex-grow: 1; /* Allows it to take remaining space */
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            align-items: center; /* Center canvas horizontally */
-            justify-content: center; /* Center canvas vertically */
+            align-items: center;
+            justify-content: center;
             padding: 10px;
-            overflow: auto; /* Allow scrolling if image is too big */
-            min-width: 300px; /* Minimum width for image area */
+            overflow: auto;
+            min-width: 300px;
         }
         #drop-area {
             border: 2px dashed #ccc;
@@ -40,16 +39,16 @@
             padding: 20px;
             text-align: center;
             cursor: pointer;
-            width: calc(100% - 40px); /* Adjust width to fit sidebar, accounting for padding */
-            max-width: 300px; /* Keep a max-width for drop area within sidebar */
-            height: 100px; /* Reduced height for smaller area */
+            width: calc(100% - 40px);
+            max-width: 300px;
+            height: 100px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            background-color: #333; /* Adjusted for dark theme */
-            color: #eee; /* Adjusted for dark theme */
-            margin-bottom: 20px; /* Margin after drop area */
+            background-color: #333;
+            color: #eee;
+            margin-bottom: 20px;
         }
         #drop-area.highlight {
             border-color: #007bff;
@@ -57,36 +56,31 @@
         }
         canvas {
             border: 1px solid #ccc;
-            /* margin-top: 20px; Removed as image-area now centers vertically */
             max-width: 100%;
             height: auto;
         }
-
-        /* Resizer styles */
         #resizer {
             width: 5px;
             cursor: ew-resize;
             background-color: #444;
-            flex-shrink: 0; /* Prevents resizer from shrinking */
+            flex-shrink: 0;
         }
-
-        /* Controls sidebar styles */
         .controls-sidebar {
-            width: 350px; /* Initial width */
-            min-width: 250px; /* Minimum width for the sidebar */
-            max-width: 600px; /* Maximum width for the sidebar */
-            background-color: #1a1a1a; /* Dark background for sidebar */
+            width: 350px;
+            min-width: 250px;
+            max-width: 600px;
+            background-color: #1a1a1a;
             padding: 15px;
-            box-sizing: border-box; /* Include padding in width */
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
-            overflow-y: auto; /* Allow scrolling within the sidebar if content overflows */
-            align-items: center; /* Center controls within sidebar */
+            overflow-y: auto;
+            align-items: center;
         }
         .controls {
-            margin-top: 10px; /* Adjusted margin */
+            margin-top: 10px;
             text-align: center;
-            width: 100%; /* Take full width of controls-sidebar padding adjusted */
+            width: 100%;
         }
         input[type="text"], input[type="number"] {
             padding: 8px;
@@ -94,55 +88,50 @@
             margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            box-sizing: border-box; /* Include padding and border in the element's total width */
-            width: calc(100% - 16px); /* 100% minus left/right padding of 8px each */
+            box-sizing: border-box;
+            width: calc(100% - 16px);
             margin-left: auto;
             margin-right: auto;
-            display: block; /* Make them block elements for better layout */
+            display: block;
         }
         label {
-            display: block; /* Make labels block for better layout above inputs */
+            display: block;
             margin-top: 10px;
         }
         button {
             padding: 10px 20px;
-            margin: 5px 0; /* Adjust button margins for vertical stacking */
+            margin: 5px 0;
             font-size: 16px;
             cursor: pointer;
             color: white;
             border: none;
             border-radius: 5px;
             transition: background-color 0.3s ease;
-            width: calc(100% - 10px); /* Adjust button width */
+            width: calc(100% - 10px);
         }
         button:hover {
             opacity: 0.9;
         }
-
-        /* Specific button colors */
-        #applyScrambleBtn, #applyXORBtn {
-            background-color: #007bff;
-        }
-        #justScrambleBtn, #justXORBtn {
-            background-color: #28a745;
-        }
-        #reverseScrambleBtn, #reverseXORBtn {
-            background-color: #007bff;
-        }
-        #justUnscrambleBtn, #justUnXORBtn {
-            background-color: #ff69b4;
-        }
+        #applyScrambleBtn, #applyXORBtn { background-color: #007bff; }
+        #justScrambleBtn, #justXORBtn { background-color: #28a745; }
+        #reverseScrambleBtn, #reverseXORBtn { background-color: #007bff; }
+        #justUnscrambleBtn, #justUnXORBtn { background-color: #ff69b4; }
 
         #message {
             margin-top: 10px;
             color: red;
-            width: 100%; /* Ensure message takes full width in sidebar */
+            width: 100%;
             text-align: center;
         }
         hr {
-            border-color: #555; /* Adjust horizontal rule color for dark theme */
+            border-color: #555;
             width: 100%;
             margin: 20px 0;
+        }
+        .legacy-container {
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
         }
     </style>
 </head>
@@ -153,9 +142,11 @@
             <canvas id="imageCanvas"></canvas>
         </div>
 
-        <div id="resizer"></div> <div class="controls-sidebar">
+        <div id="resizer"></div> 
+        <div class="controls-sidebar">
             <div id="drop-area">
-                <p>Drag & Drop</p> <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                <p>Drag & Drop</p> 
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
             </div>
             <p id="message"></p>
 
@@ -181,31 +172,19 @@
                 <p>
                     **To Reverse:** Load the scrambled image (via drag & drop) then enter the **same key** and click "Reverse".
                 </p>
-                                <br>
-<br>
-    <hr>
-<br>
-<br>
-<br>This is a way to hide an image far better.
-<br>a simple XOR on the image, will make it appear to be random RGB noise, but this is not a secure way to hide an image.
-<br>However, I also added "Scramble" which will use a seed phrase (password) and a number (1 - 34,359,738,336) that will shuffle the pixels around.
-<br>Combining Scramble with password with XOR will create an RBG noise image that can't be undone without the password (and the number, if you change it from 11111 to something else).
-<br>To share the image, the person needs to know the password and the number (if the number is changed).
-<br>
-<br>I can't say this is a secure way to send highly confidential pictures, because I don't know.
-<br>Any shuffling can be brute forced to un-shuffle, but the longer the password and the higher the number is, the more attempts it would take to brute force.
-<br>As far as running the "Apply scramble and XOR" multiple times, the XOR will be canceled out every even number and enabled every odd number of clicks.
-<br>So click it 1 time, it is enabled, click it 2 times it is disabled.
-<br>The intention was never to allow someone to click the buttons more than 1 time, but it's a feature that is there.
-<br>There are Just Scramble and Just XOR buttons,  to see what they do on their own.
-<br>It is amazing how "just scramble" will 100% obliterate an image to appear as just colored noise 
-<br>and amazing how just XOR always turns it into RGB noise.
-                <br>
-<br>
-<hr>
-<br><a href="https://lockman007.github.io/PixelSwirl/">Homepage [back]</a>
-<br>
-<br><a href="https://github.com/LockMan007/PixelSwirl">github repo</a>
+                <br><br>
+                <hr>
+                <div class="legacy-container">
+                    <label style="display:inline-block; cursor:pointer;">
+                        <input type="checkbox" id="legacyMode"> Use Legacy Mode (Order doesn't matter)
+                    </label>
+                </div>
+                <br><br>
+                This is a way to hide an image far better.<br>
+                a simple XOR on the image, will make it appear to be random RGB noise...
+                <br><br><hr><br>
+                <a href="https://lockman007.github.io/PixelSwirl/">Homepage [back]</a><br><br>
+                <a href="https://github.com/LockMan007/PixelSwirl">github repo</a>
             </div>
         </div>
     </div>
@@ -217,6 +196,7 @@
         const ctx = imageCanvas.getContext('2d');
         const keyInput = document.getElementById('keyInput');
         const cInput = document.getElementById('cInput');
+        const legacyMode = document.getElementById('legacyMode');
         const applyScrambleBtn = document.getElementById('applyScrambleBtn');
         const reverseScrambleBtn = document.getElementById('reverseScrambleBtn');
         const justScrambleBtn = document.getElementById('justScrambleBtn');
@@ -225,7 +205,6 @@
         const justUnXORBtn = document.getElementById('justUnXORBtn');
         const messageElement = document.getElementById('message');
 
-        const imageArea = document.querySelector('.image-area');
         const controlsSidebar = document.querySelector('.controls-sidebar');
         const resizer = document.getElementById('resizer');
 
@@ -233,11 +212,9 @@
         let currentImageData = null;
         let xorSeedsApplied = false;
         let scrambledApplied = false;
-
         let isResizing = false;
 
-        // --- Resizer Functions ---
-        resizer.addEventListener('mousedown', function(e) {
+        resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             document.addEventListener('mousemove', resize);
             document.addEventListener('mouseup', stopResize);
@@ -247,11 +224,9 @@
 
         function resize(e) {
             if (!isResizing) return;
-
             const newSidebarWidth = document.body.offsetWidth - e.clientX;
             const minWidth = parseInt(getComputedStyle(controlsSidebar).minWidth);
             const maxWidth = parseInt(getComputedStyle(controlsSidebar).maxWidth);
-
             if (newSidebarWidth >= minWidth && newSidebarWidth <= maxWidth) {
                 controlsSidebar.style.width = newSidebarWidth + 'px';
             }
@@ -265,29 +240,32 @@
             document.body.style.cursor = '';
         }
 
-        // --- Utility Functions ---
-        function showMessage(msg) {
-            messageElement.textContent = msg;
-        }
+        function showMessage(msg) { messageElement.textContent = msg; }
 
-        // Simple PRNG (Pseudo-Random Number Generator) using a seed
         function createSeededRandom(seed) {
             let m = 2**35 - 31;
             let a = 185852;
             let c = parseInt(cInput.value);
             let s = seed % m;
-
             return function() {
                 s = (a * s + c) % m;
                 return s / m;
             };
         }
 
-        // Generate a shuffle map based on a seeded random number generator
+        function getSeed(key) {
+            if (legacyMode.checked) {
+                // Original: Order doesn't matter (abc = cba)
+                return key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            } else {
+                // New: Order matters (abc != cba)
+                return key.split('').reduce((acc, char, i) => acc + (char.charCodeAt(0) * (i + 1)), 0);
+            }
+        }
+
         function generateShuffleMap(size, seed) {
             const indices = Array.from({ length: size }, (_, i) => i);
             const seededRandom = createSeededRandom(seed);
-
             for (let i = indices.length - 1; i > 0; i--) {
                 const j = Math.floor(seededRandom() * (i + 1));
                 [indices[i], indices[j]] = [indices[j], indices[i]];
@@ -295,58 +273,20 @@
             return indices;
         }
 
-        // --- Drag and Drop / File Handling ---
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropArea.addEventListener(eventName, highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropArea.addEventListener(eventName, unhighlight, false);
-        });
-
-        dropArea.addEventListener('drop', handleDrop, false);
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, preventDefaults, false));
+        ['dragenter', 'dragover'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.add('highlight'), false));
+        ['dragleave', 'drop'].forEach(e => dropArea.addEventListener(e, () => dropArea.classList.remove('highlight'), false));
+        dropArea.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
         dropArea.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        function highlight() {
-            dropArea.classList.add('highlight');
-        }
-
-        function unhighlight() {
-            dropArea.classList.remove('highlight');
-        }
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
-
-        function handleFileSelect(e) {
-            const files = e.target.files;
-            handleFiles(files);
-        }
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
 
         function handleFiles(files) {
             if (files.length === 0) return;
-
             const file = files[0];
-            if (!file.type.startsWith('image/')) {
-                showMessage('Please drop an image file.');
-                return;
-            }
-
-            showMessage(''); // Clear message once file is handled
-
+            if (!file.type.startsWith('image/')) { showMessage('Please drop an image file.'); return; }
+            showMessage('');
             const reader = new FileReader();
             reader.onload = function(event) {
                 const img = new Image();
@@ -354,7 +294,6 @@
                     imageCanvas.width = img.width;
                     imageCanvas.height = img.height;
                     ctx.drawImage(img, 0, 0);
-                    originalImageDataOnLoad = ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
                     currentImageData = ctx.getImageData(0, 0, imageCanvas.width, imageCanvas.height);
                     xorSeedsApplied = false;
                     scrambledApplied = false;
@@ -364,65 +303,35 @@
             reader.readAsDataURL(file);
         }
 
-        // --- Core Image Manipulation Functions ---
-
         function applyXOR(imageData, key) {
             const data = imageData.data;
             const pixelCount = data.length / 4;
-            const seed = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const seed = getSeed(key);
             const seededRandomXOR = createSeededRandom(seed);
-
             for (let i = 0; i < pixelCount; i++) {
-                const dataIndex = i * 4;
-                const rSeed = Math.floor(seededRandomXOR() * 256);
-                const gSeed = Math.floor(seededRandomXOR() * 256);
-                const bSeed = Math.floor(seededRandomXOR() * 256);
-
-                data[dataIndex] ^= rSeed;
-                data[dataIndex + 1] ^= gSeed;
-                data[dataIndex + 2] ^= bSeed;
+                const idx = i * 4;
+                data[idx] ^= Math.floor(seededRandomXOR() * 256);
+                data[idx + 1] ^= Math.floor(seededRandomXOR() * 256);
+                data[idx + 2] ^= Math.floor(seededRandomXOR() * 256);
             }
             xorSeedsApplied = true;
-            return imageData;
-        }
-
-        function reverseXOR(imageData, key) {
-            const data = imageData.data;
-            const pixelCount = data.length / 4;
-            const seed = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const seededRandomXOR = createSeededRandom(seed);
-
-            for (let i = 0; i < pixelCount; i++) {
-                const dataIndex = i * 4;
-                const rSeed = Math.floor(seededRandomXOR() * 256);
-                const gSeed = Math.floor(seededRandomXOR() * 256);
-                const bSeed = Math.floor(seededRandomXOR() * 256);
-
-                data[dataIndex] ^= rSeed;
-                data[dataIndex + 1] ^= gSeed;
-                data[dataIndex + 2] ^= bSeed;
-            }
-            xorSeedsApplied = false;
             return imageData;
         }
 
         function applyScramble(imageData, key) {
             const data = new Uint8ClampedArray(imageData.data);
             const pixelCount = data.length / 4;
-            const seed = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const seed = getSeed(key);
             const seededRandomScramble = createSeededRandom(seed + 1);
-
             const scrambleMap = generateShuffleMap(pixelCount, seededRandomScramble().toFixed(0));
             const scrambledData = new Uint8ClampedArray(data.length);
-
             for (let i = 0; i < pixelCount; i++) {
-                const originalPixelIndex = i * 4;
-                const targetPixelIndex = scrambleMap[i] * 4;
-
-                scrambledData[targetPixelIndex] = data[originalPixelIndex];
-                scrambledData[targetPixelIndex + 1] = data[originalPixelIndex + 1];
-                scrambledData[targetPixelIndex + 2] = data[originalPixelIndex + 2];
-                scrambledData[targetPixelIndex + 3] = data[originalPixelIndex + 3];
+                const origIdx = i * 4;
+                const targetIdx = scrambleMap[i] * 4;
+                scrambledData[targetIdx] = data[origIdx];
+                scrambledData[targetIdx + 1] = data[origIdx + 1];
+                scrambledData[targetIdx + 2] = data[origIdx + 2];
+                scrambledData[targetIdx + 3] = data[origIdx + 3];
             }
             imageData.data.set(scrambledData);
             scrambledApplied = true;
@@ -432,154 +341,76 @@
         function reverseScramble(imageData, key) {
             const data = new Uint8ClampedArray(imageData.data);
             const pixelCount = data.length / 4;
-            const seed = key.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const seed = getSeed(key);
             const seededRandomScramble = createSeededRandom(seed + 1);
-
             const scrambleMap = generateShuffleMap(pixelCount, seededRandomScramble().toFixed(0));
-            const reverseScrambleMap = new Array(pixelCount);
-            for (let i = 0; i < pixelCount; i++) {
-                reverseScrambleMap[scrambleMap[i]] = i;
-            }
-
+            const reverseMap = new Array(pixelCount);
+            for (let i = 0; i < pixelCount; i++) reverseMap[scrambleMap[i]] = i;
             const unscrambledData = new Uint8ClampedArray(data.length);
-
             for (let i = 0; i < pixelCount; i++) {
-                const scrambledPixelIndex = i * 4;
-                const originalPixelIndex = reverseScrambleMap[i] * 4;
-
-                unscrambledData[originalPixelIndex] = data[scrambledPixelIndex];
-                unscrambledData[originalPixelIndex + 1] = data[scrambledPixelIndex + 1];
-                unscrambledData[originalPixelIndex + 2] = data[scrambledPixelIndex + 2];
-                unscrambledData[originalPixelIndex + 3] = data[scrambledPixelIndex + 3];
+                const scramIdx = i * 4;
+                const origIdx = reverseMap[i] * 4;
+                unscrambledData[origIdx] = data[scramIdx];
+                unscrambledData[origIdx + 1] = data[scramIdx + 1];
+                unscrambledData[origIdx + 2] = data[scramIdx + 2];
+                unscrambledData[origIdx + 3] = data[scramIdx + 3];
             }
             imageData.data.set(unscrambledData);
             scrambledApplied = false;
             return imageData;
         }
 
-        // --- Button Event Listeners ---
         applyScrambleBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
             const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter a key.');
-                return;
-            }
-
+            if (!currentImageData || !key) { showMessage('Image and Key required.'); return; }
             currentImageData = applyXOR(currentImageData, key);
             currentImageData = applyScramble(currentImageData, key);
-
             ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image scrambled and XORed!');
+            showMessage('Scrambled and XORed!');
         });
 
         reverseScrambleBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
             const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter the key used for scrambling.');
-                return;
-            }
-
+            if (!currentImageData || !key) { showMessage('Image and Key required.'); return; }
             currentImageData = reverseScramble(currentImageData, key);
-            currentImageData = reverseXOR(currentImageData, key);
-
+            currentImageData = applyXOR(currentImageData, key); // XOR is its own inverse
             ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image restored!');
+            showMessage('Restored!');
         });
 
         justScrambleBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
             const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter a key.');
-                return;
-            }
-            if (scrambledApplied) {
-                showMessage('Image is already scrambled.');
-                return;
-            }
-
+            if (!currentImageData || !key) return;
             currentImageData = applyScramble(currentImageData, key);
             ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image scrambled!');
-        });
-
-        justXORBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
-            const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter a key.');
-                return;
-            }
-            if (xorSeedsApplied) {
-                showMessage('Image is already XORed.');
-                return;
-            }
-
-            currentImageData = applyXOR(currentImageData, key);
-            ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image XORed!');
+            showMessage('Scrambled!');
         });
 
         justUnscrambleBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
             const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter the key.');
-                return;
-            }
-            if (!scrambledApplied) {
-                showMessage('Image is not scrambled.');
-                return;
-            }
-
+            if (!currentImageData || !key) return;
             currentImageData = reverseScramble(currentImageData, key);
             ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image unscrambled!');
+            showMessage('Unscrambled!');
+        });
+
+        justXORBtn.addEventListener('click', () => {
+            const key = keyInput.value.trim();
+            if (!currentImageData || !key) return;
+            currentImageData = applyXOR(currentImageData, key);
+            ctx.putImageData(currentImageData, 0, 0);
+            showMessage('XORed!');
         });
 
         justUnXORBtn.addEventListener('click', () => {
-            if (!currentImageData) {
-                showMessage('Please load an image first.');
-                return;
-            }
             const key = keyInput.value.trim();
-            if (!key) {
-                showMessage('Please enter the key.');
-                return;
-            }
-            if (!xorSeedsApplied) {
-                showMessage('Image is not XORed.');
-                return;
-            }
-
-            currentImageData = reverseXOR(currentImageData, key);
+            if (!currentImageData || !key) return;
+            currentImageData = applyXOR(currentImageData, key); 
             ctx.putImageData(currentImageData, 0, 0);
-            showMessage('Image un-XORed!');
+            showMessage('Un-XORed!');
         });
 
-        // Display "Please load an image first." message on initial page load
-        window.addEventListener('load', () => {
-            showMessage('Please load an image first.');
-        });
+        window.addEventListener('load', () => showMessage('Please load an image first.'));
     </script>
-
 </body>
-
 </html>
