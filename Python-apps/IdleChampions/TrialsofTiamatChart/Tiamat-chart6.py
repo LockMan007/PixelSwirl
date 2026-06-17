@@ -101,30 +101,36 @@ def update_chart():
         
         try:
             tier_val = int(strip_non_numeric(tier_entry.get()))
-            dps = float(strip_non_numeric(dps_entry.get()))
+            current_live_dps = float(strip_non_numeric(dps_entry.get()))
             total_hp = TIER_DATA[tier_val]["health"]
             
-            # 2. Draw historical points' projections (lighter, dotted)
-            for i in range(len(history) - 1):
+            # 2. Draw historical points' projections (lighter, dotted) for ALL points
+            for i in range(len(history)):
                 pt_x = history[i][0]
                 pt_y = history[i][1]
                 
-                if pt_x > 0 and pt_y < 100:
-                    rate_per_hour = (100 - pt_y) / pt_x
-                    if rate_per_hour > 0:
-                        hours_to_kill = pt_y / rate_per_hour
-                        proj_x = pt_x + hours_to_kill
-                        ax.plot([pt_x, proj_x], [pt_y, 0], 'r:', linewidth=1, alpha=0.5)
+                # Retrieve the historical snapshot DPS if it exists, otherwise fallback safely
+                if len(history[i]) > 2:
+                    pt_dps = float(history[i][2])
+                else:
+                    pt_dps = current_live_dps
+                
+                if pt_dps > 0 and pt_y > 0:
+                    # Calculate remaining HP based exactly on this standalone point's percentage
+                    remaining_hp_at_point = (pt_y / 100.0) * total_hp
+                    # Determine independent time length to hit zero based purely on its unique DPS
+                    hours_to_kill = (remaining_hp_at_point / pt_dps) / 3600.0
+                    proj_x = pt_x + hours_to_kill
+                    
+                    ax.plot([pt_x, proj_x], [pt_y, 0], 'r:', linewidth=1, alpha=0.5)
 
             # 3. Draw the latest point's projection using live DPS (darker, dashed)
             if len(history) > 0:
                 last_x = history[-1][0]
                 last_y = history[-1][1]
-                if dps > 0:
-                    remaining_hp = (last_y / 100) * total_hp
-                    # hours_to_kill = (remaining_hp / dps) / 3600
-                    # Note: Ensure this math matches your preferred calculation for live status
-                    hours_to_kill = (remaining_hp / dps) / 3600 
+                if current_live_dps > 0 and last_y > 0:
+                    remaining_hp = (last_y / 100.0) * total_hp
+                    hours_to_kill = (remaining_hp / current_live_dps) / 3600.0 
                     proj_x = last_x + hours_to_kill
                     
                     ax.plot([last_x, proj_x], [last_y, 0], 'r--', linewidth=1.5, alpha=0.9)
@@ -148,15 +154,17 @@ def start_tracking():
         initial_hp_at_start = float(f"{rem_h}{rem_h_suffix:06d}")
         
         tier_val = int(strip_non_numeric(tier_entry.get()))
+        dps_val = float(strip_non_numeric(dps_entry.get()))
         total_hp = TIER_DATA[tier_val]["health"]
         percent_left = (initial_hp_at_start / total_hp) * 100
         
         # Calculate elapsed hours from the start of the 168-hour window
         encounter_elapsed_hours = 168 - (total_seconds_at_start / 3600)
         
-        # FIX: Only append if history is empty or the new time is strictly greater than the last point
+        # Only append if history is empty or the new time is strictly greater than the last point
         if not history or (encounter_elapsed_hours > (history[-1][0] + 0.001)):
-            history.append([encounter_elapsed_hours, max(0, percent_left)])
+            # Capture the current unique DPS value alongside coordinate variables
+            history.append([encounter_elapsed_hours, max(0, percent_left), dps_val])
             update_chart()
         else:
             # If we aren't adding a new point, just refresh the chart with current inputs
@@ -200,19 +208,17 @@ def run_update():
     except: 
         pass
 
-# ... (GUI setup) ...
+# GUI setup
 root = tk.Tk()
 root.title("ToMT Tier Progress Calculator")
-# Sets a slightly larger default window and enforces a minimum size
 root.geometry("600x650")
 root.minsize(500, 550)
 
-# Configure rows and columns to expand when the window is maximized
 root.columnconfigure(0, weight=1)
 root.columnconfigure(1, weight=1)
 root.columnconfigure(2, weight=1)
 root.columnconfigure(3, weight=1)
-root.rowconfigure(7, weight=1) # Row 7 (the chart) takes up all the extra vertical space
+root.rowconfigure(7, weight=1) 
 
 # Inputs
 tk.Label(root, text="Tier (1-10):").grid(row=0, column=0, sticky="e"); tier_entry = tk.Entry(root, width=10); tier_entry.grid(row=0, column=1, sticky="w")
@@ -237,7 +243,7 @@ tier_info_label = tk.Label(root, text="", font=("Arial", 10, "bold")); tier_info
 
 status_label = tk.Label(root, text="", font=("Arial", 10, "bold"), justify="center"); status_label.grid(row=6, column=0, columnspan=4)
 
-# Matplotlib Chart (Now set to sticky so it stretches)
+# Matplotlib Chart
 fig = plt.Figure(figsize=(5, 3), dpi=100); ax = fig.add_subplot(111); canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().grid(row=7, column=0, columnspan=4, sticky="nsew", padx=10, pady=5)
 
