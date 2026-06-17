@@ -1,5 +1,8 @@
 WORK IN PROGRESS
-this is inaccurate and has issues.
+this is possibly still inaccurate and may have issues.
 
-The AI keeps "averaging" and breaking stuff.
 This is still an early work in progress.
+
+screenshot
+https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/IdleChampions/TrialsofTiamatChart/IdleChampions-TiamatTrialsChart.jpg
+[https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/IdleChampions/TrialsofTiamatChart/IdleChampions-TiamatTrialsChart.jpg]
