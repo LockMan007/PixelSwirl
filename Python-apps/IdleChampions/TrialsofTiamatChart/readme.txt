@@ -1,2 +1,5 @@
 WORK IN PROGRESS
-may be inaccurate or have issues.
+this is inaccurate and has issues.
+
+The AI keeps "averaging" and breaking stuff.
+This is still an early work in progress.
