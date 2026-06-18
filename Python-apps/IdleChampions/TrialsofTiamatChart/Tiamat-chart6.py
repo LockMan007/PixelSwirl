@@ -159,12 +159,18 @@ def update_chart():
                     proj_x = pt_x + hours_to_kill
                     ax.plot([pt_x, proj_x], [pt_y, 0], 'r:', linewidth=1, alpha=0.5)
 
-            # 3. Draw the latest point's projection using live DPS (darker, dashed)
+            # 3. Draw the latest point's projection using its SAVED snapshot DPS (darker, dashed)
             last_x = history[-1][0]
             last_y = history[-1][1]
-            if current_live_dps > 0 and last_y > 0:
+            
+            if len(history[-1]) > 2:
+                last_dps = float(history[-1][2])
+            else:
+                last_dps = current_live_dps
+                
+            if last_dps > 0 and last_y > 0:
                 remaining_hp = (last_y / 100.0) * total_hp
-                hours_to_kill = (remaining_hp / current_live_dps) / 3600.0 
+                hours_to_kill = (remaining_hp / last_dps) / 3600.0 
                 proj_x = last_x + hours_to_kill
                 ax.plot([last_x, proj_x], [last_y, 0], 'r--', linewidth=1.5, alpha=0.9)
         except Exception:
