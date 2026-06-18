@@ -127,23 +127,27 @@ def update_chart():
     ax.set_yticks([0, 20, 40, 60, 80, 100])
     ax.set_yticklabels(['0%', '20%', '40%', '60%', '80%', '100%'])
     
+    # 1. Background layer: Very faint vertical lines at 24h intervals up to 144h
+    for hour in [24, 48, 72, 96, 120, 144]:
+        ax.axvline(x=hour, color='#FDF4A9', linestyle='-', linewidth=1, zorder=1)
+        
     current_live_dps = 0.0
     try:
         current_live_dps = float(strip_non_numeric(dps_entry.get()))
     except:
         pass
 
-    # 1. Draw the main progress line (Green)
+    # 2. Foreground Data Layers
     if history:
         x_vals = [p[0] for p in history]
         y_vals = [p[1] for p in history]
-        ax.plot(x_vals, y_vals, 'g-o')
+        ax.plot(x_vals, y_vals, 'g-o', zorder=3)
         
         try:
             tier_val = int(strip_non_numeric(tier_entry.get()))
             total_hp = TIER_DATA[tier_val]["health"]
             
-            # 2. Draw historical points' projections (lighter, dotted) for ALL points
+            # Historical points' projections (lighter, dotted) for ALL points
             for i in range(len(history)):
                 pt_x = history[i][0]
                 pt_y = history[i][1]
@@ -157,9 +161,9 @@ def update_chart():
                     remaining_hp_at_point = (pt_y / 100.0) * total_hp
                     hours_to_kill = (remaining_hp_at_point / pt_dps) / 3600.0
                     proj_x = pt_x + hours_to_kill
-                    ax.plot([pt_x, proj_x], [pt_y, 0], 'r:', linewidth=1, alpha=0.5)
+                    ax.plot([pt_x, proj_x], [pt_y, 0], 'r:', linewidth=1, alpha=0.5, zorder=2)
 
-            # 3. Draw the latest point's projection using its SAVED snapshot DPS (darker, dashed)
+            # Latest point's projection using its SAVED snapshot DPS (darker, dashed)
             last_x = history[-1][0]
             last_y = history[-1][1]
             
@@ -172,7 +176,27 @@ def update_chart():
                 remaining_hp = (last_y / 100.0) * total_hp
                 hours_to_kill = (remaining_hp / last_dps) / 3600.0 
                 proj_x = last_x + hours_to_kill
-                ax.plot([last_x, proj_x], [last_y, 0], 'r--', linewidth=1.5, alpha=0.9)
+                ax.plot([last_x, proj_x], [last_y, 0], 'r--', linewidth=1.5, alpha=0.9, zorder=2)
+                
+            # 3. Dynamic Real-Time Crosshair Indicators (Riding the dark red line)
+            if start_time and last_dps > 0:
+                elapsed_seconds = (datetime.now() - start_time).total_seconds()
+                # Find exactly where we are on the overall 168-hour timeline right now
+                live_x_hours = 168 - ((total_seconds_at_start - elapsed_seconds) / 3600.0)
+                
+                if 0 <= live_x_hours <= 168:
+                    # Calculate position strictly along the red projection line from the last saved node
+                    hours_since_last_saved = live_x_hours - last_x
+                    remaining_hp_at_last_saved = (last_y / 100.0) * total_hp
+                    
+                    projected_hp_now = remaining_hp_at_last_saved - (last_dps * hours_since_last_saved * 3600.0)
+                    live_y_percent = (projected_hp_now / total_hp) * 100.0
+                    live_y_percent = max(0.0, min(100.0, live_y_percent))
+                    
+                    # Render crosshairs riding perfectly along that path
+                    ax.axhline(y=live_y_percent, color='#AEAEAE', linestyle='-', linewidth=0.8, alpha=0.7, zorder=1)
+                    ax.axvline(x=live_x_hours, color='#AEAEAE', linestyle='-', linewidth=0.8, alpha=0.7, zorder=1)
+                    
         except Exception:
             pass
 
@@ -182,7 +206,6 @@ def update_chart():
         ui_x, ui_y, ui_dps, total_hp = ui_coords
         last_pt = history[-1]
         
-        # Check tolerance parameters to verify if inputs match the last green node
         is_matching_x = abs(ui_x - last_pt[0]) < 0.001
         is_matching_y = abs(ui_y - last_pt[1]) < 0.001
         
@@ -190,14 +213,13 @@ def update_chart():
         if len(last_pt) > 2:
             is_matching_dps = abs(ui_dps - last_pt[2]) < 0.001
 
-        # If data deviates from the last point, paint the temporary staging assets
         if not (is_matching_x and is_matching_y and is_matching_dps):
-            ax.plot(ui_x, ui_y, 'bo', alpha=pulse_alpha, markersize=8)
+            ax.plot(ui_x, ui_y, 'bo', alpha=pulse_alpha, markersize=8, zorder=4)
             if ui_dps > 0 and ui_y > 0:
                 rem_hp_staging = (ui_y / 100.0) * total_hp
                 h_to_kill_staging = (rem_hp_staging / ui_dps) / 3600.0
                 staging_proj_x = ui_x + h_to_kill_staging
-                ax.plot([ui_x, staging_proj_x], [ui_y, 0], 'b:', linewidth=1.5, alpha=0.6)
+                ax.plot([ui_x, staging_proj_x], [ui_y, 0], 'b:', linewidth=1.5, alpha=0.6, zorder=2)
                 
     ax.set_xlim(0, 168)
     ax.set_ylim(0, 100)
@@ -263,6 +285,8 @@ def run_update():
             
             status_label.config(text=f"Projected to FAIL.\nNeed {needed_dps:,.0f} additional DPS.\nLate by: {format_time_delta(delay)}", fg="red")
         
+        # Periodic update loop automatically re-triggers crosshair updates alongside text variables
+        update_chart()
         tracking_id = root.after(1000, run_update)
     except: 
         pass
@@ -271,7 +295,6 @@ def animate_pulse():
     """Oscillates opacity bounds smoothly to control blue staging canvas points."""
     global pulse_alpha, pulse_direction, pulse_id
     
-    # Range bound step logic 
     if pulse_direction == 1:
         pulse_alpha += 0.04
         if pulse_alpha >= 0.95:
@@ -283,7 +306,6 @@ def animate_pulse():
             pulse_alpha = 0.35
             pulse_direction = 1
             
-    # Redraw chart if staging assets are actively visible
     ui_coords = get_current_ui_coordinates()
     if ui_coords and history:
         ui_x, ui_y, ui_dps, _ = ui_coords
@@ -416,5 +438,5 @@ progress_label = tk.Label(progress_container, text="0.00%", fg="white", bg="blac
 progress_label.place(relx=0.98, rely=0.5, anchor="e")
 
 load_all()
-animate_pulse() # Start running the slow opacity oscillation system loop
+animate_pulse() 
 root.mainloop()
