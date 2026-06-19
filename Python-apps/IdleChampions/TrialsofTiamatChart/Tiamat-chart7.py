@@ -276,7 +276,7 @@ def run_update():
         
         if (dps * current_time_left) >= current_hp:
             success_time = (dps * current_time_left - current_hp) / dps if dps > 0 else 0
-            status_label.config(text=f"On track to WIN!\nAhead by: {format_time_delta(success_time)}", fg="dark green")
+            status_label.config(text=f"On track to WIN!\nWin in: {format_time_delta(current_time_left-success_time)}", fg="dark green")
         else:
             delay = (current_hp / dps) - current_time_left if dps > 0 else float('inf')
             
