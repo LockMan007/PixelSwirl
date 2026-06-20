@@ -6,6 +6,6 @@ Added "Remove Meta Data" button, as an optional button if that is all you want t
 While I could have also added this as a checkbox, to both compress AND remove meta data,
 for now, i just needed the option to remove meta data without affecting the video quality/compression.
 
-New version:
+(before 6/2026 update):
 video_compressor3.py
 same as previous filename, so that it won't break the registry setting.
