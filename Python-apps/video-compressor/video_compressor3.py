@@ -85,7 +85,11 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
 
         # --- File Selection Button ---
         select_button = Button(self, text="Select mp4, mov, avi, mkv, or webm File", command=self.browse_file)
-        select_button.place(relx=0.5, rely=0.43, anchor="center")
+        select_button.place(relx=0.05, rely=0.43, anchor="w", relwidth=0.62)
+
+        # --- Remove Metadata Button ---
+        remove_meta_button = Button(self, text="Remove Meta Data", command=self.remove_metadata)
+        remove_meta_button.place(relx=0.95, rely=0.43, anchor="e", relwidth=0.26)
 
         # --- File Path Display ---
         file_label = Label(self, text="Source File:", style='Normal.TLabel') # Using ttk.Label
@@ -163,7 +167,7 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
 
     def browse_file(self):
         """Open a file dialog to select the video."""
-        file_path = filedialog.askopenfilename(filetypes = [("Video files", "*.mp4 *.mov *.avi"), ("All files", "*.*")])
+        file_path = filedialog.askopenfilename(filetypes = [("Video files", "*.mp4 *.mov *.avi *.mkv *.webm"), ("All files", "*.*")])
         if file_path:
             self.set_file_path(file_path)
 
@@ -258,6 +262,40 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
             self.compression_label.config(text="Compression: N/A", style='Warning.TLabel')
             self.size_entry.config(style='Warning.TEntry')
 
+    def remove_metadata(self):
+        """Removes all metadata from the selected video file and saves it with a '_NoMeta' suffix."""
+        if not self.source_file_path or not os.path.exists(self.source_file_path):
+            messagebox.showerror("Error", "Please select a valid video file first.")
+            return
+
+        self.status_label.config(text="Status: Processing metadata removal...", style='Normal.TLabel')
+        self.update_idletasks()
+
+        # Parse filename to append '_NoMeta' right before the extension
+        dir_name, file_name = os.path.split(self.source_file_path)
+        base_name, ext = os.path.splitext(file_name)
+        new_output_path = os.path.join(dir_name, f"{base_name}_NoMeta{ext}")
+
+        # Command to strip all global, stream, and user/vendor metadata without re-encoding
+        cmd = [
+            FFMPEG_PATH, '-y', '-nostdin',
+            '-i', self.source_file_path,
+            '-map_metadata', '-1',
+            '-c', 'copy',
+            new_output_path
+        ]
+
+        try:
+            subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            
+            self.status_label.config(text="Status: Metadata removed successfully!", style='Normal.TLabel')
+            messagebox.showinfo("Success", f"All metadata has been stripped.\nSaved as: {base_name}_NoMeta{ext}")
+            
+            # Point the UI to the newly generated file so subsequent steps target the metadata-free file
+            self.set_file_path(new_output_path)
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+            self.status_label.config(text="Status: Error stripping metadata", style='Warning.TLabel')
+            messagebox.showerror("Error", f"An error occurred while stripping metadata:\n{e}")
 
     def get_video_info(self):
         """Use ffprobe to get the video duration."""
@@ -430,8 +468,6 @@ class MP4CompressorGUI(TkinterDnD.Tk if is_ttkbootstrap_available else Tk):
                 self.update_idletasks()
             except ValueError:
                 pass
-
-
 
 
 if __name__ == "__main__":
