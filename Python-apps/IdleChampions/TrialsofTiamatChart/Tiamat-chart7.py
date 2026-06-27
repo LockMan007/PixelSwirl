@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.ticker import MultipleLocator  # Added for 12-hour sub-ticks
 import math
 
 # Tier to Health Mapping
@@ -126,6 +127,12 @@ def update_chart():
     ax.yaxis.tick_right()
     ax.set_yticks([0, 20, 40, 60, 80, 100])
     ax.set_yticklabels(['0%', '20%', '40%', '60%', '80%', '100%'])
+    
+    # Force major ticks at 24-hour increments with text labels
+    ax.set_xticks([0, 24, 48, 72, 96, 120, 144, 168])
+    
+    # Add unlabeled minor ticks every 12 hours between the major 24-hour marks
+    ax.xaxis.set_minor_locator(MultipleLocator(12))
     
     # 1. Background layer: Very faint vertical lines at 24h intervals up to 144h
     for hour in [24, 48, 72, 96, 120, 144]:
