@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToMT Tier Progress Calculator (Toad Code)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { background-color: #f4f4f9; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 650px; }
+        h1 { text-align: center; font-size: 1.5rem; margin-top: 0; color: #333; }
+        
+        .grid-inputs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
+        .input-group { display: flex; flex-direction: column; }
+        label { font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: #555; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        
+        .hp-inputs, .time-inputs { display: flex; gap: 5px; align-items: center; }
+        .time-inputs input { width: 50px; text-align: center; }
+        
+        /* Master layout box for buttons */
+        .control-panel-grid { display: grid; grid-template-columns: 1fr 140px; gap: 10px; margin-bottom: 15px; }
+        .left-rows-container { display: flex; flex-direction: column; gap: 6px; }
+        
+        /* 1px border grid boxes with custom background rows */
+        .button-row-box { 
+            display: grid; 
+            grid-template-columns: 110px 1fr 1fr; 
+            border: 1px solid #000; 
+            border-radius: 4px; 
+            overflow: hidden; 
+        }
+        
+        .row-label { 
+            display: flex; 
+            align-items: center; 
+            padding-left: 8px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            color: #222;
+        }
+        .bg-browser { background-color: #fffde7; }
+        .bg-external { background-color: #e8eaf6; }
+        
+        .button-row-box button { 
+            border: none; 
+            margin: 4px; 
+            padding: 8px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 0.85rem; 
+            color: white; 
+        }
+        
+        /* Precise color matching */
+        .btn-calc { background-color: #007bff; }
+        .btn-calc:hover { background-color: #0056b3; }
+        .btn-reload { background-color: #dc3545; }
+        .btn-reload:hover { background-color: #bd2130; }
+        .btn-file { background-color: #28a745; }
+        .btn-file:hover { background-color: #218838; }
+        
+        /* Full height Clear All button wrapper */
+        .btn-clear { 
+            width: 100%; 
+            height: 100%; 
+            background-color: #6c757d; 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 1rem; 
+        }
+        .btn-clear:hover { background-color: #5a6268; }
+
+        .live-panel { background-color: #fffde7; border: 1px solid #fbc02d; padding: 10px; border-radius: 4px; text-align: center; margin-bottom: 10px; font-size: 0.95rem; white-space: pre-line; }
+        .tier-info { text-align: center; font-weight: bold; margin-bottom: 5px; font-size: 0.95rem; }
+        .status-panel { text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 0.95rem; white-space: pre-line; }
+        
+        .chart-container { position: relative; width: 100%; height: 320px; margin-bottom: 15px; }
+        
+        .progress-container { position: relative; background: #000; border-radius: 4px; height: 30px; overflow: hidden; width: 100%; }
+        .progress-bar { background: #008000; height: 100%; width: 0%; transition: width 0.3s ease; }
+        .progress-label { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 0.8rem; font-weight: bold; }
+        
+        #importFile { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>ToMT Tier Progress Calculator (Toad Code)</h1>
+    
+    <div class="grid-inputs">
+        <div class="input-group">
+            <label for="tier">Tier (1-10):</label>
+            <select id="tier">
+                <option value="1">1 - Normal</option>
+                <option value="2">2 - Heroic</option>
+                <option value="3">3 - Veteran</option>
+                <option value="4">4 - Master</option>
+                <option value="5">5 - Epic</option>
+                <option value="6">6 - Mythic</option>
+                <option value="7">7 - Grand Legend</option>
+                <option value="8">8 - Grand Torment</option>
+                <option value="9">9 - Master of Torment</option>
+                <option value="10" selected>10 - Tiamat Reborn</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="dps">Total DPS:</label>
+            <input type="text" id="dps" value="0">
+        </div>
+        <div class="input-group">
+            <label>Remaining HP:</label>
+            <div class="hp-inputs">
+                <input type="text" id="hp_main" value="16000" style="flex: 1;">
+                <input type="text" id="hp_sub" value="000000" style="width: 80px;">
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Remaining Time:</label>
+            <div class="time-inputs">
+                <input type="text" id="days" value="6"><span>d</span>
+                <input type="text" id="hours" value="23"><span>h</span>
+                <input type="text" id="mins" value="59"><span>m</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="control-panel-grid">
+        <div class="left-rows-container">
+            <div class="button-row-box bg-browser">
+                <div class="row-label">Browser Only</div>
+                <button class="btn-calc" onclick="startTracking()">Calculate/Save</button>
+                <button class="btn-reload" onclick="reloadChart()">ReLoad Chart</button>
+            </div>
+            <div class="button-row-box bg-external">
+                <div class="row-label">External File</div>
+                <button class="btn-file" onclick="exportFile()">Export File</button>
+                <button class="btn-file" onclick="document.getElementById('importFile').click()">Import File</button>
+                <input type="file" id="importFile" accept=".json" onchange="importFile(event)">
+            </div>
+        </div>
+        <div>
+            <button class="btn-clear" onclick="clearAll()">Clear All</button>
+        </div>
+    </div>
+
+    <div class="live-panel" id="live-tracking">Time left: --<br>HP left: --</div>
+    <div class="tier-info" id="tier-info"></div>
+    <div class="status-panel" id="status-label"></div>
+
+    <div class="chart-container">
+        <canvas id="progressChart"></canvas>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+        <div class="progress-label" id="progress-label">0.00%</div>
+    </div>
+</div>
+
+<script>
+    const TIER_DATA = {
+        1: { name: "Normal", health: 4.00e08 }, 2: { name: "Heroic", health: 7.50e08 },
+        3: { name: "Veteran", health: 1.30e09 }, 4: { name: "Master", health: 2.00e09 },
+        5: { name: "Epic", health: 2.90e09 }, 6: { name: "Mythic", health: 4.30e09 },
+        7: { name: "Grand Legend", health: 6.10e09 }, 8: { name: "Grand Torment", health: 8.60e09 },
+        9: { name: "Master of Torment", health: 12.00e09 }, 10: { name: "Tiamat Reborn", health: 16.00e09 }
+    };
+
+    let history = [];
+    let startTime = null;
+    let totalSecondsAtStart = 0;
+    let initialHpAtStart = 0;
+    let trackingInterval = null;
+    let pulseAlpha = 0.6;
+    let chartInstance = null;
+    let previousTier = "10";
+
+    function stripNonNumeric(val) { return val.toString().replace(/\D/g, ''); }
+    
+    function formatTimeDelta(seconds) {
+        let s = Math.max(0, Math.floor(seconds));
+        let d = Math.floor(s / 86400);
+        s %= 86400;
+        let h = Math.floor(s / 3600);
+        s %= 3600;
+        let m = Math.floor(s / 60);
+        return `${d}d ${h}h ${m}m`;
+    }
+
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    
+    const customGridPlugin = {
+        id: 'customGridPlugin',
+        beforeDraw(chart) {
+            const {ctx, chartArea: {top, bottom}, scales: {x}} = chart;
+            ctx.save();
+            ctx.strokeStyle = '#FDF4A9';
+            ctx.lineWidth = 1;
+            [24, 48, 72, 96, 120, 144].forEach(hour => {
+                const xPos = x.getPixelForValue(hour);
+                ctx.beginPath();
+                ctx.moveTo(xPos, top);
+                ctx.lineTo(xPos, bottom);
+                ctx.stroke();
+            });
+            ctx.restore();
+        }
+    };
+
+    function initChart() {
+        chartInstance = new Chart(ctx, {
+            type: 'scatter',
+            data: { datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                scales: {
+                    x: {
+                        type: 'linear', min: 0, max: 168,
+                        position: 'bottom',
+                        ticks: {
+                            stepSize: 24,
+                            callback: value => value % 24 === 0 ? value : ''
+                        },
+                        grid: { display: false }
+                    },
+                    y: {
+                        type: 'linear', min: 0, max: 100,
+                        position: 'right',
+                        ticks: { stepSize: 20, callback: value => value + '%' },
+                        grid: { color: '#e0e0e0' }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            },
+            plugins: [customGridPlugin]
+        });
+    }
+
+    function getUIComponents() {
+        try {
+            let t_val = parseInt(document.getElementById('tier').value);
+            let dps_val = parseFloat(stripNonNumeric(document.getElementById('dps').value)) || 0;
+            let rem_h = stripNonNumeric(document.getElementById('hp_main').value);
+            let rem_h_sub = stripNonNumeric(document.getElementById('hp_sub').value).padStart(6, '0');
+            let hp_val = parseFloat(rem_h + rem_h_sub) || 0;
+
+            let d_val = parseInt(stripNonNumeric(document.getElementById('days').value)) || 0;
+            let h_val = parseInt(stripNonNumeric(document.getElementById('hours').value)) || 0;
+            let m_val = parseInt(stripNonNumeric(document.getElementById('mins').value)) || 0;
+
+            let tot_sec = (d_val * 86400) + (h_val * 3600) + (m_val * 60);
+            let x_hours = 168 - (tot_sec / 3600.0);
+            let total_hp = TIER_DATA[t_val].health;
+            let y_percent = (hp_val / total_hp) * 100.0;
+
+            return { x_hours, y_percent: Math.max(0.0, y_percent), dps_val, total_hp };
+        } catch(e) { return null; }
+    }
+
+    function updateChart() {
+        if (!chartInstance) return;
+        let datasets = [];
+        let currentLiveDps = parseFloat(stripNonNumeric(document.getElementById('dps').value)) || 0;
+        let ui = getUIComponents();
+
+        if (history.length > 0) {
+            let greenPoints = history.map(p => ({ x: p[0], y: p[1] }));
+            datasets.push({
+                type: 'line', data: greenPoints, borderColor: 'green', backgroundColor: 'green',
+                showLine: true, tension: 0, borderWidth: 2, pointRadius: 4, z: 3
+            });
+
+            history.forEach(pt => {
+                let pt_x = pt[0], pt_y = pt[1];
+                let pt_dps = pt[2] !== undefined ? pt[2] : currentLiveDps;
+                if (pt_dps > 0 && pt_y > 0 && ui) {
+                    let remHp = (pt_y / 100.0) * ui.total_hp;
+                    let hToKill = (remHp / pt_dps) / 3600.0;
+                    datasets.push({
+                        type: 'line', data: [{ x: pt_x, y: pt_y }, { x: pt_x + hToKill, y: 0 }],
+                        borderColor: 'rgba(255, 0, 0, 0.4)', borderDash: [2, 2], borderWidth: 1, pointRadius: 0, showLine: true
+                    });
+                }
+            });
+
+            let lastNode = history[history.length - 1];
+            let last_dps = lastNode[2] !== undefined ? lastNode[2] : currentLiveDps;
+            if (last_dps > 0 && lastNode[1] > 0 && ui) {
+                let remHp = (lastNode[1] / 100.0) * ui.total_hp;
+                let hToKill = (remHp / last_dps) / 3600.0;
+                datasets.push({
+                    type: 'line', data: [{ x: lastNode[0], y: lastNode[1] }, { x: lastNode[0] + hToKill, y: 0 }],
+                    borderColor: 'rgba(255, 0, 0, 0.9)', borderDash: [6, 4], borderWidth: 1.5, pointRadius: 0, showLine: true
+                });
+
+                if (startTime && last_dps > 0) {
+                    let elapsed = (new Date() - startTime) / 1000;
+                    let live_x = 168 - ((totalSecondsAtStart - elapsed) / 3600.0);
+                    if (live_x >= 0 && live_x <= 168) {
+                        let hoursSinceLast = live_x - lastNode[0];
+                        let remHpLast = (lastNode[1] / 100.0) * ui.total_hp;
+                        let projHpNow = remHpLast - (last_dps * hoursSinceLast * 3600.0);
+                        let live_y = Math.max(0.0, Math.min(100.0, (projHpNow / ui.total_hp) * 100.0));
+
+                        // Crosshair grids
+                        datasets.push({
+                            type: 'line', data: [{ x: 0, y: live_y }, { x: 168, y: live_y }],
+                            borderColor: 'rgba(174, 174, 174, 0.6)', borderWidth: 0.8, pointRadius: 0, showLine: true
+                        });
+                        datasets.push({
+                            type: 'line', data: [{ x: live_x, y: 0 }, { x: live_x, y: 100 }],
+                            borderColor: 'rgba(174, 174, 174, 0.6)', borderWidth: 0.8, pointRadius: 0, showLine: true
+                        });
+
+                        // Hardware independent Neon Green tracking dot scaled exactly to plot points
+                        datasets.push({
+                            type: 'scatter', data: [{ x: live_x, y: live_y }],
+                            backgroundColor: `rgba(0, 255, 0, ${pulseAlpha})`,
+                            borderColor: 'rgba(0, 255, 0, 1)',
+                            borderWidth: 1,
+                            pointRadius: 4,
+                            z: 10
+                        });
+                    }
+                }
+            }
+        }
+
+        if (ui && history.length > 0) {
+            let lastPt = history[history.length - 1];
+            let matchingX = Math.abs(ui.x_hours - lastPt[0]) < 0.001;
+            let matchingY = Math.abs(ui.y_percent - lastPt[1]) < 0.001;
+            let matchingDps = lastPt[2] !== undefined ? Math.abs(ui.dps_val - lastPt[2]) < 0.001 : true;
+
+            if (!(matchingX && matchingY && matchingDps)) {
+                // Staging indicator dot matching staging line aesthetics
+                datasets.push({
+                    type: 'scatter', data: [{ x: ui.x_hours, y: ui.y_percent }],
+                    backgroundColor: `rgba(0, 0, 255, ${pulseAlpha})`, borderColor: 'transparent', pointRadius: 8, z: 4
+                });
+                if (ui.dps_val > 0 && ui.y_percent > 0) {
+                    let remHpStg = (ui.y_percent / 100.0) * ui.total_hp;
+                    let hToKillStg = (remHpStg / ui.dps_val) / 3600.0;
+                    datasets.push({
+                        type: 'line', data: [{ x: ui.x_hours, y: ui.y_percent }, { x: ui.x_hours + hToKillStg, y: 0 }],
+                        borderColor: 'rgba(0, 0, 255, 0.6)', borderDash: [2, 2], borderWidth: 1.5, pointRadius: 0, showLine: true
+                    });
+                }
+            }
+        }
+
+        chartInstance.data.datasets = datasets;
+        chartInstance.update();
+    }
+
+    function handleTierChange() {
+        let tierSelect = document.getElementById('tier');
+        let currentTier = tierSelect.value;
+        
+        if (history.length >= 2) {
+            let confirmClear = confirm("Changing the tier will wipe the current chart tracking timeline records. Do you wish to proceed?");
+            if (!confirmClear) {
+                tierSelect.value = previousTier;
+                return;
+            }
+        }
+        
+        previousTier = currentTier;
+        let total_hp = TIER_DATA[parseInt(currentTier)].health;
+        let mainStr = Math.floor(total_hp / 1000000).toString();
+        
+        document.getElementById('dps').value = "0";
+        document.getElementById('hp_main').value = mainStr;
+        document.getElementById('hp_sub').value = "000000";
+        document.getElementById('days').value = "6";
+        document.getElementById('hours').value = "23";
+        document.getElementById('mins').value = "59";
+        
+        history = [[0, 100, 0]];
+        startTime = null;
+        if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
+        
+        saveAll();
+        runUpdate();
+    }
+
+    function clearAll() {
+        if (trackingInterval) clearInterval(trackingInterval);
+        localStorage.removeItem('settings_data');
+        
+        document.getElementById('tier').value = "10";
+        previousTier = "10";
+        document.getElementById('dps').value = "0";
+        document.getElementById('hp_main').value = "16000";
+        document.getElementById('hp_sub').value = "000000";
+        document.getElementById('days').value = "6";
+        document.getElementById('hours').value = "23";
+        document.getElementById('mins').value = "59";
+        
+        history = [[0, 100, 0]];
+        startTime = null;
+        
+        runUpdate();
+    }
+
+    function startTracking() {
+        if (trackingInterval) clearInterval(trackingInterval);
+        try {
+            let tier_val = parseInt(document.getElementById('tier').value);
+            let dps_val = parseFloat(stripNonNumeric(document.getElementById('dps').value)) || 0;
+            
+            let d = parseInt(stripNonNumeric(document.getElementById('days').value)) || 0;
+            let h = parseInt(stripNonNumeric(document.getElementById('hours').value)) || 0;
+            let m = parseInt(stripNonNumeric(document.getElementById('mins').value)) || 0;
+            
+            totalSecondsAtStart = (d * 86400) + (h * 3600) + (m * 60);
+            
+            let rem_h = stripNonNumeric(document.getElementById('hp_main').value);
+            let rem_h_sub = stripNonNumeric(document.getElementById('hp_sub').value).padStart(6, '0');
+            initialHpAtStart = parseFloat(rem_h + rem_h_sub) || 0;
+            
+            startTime = new Date();
+            let total_hp = TIER_DATA[tier_val].health;
+            let percentLeft = (initialHpAtStart / total_hp) * 100;
+            let encounterElapsedHours = 168 - (totalSecondsAtStart / 3600);
+
+            if (history.length === 0) {
+                history.push([encounterElapsedHours, Math.max(0, percentLeft), dps_val]);
+            } else if (encounterElapsedHours > (history[history.length - 1][0] + 0.001)) {
+                history.push([encounterElapsedHours, Math.max(0, percentLeft), dps_val]);
+            } else {
+                history[history.length - 1] = [encounterElapsedHours, Math.max(0, percentLeft), dps_val];
+            }
+            
+            saveAll();
+            runUpdate();
+            trackingInterval = setInterval(runUpdate, 1000);
+        } catch(e) { alert("Check your inputs."); }
+    }
+
+    function runUpdate() {
+        try {
+            let tier_val = parseInt(document.getElementById('tier').value);
+            let dps = parseFloat(stripNonNumeric(document.getElementById('dps').value)) || 0;
+            
+            let elapsed = startTime ? (new Date() - startTime) / 1000 : 0;
+            let currentTimeLeft = totalSecondsAtStart - elapsed;
+            let currentHp = initialHpAtStart - (dps * elapsed);
+            
+            if (!startTime) {
+                let d = parseInt(stripNonNumeric(document.getElementById('days').value)) || 0;
+                let h = parseInt(stripNonNumeric(document.getElementById('hours').value)) || 0;
+                let m = parseInt(stripNonNumeric(document.getElementById('mins').value)) || 0;
+                currentTimeLeft = (d * 86400) + (h * 3600) + (m * 60);
+                
+                let rem_h = stripNonNumeric(document.getElementById('hp_main').value);
+                let rem_h_sub = stripNonNumeric(document.getElementById('hp_sub').value).padStart(6, '0');
+                currentHp = parseFloat(rem_h + rem_h_sub) || 0;
+            }
+
+            let total_hp = TIER_DATA[tier_val].health;
+            let percentLeft = (currentHp / total_hp) * 100;
+
+            document.getElementById('progress-bar').style.width = `${Math.max(0, Math.min(100, percentLeft))}%`;
+            document.getElementById('progress-label').innerText = `${Math.max(0, percentLeft).toFixed(2)}%`;
+            document.getElementById('live-tracking').innerHTML = `Time left: ${formatTimeDelta(currentTimeLeft)}<br>HP left: ${Math.max(0, Math.floor(currentHp)).toLocaleString()}`;
+            
+            let tierInfo = TIER_DATA[tier_val];
+            document.getElementById('tier-info').innerText = `"${tierInfo.name}" ${tierInfo.health.toLocaleString(undefined, {maximumFractionDigits: 0})} HP`;
+
+            let statusLabel = document.getElementById('status-label');
+            if (dps === 0 && percentLeft === 100) {
+                statusLabel.innerHTML = `<span style="color: #555;">Waiting to initiate tracking loop...</span>`;
+            } else if ((dps * currentTimeLeft) >= currentHp) {
+                let successTime = dps > 0 ? (dps * currentTimeLeft - currentHp) / dps : 0;
+                statusLabel.innerHTML = `On track to WIN!<br><span style="color: darkgreen;">Win in: ${formatTimeDelta(currentTimeLeft - successTime)}</span>`;
+            } else {
+                let delay = dps > 0 ? (currentHp / dps) - currentTimeLeft : Infinity;
+                let deficit = currentHp - (dps * currentTimeLeft);
+                let neededDps = currentTimeLeft > 0 ? deficit / currentTimeLeft : 0;
+                statusLabel.innerHTML = `<span style="color: red;">Projected to FAIL.<br>Need ${Math.floor(neededDps).toLocaleString()} additional DPS.<br>Late by: ${formatTimeDelta(delay)}</span>`;
+            }
+
+            updateChart();
+        } catch(e) {}
+    }
+
+    function animatePulse() {
+        // Absolute clock-time mathematical calculation matching your preferred slow speed bounds
+        const cycleDuration = 16000;  // Milliseconds for one full loop cycle
+        const currentMs = Date.now();
+        
+        // Generate values smoothly between -1.0 and 1.0 using a sine wave, then map to 0.35 - 0.95 alpha bounds
+        const sineWave = Math.sin((2.0 * Math.PI * currentMs) / cycleDuration);
+        pulseAlpha = 0.65 + 0.30 * sineWave;
+        pulseAlpha = Math.max(0.35, Math.min(0.95, pulseAlpha));
+
+        updateChart();
+        requestAnimationFrame(animatePulse);
+    }
+
+    function saveAll() {
+        let data = {
+            tier: document.getElementById('tier').value, dps: document.getElementById('dps').value,
+            hp_main: document.getElementById('hp_main').value, hp_sub: document.getElementById('hp_sub').value,
+            d: document.getElementById('days').value, h: document.getElementById('hours').value, m: document.getElementById('mins').value,
+            startTime: startTime ? startTime.toISOString() : null,
+            totalSecondsAtStart, initialHpAtStart, history
+        };
+        localStorage.setItem('settings_data', JSON.stringify(data));
+    }
+
+    function loadAll() {
+        let raw = localStorage.getItem('settings_data');
+        if (!raw) {
+            history = [[0, 100, 0]];
+            updateChart();
+            runUpdate();
+            return;
+        }
+        try {
+            let data = JSON.parse(raw);
+            document.getElementById('tier').value = data.tier || "10";
+            previousTier = data.tier || "10";
+            document.getElementById('dps').value = data.dps || "0";
+            document.getElementById('hp_main').value = data.hp_main || "16000";
+            document.getElementById('hp_sub').value = data.hp_sub || "000000";
+            document.getElementById('days').value = data.d || "6";
+            document.getElementById('hours').value = data.h || "23";
+            document.getElementById('mins').value = data.m || "59";
+            history = data.history || [[0, 100, 0]];
+
+            if (data.startTime) {
+                startTime = new Date(data.startTime);
+                totalSecondsAtStart = data.totalSecondsAtStart || 0;
+                initialHpAtStart = data.initialHpAtStart || 0;
+                runUpdate();
+                trackingInterval = setInterval(runUpdate, 1000);
+            } else {
+                runUpdate();
+            }
+        } catch(e) {
+            history = [[0, 100, 0]];
+        }
+        updateChart();
+    }
+
+    function reloadChart() {
+        let raw = localStorage.getItem('settings_data');
+        if (raw) {
+            try {
+                let data = JSON.parse(raw);
+                history = data.history || [[0, 100, 0]];
+                updateChart();
+                alert("Chart reloaded successfully from storage.");
+            } catch(e) { alert("Failed to parse stored timeline data."); }
+        } else { alert("Saved tracking history data not found."); }
+    }
+
+    function exportFile() {
+        let data = {
+            tier: document.getElementById('tier').value, dps: document.getElementById('dps').value,
+            hp_main: document.getElementById('hp_main').value, hp_sub: document.getElementById('hp_sub').value,
+            d: document.getElementById('days').value, h: document.getElementById('hours').value, m: document.getElementById('mins').value,
+            startTime: startTime ? startTime.toISOString() : null,
+            totalSecondsAtStart, initialHpAtStart, history
+        };
+        let blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = `tomt_tracker_tier_${data.tier}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function importFile(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                let data = JSON.parse(e.target.result);
+                if (trackingInterval) clearInterval(trackingInterval);
+                
+                document.getElementById('tier').value = data.tier || "10";
+                previousTier = data.tier || "10";
+                document.getElementById('dps').value = data.dps || "0";
+                document.getElementById('hp_main').value = data.hp_main || "16000";
+                document.getElementById('hp_sub').value = data.hp_sub || "000000";
+                document.getElementById('days').value = data.d || "6";
+                document.getElementById('hours').value = data.h || "23";
+                document.getElementById('mins').value = data.m || "59";
+                history = data.history || [[0, 100, 0]];
+
+                if (data.startTime) {
+                    startTime = new Date(data.startTime);
+                    totalSecondsAtStart = data.totalSecondsAtStart || 0;
+                    initialHpAtStart = data.initialHpAtStart || 0;
+                    trackingInterval = setInterval(runUpdate, 1000);
+                } else {
+                    startTime = null;
+                }
+                
+                saveAll();
+                runUpdate();
+                alert("File data configuration imported successfully!");
+            } catch(err) { alert("Error reading valid JSON setup configurations."); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    document.getElementById('tier').addEventListener('change', handleTierChange);
+
+    ['dps', 'hp_main', 'hp_sub', 'days', 'hours', 'mins'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateChart);
+    });
+
+    initChart();
+    loadAll();
+    animatePulse();
+</script>
+
+</body>
+</html>
