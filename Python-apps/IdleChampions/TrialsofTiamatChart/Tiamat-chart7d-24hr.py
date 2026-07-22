@@ -194,6 +194,92 @@ def get_current_ui_coordinates():
     except:
         return None
 
+def draw_gauge_gradient():
+    """Draws vertical color gradient (Green bottom -> Yellow -> Orange -> Red top) on canvas."""
+    gauge_canvas.delete("all")
+    w, h = 30, 110
+    
+    # 4-stage color interpolation
+    colors = [
+        (255, 0, 0),     # Red (Top)
+        (255, 165, 0),   # Orange
+        (255, 255, 0),   # Yellow
+        (0, 180, 0)      # Green (Bottom)
+    ]
+    
+    for y in range(h):
+        t = y / (h - 1) # 0 top to 1 bottom
+        if t <= 0.333:
+            sub_t = t / 0.333
+            c1, c2 = colors[0], colors[1]
+        elif t <= 0.666:
+            sub_t = (t - 0.333) / 0.333
+            c1, c2 = colors[1], colors[2]
+        else:
+            sub_t = (t - 0.666) / 0.334
+            c1, c2 = colors[2], colors[3]
+            
+        r = int(c1[0] + (c2[0] - c1[0]) * sub_t)
+        g = int(c1[1] + (c2[1] - c1[1]) * sub_t)
+        b = int(c1[2] + (c2[2] - c1[2]) * sub_t)
+        
+        color_hex = f"#{r:02x}{g:02x}{b:02x}"
+        gauge_canvas.create_line(0, y, w, y, fill=color_hex)
+        
+    gauge_canvas.create_rectangle(0, 0, w-1, h-1, outline="black", width=2)
+
+def update_performance_gauge(current_x, current_y):
+    """Calculates relative performance against historical min/max and positions black bar."""
+    gx, min_y, max_y = load_all_historical_runs()
+    
+    draw_gauge_gradient()
+    
+    if gx is None or len(gx) == 0:
+        gauge_label.config(text="--", fg="black")
+        return
+        
+    # Interpolate historical bounds at current X
+    hist_min = np.interp(current_x, gx, min_y) # Best progress (lowest HP %)
+    hist_max = np.interp(current_x, gx, max_y) # Worst progress (highest HP %)
+    
+    if np.isnan(hist_min) or np.isnan(hist_max) or hist_min == hist_max:
+        gauge_label.config(text="--", fg="black")
+        return
+
+    # Normalized position: 0.0 = Best (Green/Bottom), 1.0 = Worst (Red/Top)
+    rel_pos = (current_y - hist_min) / (hist_max - hist_min)
+    
+    # Calculate Y pixel coordinate (Inverted for Tkinter: Top=0 [Red], Bottom=110 [Green])
+    h = 110
+    clamped_pos = max(-0.15, min(1.15, rel_pos))
+    y_pixel = int((1.0 - clamped_pos) * h)
+    y_pixel = max(3, min(h - 3, y_pixel))
+
+    # Draw indicator line
+    gauge_canvas.create_rectangle(0, y_pixel - 3, 30, y_pixel + 3, fill="black", outline="white")
+
+    # Dynamic status evaluation
+    if rel_pos < 0.0:
+        status_str = "BEST"
+        status_color = "darkgreen"
+    elif rel_pos <= 0.25:
+        status_str = "Great"
+        status_color = "green"
+    elif rel_pos <= 0.50:
+        status_str = "Good"
+        status_color = "#8B8000" # Dark Yellow
+    elif rel_pos <= 0.75:
+        status_str = "Average"
+        status_color = "orange"
+    elif rel_pos <= 1.0:
+        status_str = "Poor"
+        status_color = "red"
+    else:
+        status_str = "WORST"
+        status_color = "darkred"
+
+    gauge_label.config(text=status_str, fg=status_color)
+
 def update_chart():
     ax.clear()
     ax.yaxis.tick_right()
@@ -264,6 +350,9 @@ def update_chart():
                     ax.axhline(y=live_y_percent, color='#AEAEAE', linestyle='-', linewidth=0.8, alpha=0.7, zorder=1)
                     ax.axvline(x=live_x_hours, color='#AEAEAE', linestyle='-', linewidth=0.8, alpha=0.7, zorder=1)
                     
+                    # Update gauge on live point tracking
+                    update_performance_gauge(live_x_hours, live_y_percent)
+                    
         except Exception:
             pass
 
@@ -283,6 +372,9 @@ def update_chart():
                 h_to_kill_staging = (rem_hp_staging / ui_dps) / 3600.0
                 staging_proj_x = ui_x + h_to_kill_staging
                 ax.plot([ui_x, staging_proj_x], [ui_y, 0], 'b:', linewidth=1.5, alpha=0.6, zorder=2)
+            
+            # Update performance gauge with UI preview dot
+            update_performance_gauge(ui_x, ui_y)
                 
     ax.set_xlim(0, 168)
     ax.set_ylim(0, 100)
@@ -439,9 +531,9 @@ root.title("ToMT Tier Progress Calculator")
 root.geometry("600x650")
 root.minsize(500, 550)
 
-# Main Controls Layout Container
+# Main Controls Layout Container (Centered Input Grid)
 input_frame = tk.Frame(root)
-input_frame.grid(row=0, column=0, columnspan=4, pady=10)
+input_frame.grid(row=0, column=0, columnspan=4, pady=(10, 5))
 
 tier_var = tk.StringVar(value="9")
 dps_var = tk.StringVar(value="35160")
@@ -451,7 +543,7 @@ d_var = tk.StringVar(value="3")
 h_var = tk.StringVar(value="4")
 m_var = tk.StringVar(value="46")
 
-# Row 0: Tier & Total DPS (Grouped left)
+# Row 0: Tier & Total DPS
 tk.Label(input_frame, text="Tier (1-10):").grid(row=0, column=0, sticky="e", padx=(0,2))
 tier_entry = tk.Entry(input_frame, width=8, textvariable=tier_var)
 tier_entry.grid(row=0, column=1, sticky="w", padx=(0,15))
@@ -460,7 +552,7 @@ tk.Label(input_frame, text="Total DPS:").grid(row=0, column=2, sticky="e", padx=
 dps_entry = tk.Entry(input_frame, width=12, textvariable=dps_var)
 dps_entry.grid(row=0, column=3, sticky="w")
 
-# Row 1: Remaining HP Main & Suffix Box (Grouped left)
+# Row 1: Remaining HP Main & Suffix
 tk.Label(input_frame, text="Remaining HP:").grid(row=1, column=0, sticky="e", padx=(0,2), pady=3)
 health_entry = tk.Entry(input_frame, width=8, textvariable=hp_var)
 health_entry.grid(row=1, column=1, sticky="w", padx=(0,15), pady=3)
@@ -468,7 +560,7 @@ health_entry.grid(row=1, column=1, sticky="w", padx=(0,15), pady=3)
 health_suffix_entry = tk.Entry(input_frame, width=8, textvariable=hp_sub_var)
 health_suffix_entry.grid(row=1, column=2, columnspan=2, sticky="w", pady=3)
 
-# Row 2: Days / Hours / Mins Duration Controls
+# Row 2: Duration Controls
 time_frame = tk.Frame(input_frame)
 time_frame.grid(row=2, column=1, columnspan=3, sticky="w", pady=3)
 
@@ -484,6 +576,16 @@ mins_entry = tk.Entry(time_frame, width=3, textvariable=m_var)
 mins_entry.pack(side=tk.LEFT)
 tk.Label(time_frame, text=" m ").pack(side=tk.LEFT)
 
+# Right Performance Gauge Bar (Placed independently to prevent layout gaps)
+gauge_frame = tk.Frame(root)
+gauge_frame.place(relx=0.88, y=10, anchor="n")  # Floats on the right side
+
+gauge_label = tk.Label(gauge_frame, text="--", font=("Arial", 9, "bold"))
+gauge_label.pack(side=tk.TOP, pady=(0, 2))
+
+gauge_canvas = tk.Canvas(gauge_frame, width=30, height=110, highlightthickness=0)
+gauge_canvas.pack(side=tk.TOP)
+
 # Bind Trace Handlers
 tier_trace_id = tier_var.trace_add('write', on_input_changed)
 dps_trace_id = dps_var.trace_add('write', on_input_changed)
@@ -495,13 +597,13 @@ m_trace_id = m_var.trace_add('write', on_input_changed)
 
 # Action Buttons
 button_frame = tk.Frame(root)
-button_frame.grid(row=3, column=0, columnspan=4, pady=5)
+button_frame.grid(row=1, column=0, columnspan=4, pady=5)
 tk.Button(button_frame, text="Calculate", command=start_tracking, width=15).pack(side=tk.LEFT, padx=5)
 tk.Button(button_frame, text="ReLoad Chart", command=reload_chart, width=15, fg="red").pack(side=tk.LEFT, padx=5)
 
 # Live Tracking Display & Day Indicator
 tracking_container = tk.Frame(root)
-tracking_container.grid(row=4, column=0, columnspan=4, pady=5)
+tracking_container.grid(row=2, column=0, columnspan=4, pady=5)
 
 live_tracking_label = tk.Label(tracking_container, text="Time left: --\nHP left: --", font=("Arial", 10), bg="lightyellow", highlightthickness=1)
 live_tracking_label.pack(side=tk.LEFT, padx=5)
@@ -513,19 +615,19 @@ day_canvas.bind("<Button-1>", on_day_indicator_click)
 
 # Labels
 tier_info_label = tk.Label(root, text="", font=("Arial", 10, "bold"))
-tier_info_label.grid(row=5, column=0, columnspan=4)
+tier_info_label.grid(row=3, column=0, columnspan=4)
 
 status_label = tk.Label(root, text="", font=("Arial", 10, "bold"), justify="center")
-status_label.grid(row=6, column=0, columnspan=4)
+status_label.grid(row=4, column=0, columnspan=4)
 
 # Matplotlib Chart
-root.rowconfigure(7, weight=1)
+root.rowconfigure(5, weight=1)
 root.columnconfigure(0, weight=1)
 
 fig = plt.Figure(figsize=(5, 3), dpi=100)
 ax = fig.add_subplot(111)
 canvas = FigureCanvasTkAgg(fig, master=root)
-canvas.get_tk_widget().grid(row=7, column=0, columnspan=4, sticky="nsew", padx=10, pady=5)
+canvas.get_tk_widget().grid(row=5, column=0, columnspan=4, sticky="nsew", padx=10, pady=5)
 
 # Progress Bar
 style = ttk.Style()
@@ -533,12 +635,13 @@ style.theme_use('default')
 style.configure("Black.Horizontal.TProgressbar", background="green", troughcolor="black", borderwidth=0, thickness=30)
 
 progress_container = tk.Frame(root, bg="white")
-progress_container.grid(row=8, column=0, columnspan=4, sticky="ew", pady=7, padx=10)
+progress_container.grid(row=6, column=0, columnspan=4, sticky="ew", pady=7, padx=10)
 progress_bar = ttk.Progressbar(progress_container, orient="horizontal", length=300, mode="determinate", style="Black.Horizontal.TProgressbar")
 progress_bar.pack(fill="x", expand=True)
 progress_label = tk.Label(progress_container, text="0.00%", fg="white", bg="black", font=("Arial", 8))
 progress_label.place(relx=0.98, rely=0.5, anchor="e")
 
+draw_gauge_gradient()
 load_all()
 animate_pulse() 
 root.mainloop()
