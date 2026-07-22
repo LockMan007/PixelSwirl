@@ -6,7 +6,7 @@ All data must be manually entered. It does not detect anything from the game.
 
 (below is a synthetic data example. this image is outdated, changes have already been made again)
 
-2026-07-22 update:
+2026-07-22 update: (added indicator of best/worst of runs, not shown in screenshot)
 <img width="917" height="682" alt="screenshot-2026_07_22" src="https://github.com/user-attachments/assets/5482fe59-863b-4231-813c-76b79d0ce405" />
 
 ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- 
