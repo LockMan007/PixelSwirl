@@ -6,7 +6,7 @@ All data must be manually entered. It does not detect anything from the game.
 
 (below is a synthetic data example. this image is outdated, changes have already been made again)
 
-2026-07-26 update: (fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.)
+2026-07-26 update: v7.2 (fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.)
 
 2026-07-22 update: (added indicator of best/worst of runs, not shown in screenshot)
 <img width="502" height="582" alt="screenshot-2026_07_22b" src="https://github.com/user-attachments/assets/541f1ffc-a143-4e9c-a784-e978b345c9b9" />
