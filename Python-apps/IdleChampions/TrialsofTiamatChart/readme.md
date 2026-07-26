@@ -8,11 +8,11 @@ All data must be manually entered. It does not detect anything from the game.
 
 2026-07-26 update: v7.2 (fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.)
 
-2026-07-22 update: (added indicator of best/worst of runs, not shown in screenshot)
+2026-07-22 update: v 7.1 (added indicator of best/worst of runs, not shown in screenshot)
 <img width="502" height="582" alt="screenshot-2026_07_22b" src="https://github.com/user-attachments/assets/541f1ffc-a143-4e9c-a784-e978b345c9b9" />
 
 
-2026-07-22 update:
+2026-07-22 update v 7d-24:
 <img width="917" height="682" alt="screenshot-2026_07_22" src="https://github.com/user-attachments/assets/5482fe59-863b-4231-813c-76b79d0ce405" />
 
 ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- 
