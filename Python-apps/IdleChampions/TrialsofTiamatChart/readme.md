@@ -18,6 +18,9 @@ I did that because updating the HP/Time boxes would trigger and always on blue-t
 Moved the Rating to below the gradient instead of on top of it, because that is more logical.
 Added orange bar of how much HP is left on the progress bar along with percentage to match the projection.
 
+<img width="502" height="684" alt="image" src="https://github.com/user-attachments/assets/6b5e6fb7-0c66-4b2b-83ff-646818a9d231" />
+
+
 ----------------------
 
 2026-07-26 update: v7.2 (fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.)
