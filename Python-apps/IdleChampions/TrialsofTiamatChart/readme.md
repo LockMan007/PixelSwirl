@@ -9,6 +9,7 @@ All data must be manually entered. It does not detect anything from the game.
 ----------------------
 
 2026-07-29 update: v7.3
+Known bug: says I am on the "best" when i am near the middle at the end. I think it is due to having runs that didn't have time logged at the last second. I'll work on coding it to extend the lines of incomplete runs.
 
 I fixed a lag issue that happened at the 1 second mark every second.
 I added checkboxes for auto-update for HP remaining and Time remaining.
