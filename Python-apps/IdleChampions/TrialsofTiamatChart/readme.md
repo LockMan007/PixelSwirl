@@ -1,5 +1,7 @@
 WORK IN PROGRESS.
 
+(Known issue, the blue dot tracker no longer auto-updates it's location)
+
 This is possibly still inaccurate and may have issues.
 
 All data must be manually entered. It does not detect anything from the game.
