@@ -16,3 +16,4 @@ Giving yourself 7 days (1 week) should be enough time.
 Being able to see how many days you have left, means you can try to get a refill sooner if you want.
 
 When you do get a refill, you need to click the medication name, add the refill amount and click to update/save it.
+<img width="537" height="726" alt="image" src="https://github.com/user-attachments/assets/43ce229d-794a-4e1e-a7ea-a0d5cfab735a" />
