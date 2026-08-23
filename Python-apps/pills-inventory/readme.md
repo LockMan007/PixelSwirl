@@ -23,6 +23,8 @@ When you do get a refill, you need to click the medication name, add the refill 
 - I need to add the ability to Remove and Rename medications/names without having to edit the .ini file or at least have a button to open the .ini file.
 - Keep the persons name by default, since most of the time, you will want to add more than 1 medication per person.
 - Link to this Github.
+- Maybe change the quantity part where you can choose to add or subtract by a set amount, for example "+30 pills"
+- Maybe be able to set a default refill amount for each pill, for less clicks and no typing to update.
 
 
 <img width="537" height="726" alt="image" src="https://github.com/user-attachments/assets/43ce229d-794a-4e1e-a7ea-a0d5cfab735a" />
