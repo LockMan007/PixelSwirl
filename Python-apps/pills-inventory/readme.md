@@ -25,6 +25,7 @@ When you do get a refill, you need to click the medication name, add the refill 
 - Link to this Github.
 - Maybe change the quantity part where you can choose to add or subtract by a set amount, for example "+30 pills"
 - Maybe be able to set a default refill amount for each pill, for less clicks and no typing to update.
-
+- Properly add the code in to collapse the top section when it isn't needed.
+- Maybe auto-resize the app based on the list. Currently it makes a set size in the code that you can edit, maybe another option to resize and "save size" as an option.
 
 <img width="537" height="726" alt="image" src="https://github.com/user-attachments/assets/43ce229d-794a-4e1e-a7ea-a0d5cfab735a" />
