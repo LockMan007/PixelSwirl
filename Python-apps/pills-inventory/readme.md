@@ -19,13 +19,14 @@ When you do get a refill, you need to click the medication name, add the refill 
 
 **TODO:**
 
-- Add version number to app.
-- I need to add the ability to Remove and Rename medications/names without having to edit the .ini file or at least have a button to open the .ini file.
-- Keep the persons name by default, since most of the time, you will want to add more than 1 medication per person.
-- Link to this Github.
-- Maybe change the quantity part where you can choose to add or subtract by a set amount, for example "+30 pills"
-- Maybe be able to set a default refill amount for each pill, for less clicks and no typing to update.
-- Properly add the code in to collapse the top section when it isn't needed.
-- Maybe auto-resize the app based on the list. Currently it makes a set size in the code that you can edit, maybe another option to resize and "save size" as an option.
+- ~Add version number to app.~
+- ~I need to add the ability to Remove and Rename medications/names without having to edit the .ini file or at least have a button to open the .ini file.~
+- ~Keep the persons name by default, since most of the time, you will want to add more than 1 medication per person.~
+- ~Link to this Github.~
+- ~Maybe change the quantity part where you can choose to add or subtract by a set amount, for example "+30 pills"~
+- ~Maybe be able to set a default refill amount for each pill, for less clicks and no typing to update.~
+- ~Properly add the code in to collapse the top section when it isn't needed.~
+- ~Maybe auto-resize the app based on the list. Currently it makes a set size in the code that you can edit, maybe another option to resize and "save size" as an option.~
 
-<img width="537" height="726" alt="image" src="https://github.com/user-attachments/assets/43ce229d-794a-4e1e-a7ea-a0d5cfab735a" />
+<img width="569" height="762" alt="image" src="https://github.com/user-attachments/assets/0a0594e4-6e9e-4b29-86c0-f65a9f4dd409" />
+
