@@ -7,17 +7,58 @@ from datetime import datetime, date
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-APP_VERSION = "0.2"
+APP_VERSION = "0.2.01"
 CONFIG_FILE = "medications.ini"
 DATE_FORMAT = "%Y-%m-%d"
 DISPLAY_DATE_FORMAT = "%m/%d/%Y"
 GITHUB_URL = "https://github.com/LockMan007/PixelSwirl/tree/main/Python-apps/pills-inventory"
+
+class ToolTip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        self.widget.bind("<Enter>", self.show_tip)
+        self.widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        if self.tip_window or not self.text:
+            return
+        
+        # Calculate popup offset using cursor coordinates
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        
+        # Use a solid background frame to act as the border line
+        border_frame = tk.Frame(tw, background="black", padx=1, pady=1)
+        border_frame.pack()
+
+        label = tk.Label(
+            border_frame, 
+            text=self.text, 
+            justify=tk.LEFT,
+            background="#ffffe0", 
+            foreground="black",
+            font=("Arial", 8, "normal")
+        )
+        label.pack(ipadx=4, ipady=2)
+
+    def hide_tip(self, event=None):
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
+
 
 class MedTrackerApp:
     def __init__(self, root):
         self.root = root
         self.config = configparser.ConfigParser()
         self.selected_section = None
+        self.last_refresh_time = None
 
         self.load_config()
         self.process_daily_deductions()
@@ -87,37 +128,33 @@ class MedTrackerApp:
         self.btn_delete = ttk.Button(btn_box_left, text="Delete", command=self.delete_medication, state="disabled")
         self.btn_delete.pack(side="left", padx=2)
 
-        # Right Column - Quick Refill Controls (Compact Layout)
+        # Right Column - Quick Refill Controls
         right_col = ttk.LabelFrame(self.input_frame, text=" Quick Refill Controls ", padding=8)
         right_col.grid(row=0, column=1, sticky="nsew", padx=5)
 
-        # Row 0: Add Refill Label
         ttk.Label(right_col, text="Add Refill Amount:").grid(row=0, column=0, columnspan=2, sticky="w", padx=2, pady=(0, 2))
-        
-        # Row 1: Add Refill Entry + Refill Now Button
         self.entry_add_refill = ttk.Entry(right_col, width=8)
         self.entry_add_refill.grid(row=1, column=0, sticky="w", padx=(2, 4), pady=(0, 8))
         btn_refill_now = ttk.Button(right_col, text="Refill Now", command=self.execute_refill)
         btn_refill_now.grid(row=1, column=1, sticky="w", padx=0, pady=(0, 8))
 
-        # Row 2: Set Default Label
         ttk.Label(right_col, text="Set Default Amount:").grid(row=2, column=0, columnspan=2, sticky="w", padx=2, pady=(0, 2))
-        
-        # Row 3: Default Entry + Save Default Button
         self.entry_default_refill = ttk.Entry(right_col, width=8)
         self.entry_default_refill.grid(row=3, column=0, sticky="w", padx=(2, 4), pady=0)
         btn_save_default = ttk.Button(right_col, text="Save Default", command=self.save_default_refill)
         btn_save_default.grid(row=3, column=1, sticky="w", padx=0, pady=0)
 
-        # Daily Deduction Banner Indicator
-        today_str = date.today().strftime(DISPLAY_DATE_FORMAT)
+        # Interactive Daily Deduction Banner Indicator
         self.lbl_status = tk.Label(
             main_container, 
-            text=f"All of today's pills have been subtracted for {today_str}", 
+            text="", 
             fg="blue", 
-            font=("Arial", 9, "bold")
+            font=("Arial", 9, "bold"),
+            cursor="hand2"
         )
         self.lbl_status.pack(pady=4)
+        self.lbl_status.bind("<Button-1>", lambda e: self.reload_data_from_ini())
+        ToolTip(self.lbl_status, "refresh data")
 
         # Scrollable Display Area
         canvas = tk.Canvas(main_container)
@@ -135,7 +172,9 @@ class MedTrackerApp:
         canvas.pack(side="left", fill="both", expand=True, padx=10, pady=5)
         scrollbar.pack(side="right", fill="y")
 
-        self.render_dashboard()
+        # Initial Load & Timer Activation
+        self.reload_data_from_ini()
+        self.schedule_hourly_auto_refresh()
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -146,11 +185,38 @@ class MedTrackerApp:
         file_menu.add_command(label="Exit", command=self.on_close)
         menubar.add_cascade(label="File", menu=file_menu)
 
+        # Added Refresh Menu Option
+        menubar.add_command(label="Refresh", command=self.reload_data_from_ini)
+
         about_menu = tk.Menu(menubar, tearoff=0)
         about_menu.add_command(label="About", command=self.show_about_dialog)
         menubar.add_cascade(label="About", menu=about_menu)
 
         self.root.config(menu=menubar)
+
+    def reload_data_from_ini(self):
+        """Reloads medications.ini, updates timestamp, and renders dashboard."""
+        self.last_refresh_time = datetime.now().strftime("%I:%M %p")
+        self.load_config()
+        self.process_daily_deductions()
+        self.update_titlebar()
+        self.update_status_label()
+        self.render_dashboard()
+
+    def update_status_label(self):
+        today_str = date.today().strftime(DISPLAY_DATE_FORMAT)
+        time_str = f" (Refreshed at {self.last_refresh_time})" if self.last_refresh_time else ""
+        self.lbl_status.config(
+            text=f"All of today's pills have been subtracted for {today_str}{time_str}"
+        )
+
+    def schedule_hourly_auto_refresh(self):
+        """Schedules auto refresh every 3,600,000 milliseconds (1 hour)."""
+        self.root.after(3600000, self.auto_refresh)
+
+    def auto_refresh(self):
+        self.reload_data_from_ini()
+        self.schedule_hourly_auto_refresh()
 
     def toggle_input_panel(self):
         if self.is_panel_visible:
@@ -354,10 +420,7 @@ class MedTrackerApp:
 
         self.config.set(self.selected_section, "DefaultRefill", def_val)
         self.save_config()
-
-        # Refresh dashboard live to immediately reflect the newly saved default
         self.render_dashboard()
-
         messagebox.showinfo("Saved", f"Default refill amount of {def_val} saved for {self.selected_section}.")
 
     def delete_medication(self):
