@@ -1,3 +1,11 @@
+This is version 0.2.01
+added:
+- Hourly Auto-Reload Loop: Implemented using self.root.after(3600000, self.auto_refresh) to reload medications.ini once every 60 minutes.
+- Header Label Updates: Displays the last refreshed time in 12-hour format with AM/PM (e.g., (Refreshed at 08:00 AM)).
+- Interactive Label & Tooltip: Formatted the label to trigger a refresh on <Button-1> and display a temporary tooltip when hovered over.
+- Menu Addition: Added a Refresh item to the menubar between File and About.
+===================================================================================
+
 This is version 0.1
 The purpose is to keep track of when you need refills.
 Input the Persons Name, Quantity remaining, TOTAL Quantity taken per day.
