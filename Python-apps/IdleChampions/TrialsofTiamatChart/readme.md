@@ -4,7 +4,7 @@ WORK IN PROGRESS. (date format Year-Month-Day)
 - I think this fixes stuff
 - I tried to add projections for finished runs. (the gray area, run history)
 - I tried to fix the problem with it resetting a run every Sunday by setting the start date and end date based on actual start date.
-- I tried to fix the blue tracker location "update" location thing.
+- I tried to fix the blue tracker location "update" location thing, but i think i got confused of what it was for, so who knows what i did.
 - I tried to get the fastest and slowest win times to judge how well your run is doing, since before it was based on a vertical slice,  which caused it to say "BEST" even when you were doing very bad.
 ----------------------
 
