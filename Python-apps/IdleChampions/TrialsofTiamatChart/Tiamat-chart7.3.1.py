@@ -733,10 +733,10 @@ def run_update():
                     ),
                     fg="red",
                 )
-        # Add update_chart() here so the canvas redraws the yellow dot every 1 minute
+        # Add update_chart() here so the canvas redraws the yellow dot every 1 second
         update_chart()
 
-        tracking_id = root.after(60000, run_update)
+        tracking_id = root.after(1000, run_update)
     except:
         pass
 
