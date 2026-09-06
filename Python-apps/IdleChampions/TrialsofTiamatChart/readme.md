@@ -1,4 +1,4 @@
-WORK IN PROGRESS.
+WORK IN PROGRESS. (date format Year-Month-Day)
 
 2026-09-06 update v7.3.1
 - I think this fixes stuff
