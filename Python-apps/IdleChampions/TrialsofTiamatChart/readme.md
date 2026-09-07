@@ -1,6 +1,6 @@
 WORK IN PROGRESS. 
 - Date format: (Year-Month-Day).
-- This is possibly still inaccurate and may have issues.
+- This app is possibly still inaccurate in some ways and may have issues.
 - All data must be manually entered. It does not detect anything from the game.
 
 2026-09-06 update v7.3.3
