@@ -6,6 +6,7 @@ WORK IN PROGRESS.
 2026-09-06 update v7.3.2
 - I think I fixed filling in the area of previous runs at the bottom to go to 0%.
 - I think I fixed it saying "Great/Best" when you are doing bad.
+- Not visible in screenshot is the yellow progress bar that shows how much HP will be remaining, since at this point, I have already secured the win.
 - <img width="602" height="734" alt="image" src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/IdleChampions/TrialsofTiamatChart/tiamat-chart-7.3.2.jpg">
 ----------------------
 
