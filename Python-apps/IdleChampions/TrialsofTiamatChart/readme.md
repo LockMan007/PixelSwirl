@@ -3,6 +3,9 @@ WORK IN PROGRESS.
 - This is possibly still inaccurate and may have issues.
 - All data must be manually entered. It does not detect anything from the game.
 
+2026-09-06 update v7.3.3
+- I think I fixed it saying "Great/Best" when you are doing bad. (still testing)
+
 2026-09-06 update v7.3.2
 - I think I fixed filling in the area of previous runs at the bottom to go to 0%.
 - I think I fixed it saying "Great/Best" when you are doing bad.
