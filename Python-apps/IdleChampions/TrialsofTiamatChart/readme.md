@@ -1,4 +1,7 @@
-WORK IN PROGRESS. (date format Year-Month-Day)
+WORK IN PROGRESS. 
+- Date format: (Year-Month-Day).
+- This is possibly still inaccurate and may have issues.
+- All data must be manually entered. It does not detect anything from the game.
 
 2026-09-06 update v7.3.2
 - I think I fixed filling in the area of previous runs at the bottom to go to 0%.
@@ -14,11 +17,6 @@ WORK IN PROGRESS. (date format Year-Month-Day)
 - I tried to get the fastest and slowest win times to judge how well your run is doing, since before it was based on a vertical slice,  which caused it to say "BEST" even when you were doing very bad.
 ----------------------
 
-- This is possibly still inaccurate and may have issues.
-- All data must be manually entered. It does not detect anything from the game.
-- (below is a synthetic data example. this image is outdated, changes have already been made again)
-----------------------
-
 2026-07-29 update: v7.3
 - Known bug: says I am on the "best" when i am near the middle at the end. I think it is due to having runs that didn't have time logged at the last second. I'll work on coding it to extend the lines of incomplete runs.
 
@@ -31,15 +29,17 @@ WORK IN PROGRESS. (date format Year-Month-Day)
 - Added orange bar of how much HP is left on the progress bar along with percentage to match the projection.
 ----------------------
 
-2026-07-26 update: v7.2 (fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.)
+2026-07-26 update: v7.2
+- fixed mistake of not letting you start new runs. Added "new run" button and saves 1 week files, instead of daily files.
 ----------------------
 
-2026-07-22 update: v 7.1 (added indicator of best/worst of runs)
+2026-07-22 update: v 7.1 
+- added indicator of best/worst of runs.
 ----------------------
 
 2026-07-22 update v 7d-24
-
+- ?
 ----------------------
 
-Old version (shows the blue indicator, not shown in the example screenshot above, but it's still there):
-![App Screenshot](IdleChampions-TiamatTrialsChart1.jpg)
+Old version 
+- shows the blue indicator, not shown in the example screenshot above, but it's still there
