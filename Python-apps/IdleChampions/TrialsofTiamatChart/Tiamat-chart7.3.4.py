@@ -137,6 +137,14 @@ def get_historical_finish_times():
     files = glob.glob(os.path.join(PLOT_DIR, "*.json"))
     finishes = []
 
+    # Get active tier directly or fall back safely
+    try:
+        tier_val = int(strip_non_numeric(tier_entry.get()))
+    except Exception:
+        tier_val = 10
+
+    total_hp = TIER_DATA.get(tier_val, TIER_DATA[10])["health"]
+
     for filepath in files:
         try:
             with open(filepath, "r") as f:
@@ -149,8 +157,6 @@ def get_historical_finish_times():
                     if ry <= 1.0:
                         finishes.append(rx)
                     elif last_dps > 0:
-                        tier_val = int(strip_non_numeric(tier_entry.get())) if 'tier_entry' in globals() else 10
-                        total_hp = TIER_DATA.get(tier_val, TIER_DATA[10])["health"]
                         rem_hp = (ry / 100.0) * total_hp
                         h_to_kill = (rem_hp / last_dps) / 3600.0
                         finish_x = rx + h_to_kill
@@ -283,7 +289,6 @@ def update_performance_gauge(current_x, current_y):
 
     draw_gauge_gradient()
 
-    # Get active DPS to project current run's completion hour
     try:
         total_dps = float(strip_non_numeric(dps_entry.get()))
     except Exception:
@@ -294,7 +299,11 @@ def update_performance_gauge(current_x, current_y):
         gauge_label.config(text="--", fg="black")
         return
 
-    tier_val = int(strip_non_numeric(tier_entry.get())) if 'tier_entry' in globals() else 10
+    try:
+        tier_val = int(strip_non_numeric(tier_entry.get()))
+    except Exception:
+        tier_val = 10
+
     total_hp = TIER_DATA.get(tier_val, TIER_DATA[10])["health"]
     
     # Calculate current run's projected finish hour
@@ -302,22 +311,21 @@ def update_performance_gauge(current_x, current_y):
     hours_to_kill = (rem_hp / total_dps) / 3600.0
     projected_finish_x = current_x + hours_to_kill
 
-    # Dynamically find the best (fastest) and worst (slowest) finish times from historical files
+    # Dynamically retrieve completion boundaries from saved runs
     successful_finishes = get_historical_finish_times()
 
     if not successful_finishes or len(successful_finishes) < 2:
-        # Fallback if there aren't enough historical finish points to form a range
-        best_finish_x = 96.0
-        worst_finish_x = 168.0
-    else:
-        best_finish_x = min(successful_finishes)
-        worst_finish_x = max(successful_finishes)
+        gauge_label.config(text="--", fg="black")
+        return
+
+    best_finish_x = min(successful_finishes)
+    worst_finish_x = max(successful_finishes)
 
     if best_finish_x == worst_finish_x:
         gauge_label.config(text="--", fg="black")
         return
 
-    # Calculate horizontal relative position across your actual historical finish range
+    # Dynamic horizontal time scaling based on personal historical run bounds
     if projected_finish_x <= best_finish_x:
         rel_pos = 0.0
     elif projected_finish_x >= worst_finish_x:
@@ -745,7 +753,13 @@ def run_update():
                 win_in_seconds = current_time_left - success_time
                 projected_finish_hour = (168 * 3600 - win_in_seconds) / 3600.0
 
-                fastest_finish, slowest_finish = get_historical_finish_bounds()
+                # Fetch history list directly from your existing helper
+                finishes = get_historical_finish_times()
+                if finishes:
+                    fastest_finish = min(finishes)
+                    slowest_finish = max(finishes)
+                else:
+                    fastest_finish, slowest_finish = 96.0, 168.0
 
                 if fastest_finish > 0 and projected_finish_hour < fastest_finish:
                     status_title = "Pacing to BEAT historical records!"
@@ -977,7 +991,7 @@ def block_trace_handlers(should_block):
 
 # --- GUI SETUP ---
 root = tk.Tk()
-root.title("ToMT Tier Progress Calculator (v7.3.3)")
+root.title("ToMT Tier Progress Calculator (v7.3.4)")
 root.geometry("600x670")
 root.minsize(500, 550)
 
