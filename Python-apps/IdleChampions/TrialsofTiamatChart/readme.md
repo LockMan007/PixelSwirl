@@ -11,8 +11,8 @@ WORK IN PROGRESS.
 ----------------------
 
 2026-09-06 update v7.3.1
-- I think this fixes stuff
-- I tried to add projections for finished runs. (the gray area, run history)
+- I think this fixes stuff.
+- I tried to add projections for finished runs. (the gray area, run history).
 - I tried to fix the problem with it resetting a run every Sunday by setting the start date and end date based on actual start date.
 - I tried to fix the blue tracker location "update" location thing, but i think i got confused of what it was for, so who knows what i did.
 - I tried to get the fastest and slowest win times to judge how well your run is doing, since before it was based on a vertical slice,  which caused it to say "BEST" even when you were doing very bad.
@@ -20,7 +20,6 @@ WORK IN PROGRESS.
 
 2026-07-29 update: v7.3
 - Known bug: says I am on the "best" when i am near the middle at the end. I think it is due to having runs that didn't have time logged at the last second. I'll work on coding it to extend the lines of incomplete runs.
-
 - I fixed a lag issue that happened at the 1 second mark every second.
 - I added checkboxes for auto-update for HP remaining and Time remaining.
 - Added translucent yellow mark on crosshairs to always let you know where you are easier.
@@ -43,4 +42,4 @@ WORK IN PROGRESS.
 ----------------------
 
 Old version 
-- shows the blue indicator, not shown in the example screenshot above, but it's still there
+- shows the blue indicator, not shown in the example screenshot above, but it's still there.
