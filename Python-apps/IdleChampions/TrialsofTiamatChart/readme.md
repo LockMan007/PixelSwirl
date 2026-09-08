@@ -3,6 +3,9 @@ WORK IN PROGRESS.
 - This app is possibly still inaccurate in some ways and may have issues.
 - All data must be manually entered. It does not detect anything from the game.
 
+2026-09-08 update v7.3.4.1
+- I think i finally solved the Best/Worst thing, also flipped the colors, green at top, red at bottom.
+
 2026-09-06 update v7.3.4
 - the Best/Worst thing is for sure not working right now.
 - I'm not sure yet if it is messing up the chart also.
