@@ -4,6 +4,8 @@ WORK IN PROGRESS.
 - All data must be manually entered. It does not detect anything from the game.
 
 2026-09-06 update v7.3.4
+- the Best/Worst thing is for sure not working right now.
+- I'm not sure yet if it is messing up the chart also.
 - I think I fixed it ending the time left before it's over.
 
 2026-09-06 update v7.3.3
