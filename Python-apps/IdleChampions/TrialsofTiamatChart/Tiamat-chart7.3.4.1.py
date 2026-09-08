@@ -261,7 +261,8 @@ def draw_gauge_gradient():
     gauge_canvas.delete("all")
     w, h = 30, 110
 
-    colors = [(255, 0, 0), (255, 165, 0), (255, 255, 0), (0, 180, 0)]
+    # Reversed color sequence: Green at top (0), Yellow, Orange, Red at bottom (h)
+    colors = [(0, 180, 0), (255, 255, 0), (255, 165, 0), (255, 0, 0)]
 
     for y in range(h):
         t = y / (h - 1)
@@ -289,54 +290,24 @@ def update_performance_gauge(current_x, current_y):
 
     draw_gauge_gradient()
 
-    try:
-        total_dps = float(strip_non_numeric(dps_entry.get()))
-    except Exception:
+    if gx is None or min_y is None or max_y is None:
         gauge_label.config(text="--", fg="black")
         return
 
-    if total_dps <= 0:
+    # Bound sampling at current hour
+    y_best = float(np.interp(current_x, gx, min_y))   # Lowest HP % = BEST
+    y_worst = float(np.interp(current_x, gx, max_y))  # Highest HP % = WORST
+
+    if y_worst == y_best:
         gauge_label.config(text="--", fg="black")
         return
 
-    try:
-        tier_val = int(strip_non_numeric(tier_entry.get()))
-    except Exception:
-        tier_val = 10
-
-    total_hp = TIER_DATA.get(tier_val, TIER_DATA[10])["health"]
-    
-    # Calculate current run's projected finish hour
-    rem_hp = (current_y / 100.0) * total_hp
-    hours_to_kill = (rem_hp / total_dps) / 3600.0
-    projected_finish_x = current_x + hours_to_kill
-
-    # Dynamically retrieve completion boundaries from saved runs
-    successful_finishes = get_historical_finish_times()
-
-    if not successful_finishes or len(successful_finishes) < 2:
-        gauge_label.config(text="--", fg="black")
-        return
-
-    best_finish_x = min(successful_finishes)
-    worst_finish_x = max(successful_finishes)
-
-    if best_finish_x == worst_finish_x:
-        gauge_label.config(text="--", fg="black")
-        return
-
-    # Dynamic horizontal time scaling based on personal historical run bounds
-    if projected_finish_x <= best_finish_x:
-        rel_pos = 0.0
-    elif projected_finish_x >= worst_finish_x:
-        rel_pos = 1.0
-    else:
-        rel_pos = (projected_finish_x - best_finish_x) / (worst_finish_x - best_finish_x)
-
+    # Normalized score: 1.0 = BEST (Top / Green), 0.0 = WORST (Bottom / Red)
+    rel_pos = (y_worst - current_y) / (y_worst - y_best)
     clamped_pos = max(0.0, min(1.0, rel_pos))
 
     h = 110
-    # 0 pixels = Top / Red (WORST), h pixels = Bottom / Green (BEST)
+    # 0 pixels = Top / Green (BEST), h pixels = Bottom / Red (WORST)
     y_pixel = int((1.0 - clamped_pos) * h)
     y_pixel = max(3, min(h - 3, y_pixel))
 
@@ -345,17 +316,15 @@ def update_performance_gauge(current_x, current_y):
     )
 
     if clamped_pos >= 0.85:
-        status_str, status_color = "WORST", "darkred"
+        status_str, status_color = "BEST", "darkgreen"
     elif clamped_pos >= 0.65:
-        status_str, status_color = "Poor", "red"
+        status_str, status_color = "Great", "green"
     elif clamped_pos >= 0.35:
         status_str, status_color = "Average", "orange"
     elif clamped_pos >= 0.15:
-        status_str, status_color = "Good", "#8B8000"
-    elif clamped_pos > 0.0:
-        status_str, status_color = "Great", "green"
+        status_str, status_color = "Poor", "red"
     else:
-        status_str, status_color = "BEST", "darkgreen"
+        status_str, status_color = "WORST", "darkred"
 
     gauge_label.config(text=status_str, fg=status_color)
 
