@@ -4,7 +4,7 @@ WORK IN PROGRESS.
 - All data must be manually entered. It does not detect anything from the game.
 
 2026-09-08 update v7.3.4.2
-- reverted message about being "on track to win" or "on track to lose". I used AI to help and it decided to spice it up with making bold claims instead that can't be accurately determined.
+- reverted message about being "on track to win" or "on track to lose" to say only that and nothing else. I had used AI to help and it decided to spice it up with making bold claims instead that can't be accurately determined without my request and without telling me.
 
 2026-09-08 update v7.3.4.1
 - I think i finally solved the Best/Worst thing, also flipped the colors, green at top, red at bottom.
