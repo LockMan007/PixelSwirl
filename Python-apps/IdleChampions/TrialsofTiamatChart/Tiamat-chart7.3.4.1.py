@@ -715,51 +715,42 @@ def run_update():
         if current_hp <= 0 or percent_left <= 0:
             status_label.config(text="TIAMAT DEFEATED!", fg="gold")
         else:
+            # Check if current DPS can deplete remaining HP before time expires
             if (dps * current_time_left) >= current_hp:
                 success_time = (
                     (dps * current_time_left - current_hp) / dps if dps > 0 else 0
                 )
                 win_in_seconds = current_time_left - success_time
-                projected_finish_hour = (168 * 3600 - win_in_seconds) / 3600.0
-
-                # Fetch history list directly from your existing helper
-                finishes = get_historical_finish_times()
-                if finishes:
-                    fastest_finish = min(finishes)
-                    slowest_finish = max(finishes)
-                else:
-                    fastest_finish, slowest_finish = 96.0, 168.0
-
-                if fastest_finish > 0 and projected_finish_hour < fastest_finish:
-                    status_title = "Pacing to BEAT historical records!"
-                    status_color = "dark green"
-                elif projected_finish_hour <= slowest_finish:
-                    status_title = "On track to WIN!"
-                    status_color = "dark green"
-                else:
-                    status_title = "On track to WIN (Slower than historical wins)"
-                    status_color = "orange"
 
                 status_label.config(
                     text=(
-                        f"{status_title}\nWin in:"
+                        "On track to WIN!\nWin in:"
                         f" {format_time_delta(win_in_seconds)}"
                     ),
-                    fg=status_color,
+                    fg="darkgreen",
                 )
             else:
-                delay = (
-                    (current_hp / dps) - current_time_left if dps > 0 else float("inf")
+                needed_dps = (
+                    (current_hp - (dps * current_time_left))
+                    / current_time_left
+                    if current_time_left > 0
+                    else 0
                 )
-                deficit = current_hp - (dps * current_time_left)
-                needed_dps = deficit / current_time_left if current_time_left > 0 else 0
+                shortfall_seconds = (
+                    (current_hp - (dps * current_time_left)) / dps
+                    if dps > 0
+                    else 0
+                )
+
                 status_label.config(
                     text=(
-                        f"Projected to FAIL.\nNeed {needed_dps:,.0f} additional"
-                        f" DPS.\nLate by: {format_time_delta(delay)}"
+                        "Projected to FAIL.\nNeed"
+                        f" {needed_dps:,.0f} additional DPS.\nLate by:"
+                        f" {format_time_delta(shortfall_seconds)}"
                     ),
                     fg="red",
                 )
+
         # Add update_chart() here so the canvas redraws the yellow dot every 1 second
         update_chart()
 
@@ -960,7 +951,7 @@ def block_trace_handlers(should_block):
 
 # --- GUI SETUP ---
 root = tk.Tk()
-root.title("ToMT Tier Progress Calculator (v7.3.4)")
+root.title("ToMT Tier Progress Calculator (v7.3.4.1)")
 root.geometry("600x670")
 root.minsize(500, 550)
 
