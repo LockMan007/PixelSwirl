@@ -3,8 +3,12 @@ WORK IN PROGRESS.
 - This app is possibly still inaccurate in some ways and may have issues.
 - All data must be manually entered. It does not detect anything from the game.
 
+2026-09-23 update v7.3.4.3
+- Added 2 new (blue) progress bars. One for total time left of 7 days and one for hours/minutes left for the current day.
+- Also made a variable and moved the version to the top, but it may go away later if I use AI to modify my code.
+
 2026-09-08 update v7.3.4.2
-- reverted message about being "on track to win" or "on track to lose" to say only that and nothing else. I had used AI to help and it decided to spice it up with making bold claims about "historical" instead, that don't need to be determined and was incorrect and was without my request and without telling me it did so.
+- Reverted message about being "on track to win" or "on track to lose" to say only that and nothing else. I had used AI to help and it decided to spice it up with making bold claims about "historical" instead, that don't need to be determined and was incorrect and was without my request and without telling me it did so.
 
 2026-09-08 update v7.3.4.1
 - I think i finally solved the Best/Worst thing, also flipped the colors, green at top, red at bottom.
