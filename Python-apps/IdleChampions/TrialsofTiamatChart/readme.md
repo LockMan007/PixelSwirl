@@ -7,6 +7,8 @@ WORK IN PROGRESS.
 - Added 2 new (blue) progress bars. One for total time left of 7 days and one for hours/minutes left for the current day.
 - Also made a variable and moved the version to the top, but it may go away later if I use AI to modify my code.
 
+<img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/IdleChampions/TrialsofTiamatChart/ToMT_Tier_Progress_Calculator_(v7.3.4.3).png">
+
 2026-09-08 update v7.3.4.2
 - Reverted message about being "on track to win" or "on track to lose" to say only that and nothing else. I had used AI to help and it decided to spice it up with making bold claims about "historical" instead, that don't need to be determined and was incorrect and was without my request and without telling me it did so.
 
