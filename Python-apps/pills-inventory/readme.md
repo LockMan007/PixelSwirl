@@ -1,12 +1,16 @@
-This is version 0.3.1
+This is version 0.3.2
+- Added Pharmacy hours + phone number. (black if closing in 1+ hours, red/bold if closing in 1 or less or is already closed.)
+- (the new section also collapses out of view)
+<img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pharmacy2.png">
+===================================================================================
+version 0.3.1
 - Added refill count (also 0 count, displays red), also OTC and ??? (unknown, red)
 - Added text message box for copy/paste to notify person to call for refill.
 - Added negative count, displays red
 - moved alignment of refill control (renamed from Quick refill control to just refill control)
 - renamed "Available Refills" to "Refills Left" for consistency.
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/medicationstocktracker0.3.1.png">
-  
-===================================================================================
+  ==================================================================================
 version 0.2.01
 added:
 - Hourly Auto-Reload Loop: Implemented using self.root.after(3600000, self.auto_refresh) to reload medications.ini once every 60 minutes.
