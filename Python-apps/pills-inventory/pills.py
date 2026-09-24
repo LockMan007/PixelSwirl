@@ -1,17 +1,54 @@
 import os
 import sys
+import re
 import webbrowser
 import subprocess
 import configparser
-from datetime import datetime, date
+from datetime import datetime, date, time, timedelta
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.3.2"
 CONFIG_FILE = "medications.ini"
 DATE_FORMAT = "%Y-%m-%d"
 DISPLAY_DATE_FORMAT = "%m/%d/%Y"
 GITHUB_URL = "https://github.com/LockMan007/PixelSwirl/tree/main/Python-apps/pills-inventory"
+
+DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def parse_time_string(val_str):
+    """
+    Parses flexible user inputs like '8am', '8:00 AM', '9pm', '21:00', '9:30p', '0', 'closed'.
+    Returns datetime.time object or None if closed/invalid.
+    """
+    s = val_str.strip().lower()
+    if not s or s in ("0", "closed", "none", "off", "-"):
+        return None
+
+    # Match numbers + optional colon + optional am/pm
+    match = re.match(r"^(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m?\.?)?$", s)
+    if not match:
+        return None
+
+    hr = int(match.group(1))
+    mn = int(match.group(2)) if match.group(2) else 0
+    ampm = match.group(3)
+
+    if ampm:
+        is_pm = 'p' in ampm
+        if is_pm and hr < 12:
+            hr += 12
+        elif not is_pm and hr == 12:
+            hr = 0
+    elif hr < 7:  # Heuristic: single numbers like 1..6 default to PM for closing hours
+        hr += 12
+
+    try:
+        return time(hr, mn)
+    except ValueError:
+        return None
+
 
 class ToolTip:
     def __init__(self, widget, text):
@@ -58,29 +95,29 @@ class MedTrackerApp:
         self.selected_section = None
         self.last_refresh_time = None
         self.include_days_left_var = tk.BooleanVar(value=False)
+        self.include_phone_var = tk.BooleanVar(value=False)
         self.refill_type_var = tk.StringVar(value="NUMERIC")
+
+        self.day_entries = {}
 
         self.load_config()
         self.process_daily_deductions()
         
-        # Setup Window Size
-        saved_geo = self.config.get("SYSTEM", "window_geometry", fallback="950x750")
+        saved_geo = self.config.get("SYSTEM", "window_geometry", fallback="980x780")
         try:
             self.root.geometry(saved_geo)
         except tk.TclError:
-            self.root.geometry("950x750")
+            self.root.geometry("980x780")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.update_titlebar()
 
-        # Build Menu
         self.create_menu()
 
-        # Main Container
         main_container = ttk.Frame(self.root)
         main_container.pack(fill="both", expand=True)
 
-        # Collapsible Header Toggle
+        # Toggle Button
         self.is_panel_visible = True
         self.btn_toggle_panel = ttk.Button(
             main_container, 
@@ -89,68 +126,58 @@ class MedTrackerApp:
         )
         self.btn_toggle_panel.pack(fill="x", padx=10, pady=(5, 0))
 
-        # Input Frame (Add / Update Medication)
-        self.input_frame = ttk.LabelFrame(main_container, text="Add / Update Medication", padding=10)
+        # Main Input Panel (Collapsible Container)
+        self.input_frame = ttk.Frame(main_container, padding=5)
         self.input_frame.pack(fill="x", padx=10, pady=5)
 
-        # Left Column - Standard Inputs
-        left_col = ttk.Frame(self.input_frame)
-        left_col.grid(row=0, column=0, sticky="nw", padx=(0, 20))
+        # Left Sub-Frame: Add/Update Medication + Refill Controls
+        left_main_box = ttk.LabelFrame(self.input_frame, text=" Add / Update Medication ", padding=8)
+        left_main_box.pack(side="left", fill="both", expand=True, padx=(0, 5))
+
+        left_col = ttk.Frame(left_main_box)
+        left_col.grid(row=0, column=0, sticky="nw", padx=(0, 15))
 
         ttk.Label(left_col, text="Person Name:").grid(row=0, column=0, sticky="w", padx=2, pady=2)
-        self.entry_person = ttk.Entry(left_col, width=20)
+        self.entry_person = ttk.Entry(left_col, width=18)
         self.entry_person.grid(row=0, column=1, sticky="w", padx=2, pady=2)
         self.entry_person.bind("<KeyRelease>", self.on_input_change)
 
         ttk.Label(left_col, text="Pill Name:").grid(row=1, column=0, sticky="w", padx=2, pady=2)
-        self.entry_pill = ttk.Entry(left_col, width=20)
+        self.entry_pill = ttk.Entry(left_col, width=18)
         self.entry_pill.grid(row=1, column=1, sticky="w", padx=2, pady=2)
         self.entry_pill.bind("<KeyRelease>", self.on_input_change)
 
         ttk.Label(left_col, text="Current Quantity:").grid(row=2, column=0, sticky="w", padx=2, pady=2)
-        self.entry_quantity = ttk.Entry(left_col, width=20)
+        self.entry_quantity = ttk.Entry(left_col, width=18)
         self.entry_quantity.grid(row=2, column=1, sticky="w", padx=2, pady=2)
 
         ttk.Label(left_col, text="Daily Frequency:").grid(row=3, column=0, sticky="w", padx=2, pady=2)
-        self.entry_daily = ttk.Entry(left_col, width=20)
+        self.entry_daily = ttk.Entry(left_col, width=18)
         self.entry_daily.grid(row=3, column=1, sticky="w", padx=2, pady=2)
 
         ttk.Label(left_col, text="Refills Left:").grid(row=4, column=0, sticky="w", padx=2, pady=2)
         
-        # Refills Left Selector Container
         refills_container = ttk.Frame(left_col)
         refills_container.grid(row=4, column=1, sticky="w", padx=2, pady=2)
 
         self.radio_num = ttk.Radiobutton(
-            refills_container, 
-            variable=self.refill_type_var, 
-            value="NUMERIC",
-            command=self.toggle_refill_mode
+            refills_container, variable=self.refill_type_var, value="NUMERIC", command=self.toggle_refill_mode
         )
         self.radio_num.pack(side="left", padx=(0, 2))
 
-        self.entry_refills_left = ttk.Entry(refills_container, width=12)
-        self.entry_refills_left.pack(side="left", padx=(0, 6))
+        self.entry_refills_left = ttk.Entry(refills_container, width=8)
+        self.entry_refills_left.pack(side="left", padx=(0, 4))
 
         self.radio_otc = ttk.Radiobutton(
-            refills_container, 
-            text="OTC", 
-            variable=self.refill_type_var, 
-            value="OTC",
-            command=self.toggle_refill_mode
+            refills_container, text="OTC", variable=self.refill_type_var, value="OTC", command=self.toggle_refill_mode
         )
-        self.radio_otc.pack(side="left", padx=(0, 6))
+        self.radio_otc.pack(side="left", padx=(0, 4))
 
         self.radio_unk = ttk.Radiobutton(
-            refills_container, 
-            text="???", 
-            variable=self.refill_type_var, 
-            value="???",
-            command=self.toggle_refill_mode
+            refills_container, text="???", variable=self.refill_type_var, value="???", command=self.toggle_refill_mode
         )
         self.radio_unk.pack(side="left")
 
-        # Left Action Buttons
         btn_box_left = ttk.Frame(left_col)
         btn_box_left.grid(row=5, column=0, columnspan=2, pady=(8, 0), sticky="w")
 
@@ -163,9 +190,9 @@ class MedTrackerApp:
         self.btn_delete = ttk.Button(btn_box_left, text="Delete", command=self.delete_medication, state="disabled")
         self.btn_delete.pack(side="left", padx=2)
 
-        # Right Column - Refill Controls
-        right_col = ttk.LabelFrame(self.input_frame, text=" Refill Controls ", padding=8)
-        right_col.grid(row=0, column=1, sticky="nw", padx=(0, 20))
+        # Refill Controls Frame
+        right_col = ttk.LabelFrame(left_main_box, text=" Refill Controls ", padding=6)
+        right_col.grid(row=0, column=1, sticky="nw", padx=(0, 10))
 
         ttk.Label(right_col, text="Add Refill Amount:").grid(row=0, column=0, columnspan=2, sticky="w", padx=2, pady=(0, 2))
         self.entry_add_refill = ttk.Entry(right_col, width=8)
@@ -179,7 +206,46 @@ class MedTrackerApp:
         btn_save_default = ttk.Button(right_col, text="Save Default", command=self.save_default_refill)
         btn_save_default.grid(row=3, column=1, sticky="w", padx=0, pady=0)
 
-        # Interactive Banner Indicator (Left Aligned)
+        # Right Sub-Frame: Pharmacy Hours & Settings
+        pharmacy_box = ttk.LabelFrame(self.input_frame, text=" Pharmacy Hours ", padding=6)
+        pharmacy_box.pack(side="right", fill="y", anchor="n")
+
+        # Grid for Mon-Sun
+        ttk.Label(pharmacy_box, text="Open", font=("Arial", 8, "bold")).grid(row=0, column=1, padx=2)
+        ttk.Label(pharmacy_box, text="Close", font=("Arial", 8, "bold")).grid(row=0, column=2, padx=2)
+
+        for idx, day in enumerate(DAYS, start=1):
+            ttk.Label(pharmacy_box, text=f"{day}:").grid(row=idx, column=0, sticky="e", padx=2, pady=1)
+            e_open = ttk.Entry(pharmacy_box, width=7)
+            e_open.grid(row=idx, column=1, padx=2, pady=1)
+            e_close = ttk.Entry(pharmacy_box, width=7)
+            e_close.grid(row=idx, column=2, padx=2, pady=1)
+            self.day_entries[day] = (e_open, e_close)
+
+        # Quick Copy & Save Controls
+        copy_box = ttk.Frame(pharmacy_box)
+        copy_box.grid(row=8, column=0, columnspan=3, pady=(3, 3))
+
+        btn_copy_wk = ttk.Button(copy_box, text="Mon→Wkdays", command=self.copy_mon_to_weekdays)
+        btn_copy_wk.pack(side="left", padx=1)
+        ToolTip(btn_copy_wk, "Copy Monday hours to Tue-Fri")
+
+        btn_copy_all = ttk.Button(copy_box, text="Mon→All", command=self.copy_mon_to_all)
+        btn_copy_all.pack(side="left", padx=1)
+        ToolTip(btn_copy_all, "Copy Monday hours to all days")
+
+        btn_save_pharmacy = ttk.Button(pharmacy_box, text="Save Pharmacy", command=self.save_pharmacy_data)
+        btn_save_pharmacy.grid(row=9, column=0, columnspan=3, sticky="ew", padx=2, pady=(2, 4))
+
+        # Phone Number Entry
+        phone_frame = ttk.Frame(pharmacy_box)
+        phone_frame.grid(row=10, column=0, columnspan=3, sticky="w", pady=(2, 0))
+        
+        ttk.Label(phone_frame, text="Phone:").pack(side="left", padx=(0, 2))
+        self.entry_phone = ttk.Entry(phone_frame, width=16)
+        self.entry_phone.pack(side="left")
+
+        # Status Label
         self.lbl_status = tk.Label(
             main_container, 
             text="", 
@@ -192,11 +258,11 @@ class MedTrackerApp:
         self.lbl_status.bind("<Button-1>", lambda e: self.reload_data_from_ini())
         ToolTip(self.lbl_status, "refresh data")
 
-        # Dashboard View Area Frame
+        # Dashboard View Area
         dashboard_view = ttk.Frame(main_container)
         dashboard_view.pack(fill="both", expand=True, padx=10, pady=5)
 
-        # Left Side: Scrollable Frame for Person Cards
+        # Left Side: Cards
         canvas_container = ttk.Frame(dashboard_view)
         canvas_container.pack(side="left", fill="both", expand=True)
 
@@ -215,13 +281,32 @@ class MedTrackerApp:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # Right Side: Single Global Text Generator Panel
+        # Right Side: Pharmacy Status + Text Generator
         right_panel = ttk.Frame(dashboard_view, padding=(10, 0, 0, 0))
         right_panel.pack(side="right", fill="y", anchor="n")
 
+        # Pharmacy Closing Countdown Widget
+        ttk.Label(right_panel, text="Pharmacy Closes in:", font=("Arial", 9, "bold")).pack(anchor="w")
+        
+        self.lbl_closing_time = tk.Label(right_panel, text="Closed", font=("Arial", 9, "normal"), fg="black", anchor="w")
+        self.lbl_closing_time.pack(anchor="w", pady=(0, 4))
+
+        self.lbl_phone_display = ttk.Label(right_panel, text="", font=("Arial", 9))
+        self.lbl_phone_display.pack(anchor="w", pady=(0, 2))
+
+        chk_phone = ttk.Checkbutton(
+            right_panel, 
+            text="Include phone in message", 
+            variable=self.include_phone_var,
+            command=self.render_dashboard
+        )
+        chk_phone.pack(anchor="w", pady=(0, 10))
+
+        ttk.Separator(right_panel, orient="horizontal").pack(fill="x", pady=5)
+
         ttk.Label(right_panel, text="Text Message Generator:", font=("Arial", 9, "bold")).pack(anchor="w", pady=(0, 2))
         
-        self.txt_global_message = tk.Text(right_panel, width=32, height=15, font=("Arial", 9), wrap="word")
+        self.txt_global_message = tk.Text(right_panel, width=32, height=12, font=("Arial", 9), wrap="word")
         self.txt_global_message.pack(fill="both", expand=True)
 
         chk_days = ttk.Checkbutton(
@@ -232,7 +317,7 @@ class MedTrackerApp:
         )
         chk_days.pack(anchor="w", pady=(5, 0))
 
-        # Initial Load & Timer Activation
+        self.load_pharmacy_fields()
         self.reload_data_from_ini()
         self.schedule_hourly_auto_refresh()
 
@@ -259,6 +344,96 @@ class MedTrackerApp:
             self.entry_refills_left.focus_set()
         else:
             self.entry_refills_left.config(state="disabled")
+
+    def copy_mon_to_weekdays(self):
+        mon_open = self.day_entries["Mon"][0].get()
+        mon_close = self.day_entries["Mon"][1].get()
+        for day in ["Tue", "Wed", "Thu", "Fri"]:
+            self.day_entries[day][0].delete(0, tk.END)
+            self.day_entries[day][0].insert(0, mon_open)
+            self.day_entries[day][1].delete(0, tk.END)
+            self.day_entries[day][1].insert(0, mon_close)
+
+    def copy_mon_to_all(self):
+        mon_open = self.day_entries["Mon"][0].get()
+        mon_close = self.day_entries["Mon"][1].get()
+        for day in DAYS[1:]:
+            self.day_entries[day][0].delete(0, tk.END)
+            self.day_entries[day][0].insert(0, mon_open)
+            self.day_entries[day][1].delete(0, tk.END)
+            self.day_entries[day][1].insert(0, mon_close)
+
+    def load_pharmacy_fields(self):
+        if not self.config.has_section("PHARMACY"):
+            return
+        
+        for day in DAYS:
+            o_val = self.config.get("PHARMACY", f"{day}_open", fallback="")
+            c_val = self.config.get("PHARMACY", f"{day}_close", fallback="")
+            
+            self.day_entries[day][0].delete(0, tk.END)
+            self.day_entries[day][0].insert(0, o_val)
+            
+            self.day_entries[day][1].delete(0, tk.END)
+            self.day_entries[day][1].insert(0, c_val)
+
+        phone_val = self.config.get("PHARMACY", "phone", fallback="")
+        self.entry_phone.delete(0, tk.END)
+        self.entry_phone.insert(0, phone_val)
+
+    def save_pharmacy_data(self):
+        if not self.config.has_section("PHARMACY"):
+            self.config.add_section("PHARMACY")
+
+        for day in DAYS:
+            self.config.set("PHARMACY", f"{day}_open", self.day_entries[day][0].get().strip())
+            self.config.set("PHARMACY", f"{day}_close", self.day_entries[day][1].get().strip())
+
+        self.config.set("PHARMACY", "phone", self.entry_phone.get().strip())
+        self.save_config()
+        self.render_dashboard()
+        messagebox.showinfo("Saved", "Pharmacy hours and phone number updated successfully.")
+
+    def update_pharmacy_closing_widget(self):
+        if not self.config.has_section("PHARMACY"):
+            self.lbl_closing_time.config(text="Hours not set", fg="black")
+            return
+
+        phone_str = self.config.get("PHARMACY", "phone", fallback="")
+        self.lbl_phone_display.config(text=phone_str if phone_str else "")
+
+        today_name = DAYS[date.today().weekday()]
+        close_str = self.config.get("PHARMACY", f"{today_name}_close", fallback="")
+        open_str = self.config.get("PHARMACY", f"{today_name}_open", fallback="")
+
+        close_time = parse_time_string(close_str)
+        open_time = parse_time_string(open_str)
+
+        if not close_time or not open_time:
+            self.lbl_closing_time.config(text="Closed Today", fg="black", font=("Arial", 9, "normal"))
+            return
+
+        now = datetime.now()
+        dt_close = datetime.combine(now.date(), close_time)
+        dt_open = datetime.combine(now.date(), open_time)
+
+        if now < dt_open:
+            self.lbl_closing_time.config(text=f"Opens at {dt_open.strftime('%I:%M %p')}", fg="black", font=("Arial", 9, "normal"))
+        elif now > dt_close:
+            self.lbl_closing_time.config(text="Closed for the day", fg="red", font=("Arial", 9, "bold"))
+        else:
+            diff = dt_close - now
+            seconds = int(diff.total_seconds())
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+
+            time_text = f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+            
+            # Red text if 1 hour or less remaining
+            if seconds <= 3600:
+                self.lbl_closing_time.config(text=time_text, fg="red", font=("Arial", 9, "bold"))
+            else:
+                self.lbl_closing_time.config(text=time_text, fg="black", font=("Arial", 9, "normal"))
 
     def reload_data_from_ini(self):
         self.last_refresh_time = datetime.now().strftime("%I:%M %p")
@@ -363,7 +538,7 @@ class MedTrackerApp:
 
         if days_passed > 0:
             for section in self.config.sections():
-                if section == "SYSTEM":
+                if section in ("SYSTEM", "PHARMACY"):
                     continue
                 qty = int(self.config.get(section, "Quantity", fallback="0"))
                 daily = int(self.config.get(section, "Daily", fallback="0"))
@@ -506,7 +681,6 @@ class MedTrackerApp:
         self.entry_quantity.delete(0, tk.END)
         self.entry_quantity.insert(0, str(new_total))
 
-        # Decrement refills count by 1 if numeric
         refills_val = self.get_selected_refills_value()
         if refills_val and self.is_valid_int(refills_val):
             updated_refills = max(0, int(refills_val) - 1)
@@ -553,20 +727,24 @@ class MedTrackerApp:
             med_strings.append(f'"{m["pill"]}"{suffix}')
 
         if len(med_strings) == 1:
-            return f'{person} needs to call in refills on {med_strings[0]}.'
+            msg = f'{person} needs to call in refills on {med_strings[0]}.'
         elif len(med_strings) == 2:
-            return f'{person} needs to call in refills for {med_strings[0]} and {med_strings[1]}.'
+            msg = f'{person} needs to call in refills for {med_strings[0]} and {med_strings[1]}.'
         else:
             formatted_list = ", ".join(med_strings[:-1]) + f', and {med_strings[-1]}'
-            return f'{person} needs to call in refills for {formatted_list}.'
+            msg = f'{person} needs to call in refills for {formatted_list}.'
+
+        return msg
 
     def render_dashboard(self):
+        self.update_pharmacy_closing_widget()
+
         for widget in self.scroll_frame.winfo_children():
             widget.destroy()
 
         people = {}
         for section in self.config.sections():
-            if section == "SYSTEM":
+            if section in ("SYSTEM", "PHARMACY"):
                 continue
 
             try:
@@ -605,7 +783,6 @@ class MedTrackerApp:
             p_frame = ttk.LabelFrame(self.scroll_frame, text=f" Name: {person} ", padding=10)
             p_frame.pack(fill="x", expand=True, padx=5, pady=8)
 
-            # Table Headers
             headers = ["Pill", "Days Remaining", "Quantity Remaining", "Taken Per Day", "Refills Left"]
             for col_idx, text in enumerate(headers):
                 lbl = ttk.Label(p_frame, text=text, font=("Arial", 9, "bold"))
@@ -617,7 +794,6 @@ class MedTrackerApp:
                 lbl_pill = ttk.Label(p_frame, text=med["pill"], cursor="hand2")
                 lbl_days = ttk.Label(p_frame, text=f"{med['days_left']} Days remaining", cursor="hand2")
                 
-                # Red text ONLY if quantity is at or below threshold (days_left <= 7)
                 is_low_stock = med["days_left"] <= 7
                 qty_fg = "red" if is_low_stock else "black"
                 qty_font = ("Arial", 9, "bold") if is_low_stock else ("Arial", 9, "normal")
@@ -632,7 +808,6 @@ class MedTrackerApp:
                 
                 lbl_daily = ttk.Label(p_frame, text=f"{med['daily']} per day")
 
-                # Refill display & color evaluation
                 r_val = med["refills_left"]
                 if r_val == "OTC":
                     refill_text_str = "OTC"
@@ -680,10 +855,15 @@ class MedTrackerApp:
             if person_msg:
                 all_messages.append(person_msg)
 
-        # Update Single Global Text Generator Box
+        # Update Global Message Box
         self.txt_global_message.delete("1.0", tk.END)
         if all_messages:
-            self.txt_global_message.insert("1.0", "\n".join(all_messages))
+            full_text = "\n".join(all_messages)
+            if self.include_phone_var.get():
+                phone_str = self.config.get("PHARMACY", "phone", fallback="").strip()
+                if phone_str:
+                    full_text += f"\nPhone: {phone_str}"
+            self.txt_global_message.insert("1.0", full_text)
 
     def on_close(self):
         current_geo = self.root.geometry()
