@@ -1,4 +1,13 @@
-This is version 0.2.01
+This is version 0.3.1
+- Added refill count (also 0 count, displays red), also OTC and ??? (unknown, red)
+- Added text message box for copy/paste to notify person to call for refill.
+- Added negative count, displays red
+- moved alignment of refill control (renamed from Quick refill control to just refill control)
+- renamed "Available Refills" to "Refills Left" for consistency.
+<img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/medicationstocktracker0.3.1.png">
+  
+===================================================================================
+version 0.2.01
 added:
 - Hourly Auto-Reload Loop: Implemented using self.root.after(3600000, self.auto_refresh) to reload medications.ini once every 60 minutes.
 - Header Label Updates: Displays the last refreshed time in 12-hour format with AM/PM (e.g., (Refreshed at 08:00 AM)).
@@ -6,7 +15,7 @@ added:
 - Menu Addition: Added a Refresh item to the menubar between File and About.
 ===================================================================================
 
-This is version 0.1
+version 0.1
 The purpose is to keep track of when you need refills.
 Input the Persons Name, Quantity remaining, TOTAL Quantity taken per day.
 It will tell you how many days you have left and sort by least days to most days.
