@@ -10,6 +10,7 @@ from tkinter import ttk, messagebox
 
 APP_VERSION = "0.3.3"
 CONFIG_FILE = "medications.ini"
+SETTINGS_FILE = "settings.ini"
 DATE_FORMAT = "%Y-%m-%d"
 DISPLAY_DATE_FORMAT = "%m/%d/%Y"
 GITHUB_URL = "https://github.com/LockMan007/PixelSwirl/tree/main/Python-apps/pills-inventory"
@@ -99,6 +100,7 @@ class MedTrackerApp:
     def __init__(self, root):
         self.root = root
         self.config = configparser.ConfigParser()
+        self.settings_config = configparser.ConfigParser()
         self.selected_section = None
         self.last_refresh_time = None
         self.include_days_left_var = tk.BooleanVar(value=False)
@@ -119,10 +121,11 @@ class MedTrackerApp:
 
         self.day_entries = {}
 
+        self.load_settings()
         self.load_config()
         self.process_daily_deductions()
         
-        saved_geo = self.config.get("SYSTEM", "window_geometry", fallback="980x780")
+        saved_geo = self.settings_config.get("SYSTEM", "window_geometry", fallback="980x780")
         try:
             self.root.geometry(saved_geo)
         except tk.TclError:
@@ -317,7 +320,7 @@ class MedTrackerApp:
             right_panel, 
             text="Include phone in message", 
             variable=self.include_phone_var,
-            command=self.render_dashboard
+            command=self.on_setting_changed
         )
         chk_phone.pack(anchor="w", pady=(0, 10))
 
@@ -332,7 +335,7 @@ class MedTrackerApp:
             right_panel, 
             text="Include days left in text message generator", 
             variable=self.include_days_left_var,
-            command=self.render_dashboard
+            command=self.on_setting_changed
         )
         chk_days.pack(anchor="w", pady=(5, 0))
 
@@ -340,10 +343,61 @@ class MedTrackerApp:
         self.reload_data_from_ini()
         self.schedule_hourly_auto_refresh()
 
+    def load_settings(self):
+        if os.path.exists(SETTINGS_FILE):
+            self.settings_config.read(SETTINGS_FILE)
+
+        if not self.settings_config.has_section("VISIBILITY"):
+            self.settings_config.add_section("VISIBILITY")
+        if not self.settings_config.has_section("CENSORING"):
+            self.settings_config.add_section("CENSORING")
+        if not self.settings_config.has_section("GENERATOR"):
+            self.settings_config.add_section("GENERATOR")
+        if not self.settings_config.has_section("SYSTEM"):
+            self.settings_config.add_section("SYSTEM")
+
+        self.show_name_var.set(self.settings_config.getboolean("VISIBILITY", "show_name", fallback=True))
+        self.show_pill_var.set(self.settings_config.getboolean("VISIBILITY", "show_pill", fallback=True))
+        self.show_days_remaining_var.set(self.settings_config.getboolean("VISIBILITY", "show_days_remaining", fallback=True))
+        self.show_quantity_remaining_var.set(self.settings_config.getboolean("VISIBILITY", "show_quantity_remaining", fallback=True))
+        self.show_taken_per_day_var.set(self.settings_config.getboolean("VISIBILITY", "show_taken_per_day", fallback=True))
+        self.show_refills_left_var.set(self.settings_config.getboolean("VISIBILITY", "show_refills_left", fallback=True))
+
+        self.censor_username_var.set(self.settings_config.getboolean("CENSORING", "censor_username", fallback=False))
+        self.censor_medication_var.set(self.settings_config.getboolean("CENSORING", "censor_medication", fallback=False))
+
+        self.include_days_left_var.set(self.settings_config.getboolean("GENERATOR", "include_days_left", fallback=False))
+        self.include_phone_var.set(self.settings_config.getboolean("GENERATOR", "include_phone", fallback=False))
+
+    def save_settings(self):
+        self.settings_config.set("VISIBILITY", "show_name", str(self.show_name_var.get()))
+        self.settings_config.set("VISIBILITY", "show_pill", str(self.show_pill_var.get()))
+        self.settings_config.set("VISIBILITY", "show_days_remaining", str(self.show_days_remaining_var.get()))
+        self.settings_config.set("VISIBILITY", "show_quantity_remaining", str(self.show_quantity_remaining_var.get()))
+        self.settings_config.set("VISIBILITY", "show_taken_per_day", str(self.show_taken_per_day_var.get()))
+        self.settings_config.set("VISIBILITY", "show_refills_left", str(self.show_refills_left_var.get()))
+
+        self.settings_config.set("CENSORING", "censor_username", str(self.censor_username_var.get()))
+        self.settings_config.set("CENSORING", "censor_medication", str(self.censor_medication_var.get()))
+
+        self.settings_config.set("GENERATOR", "include_days_left", str(self.include_days_left_var.get()))
+        self.settings_config.set("GENERATOR", "include_phone", str(self.include_phone_var.get()))
+
+        current_geo = self.root.geometry()
+        self.settings_config.set("SYSTEM", "window_geometry", current_geo)
+
+        with open(SETTINGS_FILE, "w") as f:
+            self.settings_config.write(f)
+
+    def on_setting_changed(self):
+        self.save_settings()
+        self.render_dashboard()
+
     def create_menu(self):
         menubar = tk.Menu(self.root)
         
         file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Save All", command=self.save_all)
         file_menu.add_command(label="Open _ini_ File", command=self.open_ini_file)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_close)
@@ -353,17 +407,17 @@ class MedTrackerApp:
         settings_menu = tk.Menu(menubar, tearoff=0)
         
         show_hide_menu = tk.Menu(settings_menu, tearoff=0)
-        show_hide_menu.add_checkbutton(label="Name", variable=self.show_name_var, command=self.render_dashboard)
-        show_hide_menu.add_checkbutton(label="Pill", variable=self.show_pill_var, command=self.render_dashboard)
-        show_hide_menu.add_checkbutton(label="Days Remaining", variable=self.show_days_remaining_var, command=self.render_dashboard)
-        show_hide_menu.add_checkbutton(label="Quantity Remaining", variable=self.show_quantity_remaining_var, command=self.render_dashboard)
-        show_hide_menu.add_checkbutton(label="Taken Per Day", variable=self.show_taken_per_day_var, command=self.render_dashboard)
-        show_hide_menu.add_checkbutton(label="Refills Left", variable=self.show_refills_left_var, command=self.render_dashboard)
+        show_hide_menu.add_checkbutton(label="Name", variable=self.show_name_var, command=self.on_setting_changed)
+        show_hide_menu.add_checkbutton(label="Pill", variable=self.show_pill_var, command=self.on_setting_changed)
+        show_hide_menu.add_checkbutton(label="Days Remaining", variable=self.show_days_remaining_var, command=self.on_setting_changed)
+        show_hide_menu.add_checkbutton(label="Quantity Remaining", variable=self.show_quantity_remaining_var, command=self.on_setting_changed)
+        show_hide_menu.add_checkbutton(label="Taken Per Day", variable=self.show_taken_per_day_var, command=self.on_setting_changed)
+        show_hide_menu.add_checkbutton(label="Refills Left", variable=self.show_refills_left_var, command=self.on_setting_changed)
         
         settings_menu.add_cascade(label="Show / Hide Elements", menu=show_hide_menu)
         settings_menu.add_separator()
-        settings_menu.add_checkbutton(label="Censor Username", variable=self.censor_username_var, command=self.render_dashboard)
-        settings_menu.add_checkbutton(label="Censor Medication", variable=self.censor_medication_var, command=self.render_dashboard)
+        settings_menu.add_checkbutton(label="Censor Username", variable=self.censor_username_var, command=self.on_setting_changed)
+        settings_menu.add_checkbutton(label="Censor Medication", variable=self.censor_medication_var, command=self.on_setting_changed)
 
         menubar.add_cascade(label="Settings", menu=settings_menu)
 
@@ -374,6 +428,33 @@ class MedTrackerApp:
         menubar.add_cascade(label="About", menu=about_menu)
 
         self.root.config(menu=menubar)
+
+    def save_all(self):
+        # Save Pharmacy fields actively typed into UI to config
+        if not self.config.has_section("PHARMACY"):
+            self.config.add_section("PHARMACY")
+
+        for day in DAYS:
+            self.config.set("PHARMACY", f"{day}_open", self.day_entries[day][0].get().strip())
+            self.config.set("PHARMACY", f"{day}_close", self.day_entries[day][1].get().strip())
+
+        self.config.set("PHARMACY", "phone", self.entry_phone.get().strip())
+
+        # Write out configuration files
+        self.save_config()
+        self.save_settings()
+
+        msg = (
+            "All data has been saved successfully!\n\n"
+            "Saved Groups & Target Files:\n"
+            "• Medication Info -> medications.ini\n"
+            "• Pharmacy Info -> medications.ini\n"
+            "• Visibility Settings -> settings.ini\n"
+            "• Censoring Settings -> settings.ini\n"
+            "• Text Generator Settings -> settings.ini\n"
+            "• System Preferences & Layout -> settings.ini"
+        )
+        messagebox.showinfo("Save All Complete", msg)
 
     def log_manual_change(self, entry_str):
         year = date.today().strftime("%Y")
@@ -987,8 +1068,7 @@ class MedTrackerApp:
             self.txt_global_message.insert("1.0", full_text)
 
     def on_close(self):
-        current_geo = self.root.geometry()
-        self.config.set("SYSTEM", "window_geometry", current_geo)
+        self.save_settings()
         self.save_config()
         self.root.destroy()
 
