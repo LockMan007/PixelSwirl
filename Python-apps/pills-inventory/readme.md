@@ -1,4 +1,4 @@
-version 0.3.3 (beta)
+version 0.3.3 (beta) note this was updated a few times today, while keeping the same version)
 - I haven't tested everything, but pretty sure it's fine.
 - The beta features are:
 - Hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
