@@ -7,6 +7,7 @@ version 0.3.3 (beta) note this was updated a few times today, while keeping the 
 - Added Save `Log-YEAR.txt` and `Refills-YEAR.txt` for logging information.
 - Added `Settings.ini` for some of the settings.
 - Added File/Save with a list of what is saved, this should be unnecessary, but is likely a good idea for now to hopefully avoid losing progress.
+- you can even condense the visible information down to just when you need a refill, which is not shown in the example below.
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pharmacy0.3.3.png">
 <HR>
 
