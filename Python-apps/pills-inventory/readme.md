@@ -1,4 +1,5 @@
 version 0.3.3 (beta) note this was updated a few times today, while keeping the same version)
+<a href="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pills-0.3.3.py">https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pills-0.3.3.py</a>
 - I haven't tested everything, but pretty sure it's fine.
 - The beta features are:
 - Hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
