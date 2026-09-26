@@ -827,22 +827,48 @@ class MedTrackerApp:
             messagebox.showerror("Error", "Enter valid integers for current quantity and refill amount.")
             return
 
-        new_total = int(current_qty) + int(add_amount)
+        current_total = int(current_qty)
+        added_pills = int(add_amount)
+        new_total = current_total + added_pills
+
+        refills_val = self.get_selected_refills_value()
+        refill_log_val = refills_val if refills_val else "0"
+
+        # Check if refills left is numeric to calculate values for the dialog
+        if refills_val and self.is_valid_int(refills_val):
+            current_refills = int(refills_val)
+            new_refills = max(0, current_refills - 1)
+
+            confirm_msg = (
+                f"You are about to add {add_amount} pills as a refill ({current_total} -> {new_total}).\n\n"
+                f"Do you ALSO want to subtract 1 from refill count?\n\n"
+                f"Choose YES to set refill amount from ({current_refills} -> {new_refills}).\n\n"
+                f"Choose NO if you have it set already to the refill count listed on the new bottle (Stays {current_refills})."
+            )
+
+            # askyesnocancel returns: True for Yes, False for No, None for Cancel
+            response = messagebox.askyesnocancel("Confirm Refill", confirm_msg)
+
+            # Abort execution if user clicks Cancel or closes the dialog box
+            if response is None:
+                return
+
+            if response is True:
+                self.entry_refills_left.delete(0, tk.END)
+                self.entry_refills_left.insert(0, str(new_refills))
+                refill_log_val = str(new_refills)
+        else:
+            # Fallback for OTC / ??? modes: simple Yes/No/Cancel confirmation
+            confirm_msg = f"You are about to add {add_amount} pills as a refill ({current_total} -> {new_total}).\n\nProceed?"
+            if not messagebox.askyesno("Confirm Refill", confirm_msg):
+                return
+
+        # Perform quantity update and saving only if not cancelled
         self.entry_quantity.delete(0, tk.END)
         self.entry_quantity.insert(0, str(new_total))
 
-        refills_val = self.get_selected_refills_value()
-        if refills_val and self.is_valid_int(refills_val):
-            updated_refills = max(0, int(refills_val) - 1)
-            self.entry_refills_left.delete(0, tk.END)
-            self.entry_refills_left.insert(0, str(updated_refills))
-            refill_log_val = str(updated_refills)
-        else:
-            refill_log_val = refills_val if refills_val else "0"
-
-        # Log to Refills-YEAR.txt
+        # Log to Refills-YEAR.txt and save config
         self.log_refill_action(person, pill, add_amount, refill_log_val)
-
         self.save_medication()
 
     def save_default_refill(self):
