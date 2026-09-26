@@ -1,3 +1,9 @@
+version 0.3.3 (beta)
+- I only tested if this launched. I did not test if anything broke or if all functions added work.
+- The beta features are:
+- hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
+- Saving when you click "Refill Now" with messaging asking if you want to -1 to refill count (maybe a better solution later).
+
 This is version 0.3.2
 - Added Pharmacy hours + phone number. (black if closing in 1+ hours, red/bold if closing in 1 or less or is already closed.)
 - (the new section also collapses out of view)
