@@ -2,7 +2,7 @@ version 0.3.3 (beta)
 - I haven't tested everything, but pretty sure it's fine.
 - The beta features are:
 - (successfully tested) hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
-- Saving when you click "Refill Now" with messaging asking if you want to -1 to refill count (maybe a better solution later).
+- (FAIL) Saving when you click "Refill Now" with messaging asking if you want to -1 to refill count (maybe a better solution later).
 - Added Save `Log-YEAR.txt` and `Refills-YEAR.txt` for logging information.
 - Added `Settings.ini` for some of the settings.
 - Added File/Save with a list of what is saved, this should be unnecessary, but is likely a good idea for now to hopefully avoid losing progress.
