@@ -4,14 +4,15 @@ version 0.3.3 (beta)
 - hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
 - Saving when you click "Refill Now" with messaging asking if you want to -1 to refill count (maybe a better solution later).
 - Added Save `Log-YEAR.txt` and `Refills-YEAR.txt` for logging information.
-===================================================================================
+
+<HR>
 
 This is version 0.3.2
 - Added Pharmacy hours + phone number. (black if closing in 1+ hours, red/bold if closing in 1 or less or is already closed.)
 - (the new section also collapses out of view)
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pharmacy2.png">
 
-===================================================================================
+<HR>
 
 version 0.3.1
 - Added refill count (also 0 count, displays red), also OTC and ??? (unknown, red)
@@ -21,7 +22,7 @@ version 0.3.1
 - renamed "Available Refills" to "Refills Left" for consistency.
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/medicationstocktracker0.3.1.png">
 
-  ==================================================================================
+  <HR>
   
 version 0.2.01
 added:
@@ -30,7 +31,7 @@ added:
 - Interactive Label & Tooltip: Formatted the label to trigger a refresh on <Button-1> and display a temporary tooltip when hovered over.
 - Menu Addition: Added a Refresh item to the menubar between File and About.
 - 
-===================================================================================
+<HR>
 
 version 0.1
 The purpose is to keep track of when you need refills.
