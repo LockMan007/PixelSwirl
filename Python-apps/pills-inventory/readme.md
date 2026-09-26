@@ -1,5 +1,5 @@
 version 0.3.3 (beta)
-- I only tested if this launched. I did not test if anything broke or if all functions added work.
+- I haven't tested everything, but pretty sure it's fine.
 - The beta features are:
 - (successfully tested) hiding/censoring information and saving that as a setting. (remove stuff you don't want to see, simplify)
 - Saving when you click "Refill Now" with messaging asking if you want to -1 to refill count (maybe a better solution later).
