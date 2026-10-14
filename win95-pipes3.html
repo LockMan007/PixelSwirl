@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 95 3D Pipes Screensaver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Retro Win95 Style Touches */
+        .win95-panel {
+            background: #c0c0c0;
+            border-top: 2px solid #dfdfdf;
+            border-left: 2px solid #dfdfdf;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            box-shadow: inset 1px 1px 0px #ffffff, inset -1px -1px 0px #0a0a0a;
+        }
+        .win95-button {
+            background: #c0c0c0;
+            border-top: 2px solid #ffffff;
+            border-left: 2px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+            box-shadow: 1px 1px 0px #0a0a0a;
+        }
+        .win95-button:active {
+            border-top: 2px solid #808080;
+            border-left: 2px solid #808080;
+            border-right: 2px solid #ffffff;
+            border-bottom: 2px solid #ffffff;
+            box-shadow: inset 1px 1px 0px #0a0a0a;
+            padding-top: 1px;
+            padding-left: 1px;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #dfdfdf;
+            border-left: 1px solid #808080;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c0c0c0;
+            border-top: 1px solid #ffffff;
+            border-left: 1px solid #ffffff;
+            border-right: 2px solid #808080;
+            border-bottom: 2px solid #808080;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container" class="w-full h-full absolute inset-0"></div>
+
+    <!-- Left Hover Trigger Zone -->
+    <div id="left-trigger" class="absolute top-0 left-0 w-8 h-full z-10"></div>
+    <!-- Right Hover Trigger Zone -->
+    <div id="right-trigger" class="absolute top-0 right-0 w-8 h-full z-10"></div>
+
+    <!-- Left Control Menu -->
+    <div id="left-menu" class="absolute top-4 left-4 w-80 win95-panel p-4 text-black z-20 transition-all duration-300 transform -translate-x-[110%] opacity-0 shadow-2xl rounded-sm">
+        <div class="flex justify-between items-center bg-[#000080] text-white px-2 py-1 mb-4 font-bold text-sm tracking-wide">
+            <span>3D Pipes Configuration</span>
+            <button id="close-left" class="bg-[#c0c0c0] text-black px-1.5 py-0.5 text-xs win95-button font-bold hover:bg-gray-300">X</button>
+        </div>
+
+        <div class="space-y-4 text-xs font-semibold">
+            <!-- Max Pipes Slider -->
+            <div>
+                <label for="max-pipes-slider" class="block mb-1 text-gray-800">Max Active Pipes: <span id="max-pipes-val" class="font-bold text-blue-900">8</span></label>
+                <input id="max-pipes-slider" type="range" min="1" max="30" value="8" class="w-full accent-blue-900 cursor-pointer">
+            </div>
+
+            <!-- Pipe Persistence / Max Length Slider (Up to 5000) -->
+            <div>
+                <label for="persistence-slider" class="block mb-1 text-gray-800">Pipe Length / Persistence: <span id="persistence-val" class="font-bold text-blue-900">60</span></label>
+                <input id="persistence-slider" type="range" min="10" max="5000" step="10" value="60" class="w-full accent-blue-900 cursor-pointer">
+            </div>
+
+            <!-- Rotation Controls -->
+            <div class="bg-white p-2 border border-gray-400 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span>Auto-Rotate Camera</span>
+                    <input id="rotation-toggle" type="checkbox" checked class="w-4 h-4 accent-blue-900 cursor-pointer">
+                </div>
+                <button id="btn-straighten" class="w-full py-1 win95-button text-black bg-[#c0c0c0] font-bold hover:bg-gray-200">Reset View (Straighten)</button>
+            </div>
+
+            <!-- Pipe Type Selection -->
+            <div>
+                <label class="block mb-1 text-gray-800">Pipe Texture Style</label>
+                <select id="pipe-style" class="w-full bg-white border border-gray-400 p-1 text-xs focus:outline-none">
+                    <option value="classic">Classic Multi-Color Solid</option>
+                    <option value="metallic">Chrome Metallic</option>
+                    <option value="neon">Neon Cyberpunk Glowing</option>
+                    <option value="rainbow">Psychedelic Rainbow</option>
+                </select>
+            </div>
+
+            <!-- Growth Speed Slider -->
+            <div>
+                <label for="speed-slider" class="block mb-1 text-gray-800">Growth Speed: <span id="speed-val" class="font-bold text-blue-900">Normal</span></label>
+                <input id="speed-slider" type="range" min="1" max="5" value="3" class="w-full accent-blue-900 cursor-pointer">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-2 flex gap-2">
+                <button id="btn-clear" class="flex-1 py-1.5 win95-button text-black bg-[#c0c0c0] font-bold hover:bg-gray-200">Clear Screen</button>
+                <button id="btn-reset" class="flex-1 py-1.5 win95-button text-black bg-[#c0c0c0] font-bold hover:bg-gray-200">Reset Defaults</button>
+            </div>
+        </div>
+        
+        <div class="mt-4 pt-2 border-t border-gray-400 text-center text-[10px] text-gray-600 font-mono">
+            Win95 Screensaver &bull; Hover left edge to toggle
+        </div>
+    </div>
+
+    <!-- Right Stats Menu -->
+    <div id="right-menu" class="absolute top-4 right-4 w-72 win95-panel p-4 text-black z-20 transition-all duration-300 transform translate-x-[110%] opacity-0 shadow-2xl rounded-sm">
+        <div class="flex justify-between items-center bg-[#000080] text-white px-2 py-1 mb-4 font-bold text-sm tracking-wide">
+            <span>System Stats & Help</span>
+            <button id="close-right" class="bg-[#c0c0c0] text-black px-1.5 py-0.5 text-xs win95-button font-bold hover:bg-gray-200">X</button>
+        </div>
+
+        <div class="space-y-3 text-xs font-medium">
+            <div class="bg-white p-2 border border-gray-400 space-y-1 font-mono">
+                <div class="flex justify-between"><span>Active Pipes:</span> <span id="stat-pipes" class="font-bold">0</span></div>
+                <div class="flex justify-between"><span>Exact Segments:</span> <span id="stat-segments" class="font-bold text-blue-900">0</span></div>
+                <div class="flex justify-between"><span>FPS:</span> <span id="stat-fps" class="font-bold">60</span></div>
+            </div>
+
+            <div class="p-2 bg-gray-200 border border-gray-400 text-[11px] leading-relaxed">
+                <p class="font-bold mb-1 text-blue-900">Controls Hint:</p>
+                <ul class="list-disc pl-4 space-y-1 text-gray-700">
+                    <li>Hover near <b>Left Edge</b> for Settings[cite: 3].</li>
+                    <li>Hover near <b>Right Edge</b> for Stats[cite: 3].</li>
+                    <li>Click canvas to clear & respawn pipes.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        let scene, camera, renderer;
+        let pipes = [];
+        let maxPipes = 8;
+        let maxPipeLength = 60; // Persistence / Max length slider value (up to 5000)
+        let autoRotate = true;
+        let pipeStyle = 'classic';
+        let growthSpeed = 3;
+
+        // Target and current rotation for smooth camera straightening
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+
+        const GRID_SIZE = 2;
+        const RANGE = 28;
+
+        const classicColors = [
+            0x00ff00, // Green
+            0xff0000, // Red
+            0x0000ff, // Blue
+            0xffff00, // Yellow
+            0x00ffff, // Cyan
+            0xff00ff, // Magenta
+            0xff8800  // Orange
+        ];
+
+        class PipeSystem {
+            constructor() {
+                this.elements = [];
+                this.reset();
+            }
+
+            reset() {
+                this.clearElements();
+                
+                this.x = (Math.floor(Math.random() * RANGE) - RANGE / 2) * GRID_SIZE;
+                this.y = (Math.floor(Math.random() * RANGE) - RANGE / 2) * GRID_SIZE;
+                this.z = (Math.floor(Math.random() * RANGE) - RANGE / 2) * GRID_SIZE;
+
+                this.dir = new THREE.Vector3(1, 0, 0);
+                this.assignMaterial();
+            }
+
+            clearElements() {
+                if (this.elements) {
+                    this.elements.forEach(el => {
+                        scene.remove(el);
+                        if (el.geometry) el.geometry.dispose();
+                    });
+                }
+                this.elements = [];
+            }
+
+            assignMaterial() {
+                let colorVal = 0xffffff;
+                let roughnessVal = 0.4;
+                let metalnessVal = 0.3;
+                let emissiveVal = 0x000000;
+
+                if (pipeStyle === 'classic') {
+                    colorVal = classicColors[Math.floor(Math.random() * classicColors.length)];
+                } else if (pipeStyle === 'metallic') {
+                    const metallicTints = [0xcccccc, 0x888899, 0xddaa55, 0xaaaaaa];
+                    colorVal = metallicTints[Math.floor(Math.random() * metallicTints.length)];
+                    roughnessVal = 0.1;
+                    metalnessVal = 0.95;
+                } else if (pipeStyle === 'neon') {
+                    const neonColors = [0x00ffcc, 0xff0055, 0xcc00ff, 0xffff00, 0x00ffff];
+                    colorVal = neonColors[Math.floor(Math.random() * neonColors.length)];
+                    emissiveVal = colorVal;
+                    roughnessVal = 0.1;
+                    metalnessVal = 0.2;
+                } else if (pipeStyle === 'rainbow') {
+                    colorVal = Math.random() * 0xffffff;
+                    roughnessVal = 0.3;
+                    metalnessVal = 0.5;
+                }
+
+                this.material = new THREE.MeshStandardMaterial({
+                    color: colorVal,
+                    roughness: roughnessVal,
+                    metalness: metalnessVal,
+                    emissive: emissiveVal,
+                    emissiveIntensity: emissiveVal !== 0x000000 ? 0.5 : 0
+                });
+            }
+
+            update() {
+                // Randomly change direction
+                if (Math.random() < 0.22) {
+                    const dirs = [
+                        new THREE.Vector3(GRID_SIZE, 0, 0),
+                        new THREE.Vector3(-GRID_SIZE, 0, 0),
+                        new THREE.Vector3(0, GRID_SIZE, 0),
+                        new THREE.Vector3(0, -GRID_SIZE, 0),
+                        new THREE.Vector3(0, 0, GRID_SIZE),
+                        new THREE.Vector3(0, 0, -GRID_SIZE)
+                    ];
+                    const validDirs = dirs.filter(d => !d.equals(this.dir.clone().negate()));
+                    this.dir = validDirs[Math.floor(Math.random() * validDirs.length)];
+                }
+
+                const prevX = this.x;
+                const prevY = this.y;
+                const prevZ = this.z;
+
+                this.x += this.dir.x;
+                this.y += this.dir.y;
+                this.z += this.dir.z;
+
+                // Check boundary collision -> reset pipe if out of bounds
+                if (
+                    Math.abs(this.x) > RANGE * GRID_SIZE ||
+                    Math.abs(this.y) > RANGE * GRID_SIZE ||
+                    Math.abs(this.z) > RANGE * GRID_SIZE
+                ) {
+                    this.reset();
+                    return;
+                }
+
+                // 1. Create joint node sphere
+                const sphereGeo = new THREE.SphereGeometry(0.42, 14, 14);
+                const sphere = new THREE.Mesh(sphereGeo, this.material);
+                sphere.position.set(this.x, this.y, this.z);
+                sphere.userData.isPipeElement = true;
+                scene.add(sphere);
+                this.elements.push(sphere);
+
+                // 2. Create pipe cylinder segment
+                const length = GRID_SIZE;
+                const cylGeo = new THREE.CylinderGeometry(0.28, 0.28, length, 10);
+                const cyl = new THREE.Mesh(cylGeo, this.material);
+
+                cyl.position.set((prevX + this.x) / 2, (prevY + this.y) / 2, (prevZ + this.z) / 2);
+                
+                if (this.dir.x !== 0) {
+                    cyl.rotation.z = Math.PI / 2;
+                } else if (this.dir.z !== 0) {
+                    cyl.rotation.x = Math.PI / 2;
+                }
+                cyl.userData.isPipeElement = true;
+                scene.add(cyl);
+                this.elements.push(cyl);
+
+                // Rolling Queue FIFO: remove oldest elements if we exceed persistence length
+                while (this.elements.length > maxPipeLength * 2) {
+                    const oldEl = this.elements.shift();
+                    scene.remove(oldEl);
+                    if (oldEl.geometry) oldEl.geometry.dispose();
+                }
+            }
+        }
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.012);
+
+            camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 45);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Lighting setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight1.position.set(20, 40, 30);
+            scene.add(dirLight1);
+
+            const dirLight2 = new THREE.DirectionalLight(0x88bbff, 0.8);
+            dirLight2.position.set(-20, -30, -20);
+            scene.add(dirLight2);
+
+            updatePipesCount();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('click', (e) => {
+                if (e.target.closest('#left-menu') || e.target.closest('#right-menu')) return;
+                clearAllPipes();
+            });
+
+            setupUIControls();
+            setupEdgeHoverTriggers();
+        }
+
+        function updatePipesCount() {
+            while (pipes.length < maxPipes) {
+                pipes.push(new PipeSystem());
+            }
+            while (pipes.length > maxPipes) {
+                const p = pipes.pop();
+                if (p) p.clearElements();
+            }
+        }
+
+        function clearAllPipes() {
+            pipes.forEach(p => p.reset());
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function setupUIControls() {
+            const sliderPipes = document.getElementById('max-pipes-slider');
+            const valPipes = document.getElementById('max-pipes-val');
+            sliderPipes.addEventListener('input', (e) => {
+                maxPipes = parseInt(e.target.value);
+                valPipes.textContent = maxPipes;
+                updatePipesCount();
+            });
+
+            const sliderPersistence = document.getElementById('persistence-slider');
+            const valPersistence = document.getElementById('persistence-val');
+            sliderPersistence.addEventListener('input', (e) => {
+                maxPipeLength = parseInt(e.target.value);
+                valPersistence.textContent = maxPipeLength >= 1000 ? 'Absurd (' + maxPipeLength + ')' : maxPipeLength;
+            });
+
+            const chkRotation = document.getElementById('rotation-toggle');
+            chkRotation.addEventListener('change', (e) => {
+                autoRotate = e.target.checked;
+            });
+
+            document.getElementById('btn-straighten').addEventListener('click', () => {
+                targetRotationX = 0;
+                targetRotationY = 0;
+            });
+
+            const selStyle = document.getElementById('pipe-style');
+            selStyle.addEventListener('change', (e) => {
+                pipeStyle = e.target.value;
+                pipes.forEach(p => p.assignMaterial());
+                clearAllPipes();
+            });
+
+            const sliderSpeed = document.getElementById('speed-slider');
+            const valSpeed = document.getElementById('speed-val');
+            const speedLabels = { '1': 'Very Slow', '2': 'Slow', '3': 'Normal', '4': 'Fast', '5': 'Turbo' };
+            sliderSpeed.addEventListener('input', (e) => {
+                growthSpeed = parseInt(e.target.value);
+                valSpeed.textContent = speedLabels[growthSpeed] || 'Normal';
+            });
+
+            document.getElementById('btn-clear').addEventListener('click', clearAllPipes);
+            document.getElementById('btn-reset').addEventListener('click', () => {
+                maxPipes = 8;
+                sliderPipes.value = 8;
+                valPipes.textContent = '8';
+                maxPipeLength = 60;
+                sliderPersistence.value = 60;
+                valPersistence.textContent = '60';
+                autoRotate = true;
+                chkRotation.checked = true;
+                targetRotationX = 0;
+                targetRotationY = 0;
+                pipeStyle = 'classic';
+                selStyle.value = 'classic';
+                growthSpeed = 3;
+                sliderSpeed.value = 3;
+                valSpeed.textContent = 'Normal';
+                updatePipesCount();
+                clearAllPipes();
+            });
+
+            document.getElementById('close-left').addEventListener('click', () => {
+                document.getElementById('left-menu').classList.add('-translate-x-[110%]', 'opacity-0');
+            });
+            document.getElementById('close-right').addEventListener('click', () => {
+                document.getElementById('right-menu').classList.add('translate-x-[110%]', 'opacity-0');
+            });
+        }
+
+        function setupEdgeHoverTriggers() {
+            const leftTrigger = document.getElementById('left-trigger');
+            const rightTrigger = document.getElementById('right-trigger');
+            const leftMenu = document.getElementById('left-menu');
+            const rightMenu = document.getElementById('right-menu');
+
+            leftTrigger.addEventListener('mouseenter', () => {
+                leftMenu.classList.remove('-translate-x-[110%]', 'opacity-0');
+            });
+
+            leftMenu.addEventListener('mouseleave', (e) => {
+                if (e.clientX > leftMenu.getBoundingClientRect().right) {
+                    leftMenu.classList.add('-translate-x-[110%]', 'opacity-0');
+                }
+            });
+
+            rightTrigger.addEventListener('mouseenter', () => {
+                rightMenu.classList.remove('translate-x-[110%]', 'opacity-0');
+            });
+
+            rightMenu.addEventListener('mouseleave', (e) => {
+                if (e.clientX < rightMenu.getBoundingClientRect().left) {
+                    rightMenu.classList.add('translate-x-[110%]', 'opacity-0');
+                }
+            });
+        }
+
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 60;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (autoRotate) {
+                targetRotationY += 0.0025;
+                targetRotationX += 0.0012;
+            }
+
+            scene.rotation.y += (targetRotationY - scene.rotation.y) * 0.08;
+            scene.rotation.x += (targetRotationX - scene.rotation.x) * 0.08;
+
+            if (frameCount % Math.max(1, (6 - growthSpeed)) === 0) {
+                pipes.forEach(p => p.update());
+            }
+            frameCount++;
+
+            let exactSegmentCount = 0;
+            scene.traverse((child) => {
+                if (child.userData && child.userData.isPipeElement) {
+                    exactSegmentCount++;
+                }
+            });
+
+            const now = performance.now();
+            if (now - lastTime >= 400) {
+                fps = Math.round((frameCount * 1000) / (now - lastTime));
+                document.getElementById('stat-fps').textContent = fps;
+                document.getElementById('stat-pipes').textContent = pipes.length;
+                document.getElementById('stat-segments').textContent = exactSegmentCount;
+                frameCount = 0;
+                lastTime = now;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = function () {
+            init();
+            animate();
+        };
+    </script>
+</body>
+</html>
