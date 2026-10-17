@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Install GFWL Fatality for MKAK
-Comment=Install xlive.dll into Mortal Kombat Arcade Kollection
-Terminal=true
-Exec=sh -c 'cd "$(dirname "$1")" && bash ./install-steamdeck.sh' launcher %k
