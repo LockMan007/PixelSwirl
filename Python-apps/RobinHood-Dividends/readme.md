@@ -11,6 +11,44 @@ scroll down, let it load and keep repeating this until you reach the start of yo
 
 There may be a better way to do this, but it is all I know.
 
+You will be able to eventually download a file that looks something like this: "A7FC2-BEA23-6FD2.CSV"
+
+Make a copy of your hexadecimal filename you downloaded that is something like "A7FC2-BEA23-6FD2.CSV"
+name the copy of the file to "robinhood_export.csv"
+
+if you have repeated purchases of a few stocks that aren't in the CSV but where in the Purchase History, 
+then you can simply edit the value such as:
+
+"1/23/2000","1/23/2000","1/23/2000","NVDA","NVIDIA
+CUSIP: 12345A123","Buy","0.012345","$123.45","($1.00)"
+You see the number in parenthesis, ($1.00) that is how much you bought.
+
+lets say you had another one also.
+"12/23/2000","12/23/2000","12/23/2000","NVDA","NVIDIA
+CUSIP: 333333333","Buy","0.033333","$333.33","($12.00)"
+You see the number in parenthesis, ($12.00) that is how much you bought.
+
+Now in your CSV file, find one of the buys for NVDA
+CUSIP: 11111A111","Buy","0.02222","$222.22","($2.00)"
+You see the number in parenthesis, ($2.00) that is how much you bought.
+
+So take the previous ones, the ($1.00) and the ($12.00) and add them to the ($2.00)
+1+12+2 = 15 = ($15.00)
+
+so
+CUSIP: 11111A111","Buy","0.02222","$222.22","($2.00)"
+You see the number in parenthesis, ($2.00) that is how much you bought.
+becomes:
+CUSIP: 11111A111","Buy","0.02222","$222.22","($15.00)"
+You see the number in parenthesis, ($2.00) that is how much you bought.
+
+While this makes your CSV file inaccurate for history, it is the easiest way i think to add the missing amounts.
+
+All you are doing is editing a single value in your copy of the CSV file for each stock you bought that wasn't in the CSV file, but was over 5 years ago, so it was only in your account history.
+It's a lot of text to say this, but i wanted it to be easy to follow without questions.
+
+<hr>
+
 Step 1.
 In the "Robinhood-fetch.py" file, open it in a text editor like notepad
 You will see these lines near the top.
@@ -29,9 +67,6 @@ After that you see the filenames:
 # Update with your actual Robinhood CSV filename
 ROBINHOOD_CSV_PATH = "robinhood_export.csv"
 CACHE_FILE_PATH = "dividends_cache.json"
-
-Rename your hexadecimal filename you downloaded that is something like "A7FC2-BEA23-6FD2.CSV"
-rename it to "robinhood_export.csv"
 
 in the command prompt run:
 py Robinhood-fetch.py
