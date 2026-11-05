@@ -1,5 +1,8 @@
 11/5/2026 Initial Release:
 
+censored information
+<img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/RobinHood-Dividends/robinhoodhtml.png?raw=true">
+
 This is a simple app to display your dividends for RobinHood because the limit this information to mobile only and I wanted to be able to view it on a computer with a large screen, but a tiny phone screen with annoying touch screen and annoying navigation issues that come from that.
 
 go to:
