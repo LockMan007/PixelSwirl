@@ -1,4 +1,4 @@
-11/5/2026 Initial Release:
+11/5/2026 Initial Release: (Coded with the help of Google Gemini AI LLM)
 
 censored information
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/RobinHood-Dividends/robinhoodhtml.png?raw=true">
