@@ -1,3 +1,5 @@
+I am sorry that this is not a proper github and instead is a collection of files.
+
 I love AI.
 This github is just where i am dumping stuff I am working on or successfully finished.
 
