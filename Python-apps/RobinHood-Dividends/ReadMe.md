@@ -1,6 +1,6 @@
 11/5/2026 Initial Release: (Coded with the help of Google Gemini AI LLM)
 
-censored information
+censored information (The white boxes are from deleting the sections of the image and not on the actual output)
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/RobinHood-Dividends/robinhoodhtml.png?raw=true">
 
 This is a simple app to display your dividends for RobinHood because the limit this information to mobile only and I wanted to be able to view it on a computer with a large screen, but a tiny phone screen with annoying touch screen and annoying navigation issues that come from that.
