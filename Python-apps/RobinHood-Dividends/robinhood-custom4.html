@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Private Robinhood Dividend Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #1e1e24;
+            color: #f4f4f9;
+            margin: 0;
+            padding: 40px;
+        }
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+            background: #2a2a35;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        h1 { color: #00c805; margin-top: 0; text-align: center; }
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #444;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            background: #22222b;
+        }
+        input[type="file"] { display: none; }
+        .btn {
+            background-color: #00c805;
+            color: #111;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .btn:hover { background-color: #00e606; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: #22222b;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #00c805;
+        }
+        .card h3 { margin: 0 0 10px 0; color: #aaa; font-size: 14px; text-transform: uppercase; }
+        .card p { margin: 0; font-size: 28px; font-weight: bold; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        th { 
+            color: #aaa; 
+            font-weight: 600; 
+            cursor: pointer; 
+            user-select: none;
+        }
+        th:hover { color: #00c805; }
+        tr:hover { background: #333344; }
+        .sort-icon { margin-left: 5px; font-size: 12px; }
+        .file-status { margin-top: 10px; color: #aaa; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Private Dividend Tracker</h1>
+    
+    <div class="upload-grid">
+        <div class="upload-section">
+            <p>1. Load Robinhood CSV</p>
+            <label for="csvFile" class="btn">Choose CSV</label>
+            <input type="file" id="csvFile" accept=".csv">
+            <div id="csvFileName" class="file-status">No CSV selected</div>
+        </div>
+        <div class="upload-section">
+            <p>2. Load Dividend Cache (Optional JSON)</p>
+            <label for="jsonFile" class="btn">Choose JSON</label>
+            <input type="file" id="jsonFile" accept=".json">
+            <div id="jsonFileName" class="file-status">No cache loaded (defaults to 0.00)</div>
+        </div>
+    </div>
+
+    <div class="metrics">
+        <div class="card">
+            <h3>Projected 12-Month Income</h3>
+            <p id="totalDividend">$0.000000</p>
+        </div>
+        <div class="card">
+            <h3>Average Monthly Income</h3>
+            <p id="avgMonthly">$0.000000</p>
+        </div>
+    </div>
+
+    <h2>Your Holdings (Click Headers to Sort)</h2>
+    <table id="portfolioTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0, 'string')">Ticker<span id="sortIcon0" class="sort-icon"></span></th>
+                <th onclick="sortTable(1, 'number')">Amount Bought<span id="sortIcon1" class="sort-icon"></span></th>
+                <th onclick="sortTable(2, 'number')">Total Owned<span id="sortIcon2" class="sort-icon"></span></th>
+                <th onclick="sortTable(3, 'number')">Estimated 12-Month Payout<span id="sortIcon3" class="sort-icon"></span></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="4" style="text-align:center; color: #777;">Upload your CSV file to process data</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let dividendCache = {};
+    let rawCsvMatrix = null;
+    let currentSortColumn = -1;
+    let currentSortAscending = true;
+    let parsedPortfolioData = []; 
+
+    document.getElementById('csvFile').addEventListener('change', handleCsvSelect);
+    document.getElementById('jsonFile').addEventListener('change', handleJsonSelect);
+
+    function handleCsvSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        document.getElementById('csvFileName').innerText = file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            parseRobustCSV(e.target.result);
+        };
+        reader.readAsText(file);
+    }
+
+    function handleJsonSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        document.getElementById('jsonFileName').innerText = file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                dividendCache = JSON.parse(e.target.result);
+                if (rawCsvMatrix) processRobinhoodData(rawCsvMatrix);
+            } catch (err) {
+                alert("Invalid JSON file format.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function parseRobustCSV(text) {
+        const result = [];
+        let row = [''];
+        let inQuotes = false;
+
+        for (let i = 0; i < text.length; i++) {
+            let c = text[i];
+            let next = text[i+1];
+
+            if (c === '"') {
+                if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; } 
+                else { inQuotes = !inQuotes; }
+            } else if (c === ',' && !inQuotes) {
+                row.push('');
+            } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                if (c === '\r' && next === '\n') { i++; }
+                result.push(row);
+                row = [''];
+            } else {
+                row[row.length - 1] += c;
+            }
+        }
+        if (row.length > 1 || row !== '') result.push(row);
+        
+        rawCsvMatrix = result;
+        processRobinhoodData(result);
+    }
+
+    function parseNumericCash(val) {
+        if (!val) return 0;
+        let clean = val.replace(/["'\$\s]/g, "").replace(/\((.*)\)/, "$1");
+        let num = parseFloat(clean);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function processRobinhoodData(matrix) {
+        if (!matrix || matrix.length < 2) return;
+
+        const headers = matrix[0].map(h => String(h).trim().replace(/["']/g, "").toLowerCase());
+        
+        const instrumentIdx = headers.findIndex(h => h === 'instrument' || h === 'symbol' || h === 'ticker');
+        const qtyIdx = headers.findIndex(h => h === 'quantity' || h === 'shares');
+        const transIdx = headers.findIndex(h => h === 'trans code' || h === 'transaction type');
+        const descIdx = headers.findIndex(h => h === 'description');
+        const amountIdx = headers.findIndex(h => h === 'amount');
+
+        if (instrumentIdx === -1 || qtyIdx === -1 || amountIdx === -1) {
+            alert("Format Mismatch: Could not locate required column headers.");
+            return;
+        }
+
+        const trackerMap = {};
+
+        for (let i = 1; i < matrix.length; i++) {
+            const row = matrix[i];
+            if (!row || row.length <= Math.max(instrumentIdx, qtyIdx, amountIdx)) continue;
+
+            const ticker = row[instrumentIdx].trim().toUpperCase();
+            if (!ticker || ticker === "" || ticker === "UNDEFINED") continue;
+
+            let qty = parseFloat(row[qtyIdx]);
+            if (isNaN(qty)) qty = 0;
+
+            let cashAmount = parseNumericCash(row[amountIdx]);
+            let descriptionText = descIdx !== -1 ? row[descIdx].toLowerCase() : "";
+            let transCode = transIdx !== -1 ? row[transIdx].trim().toLowerCase() : "";
+
+            if (!trackerMap[ticker]) {
+                trackerMap[ticker] = { shares: 0, amountBought: 0, totalOwned: 0 };
+            }
+
+            const isDividendReinvest = descriptionText.includes("dividend reinvestment") || descriptionText.includes("reinvestment") || descriptionText.includes("cash div") || transCode.includes("cdiv");
+            const isBuy = transCode.includes("buy") || descriptionText.includes("buy");
+            const isSell = transCode.includes("sell") || descriptionText.includes("sell");
+
+            if (isDividendReinvest) {
+                trackerMap[ticker].shares += qty;
+                trackerMap[ticker].totalOwned += Math.abs(cashAmount);
+            } else if (isBuy) {
+                trackerMap[ticker].shares += qty;
+                trackerMap[ticker].amountBought += Math.abs(cashAmount);
+                trackerMap[ticker].totalOwned += Math.abs(cashAmount);
+            } else if (isSell) {
+                trackerMap[ticker].shares -= qty;
+                trackerMap[ticker].amountBought -= Math.abs(cashAmount);
+                trackerMap[ticker].totalOwned -= Math.abs(cashAmount);
+            }
+        }
+
+        parsedPortfolioData = [];
+        let grandTotal = 0;
+
+        for (let ticker in trackerMap) {
+            const dataObj = trackerMap[ticker];
+            if (dataObj.shares <= 0.000001) continue; 
+
+            // Pull rate from loaded JSON cache; strictly 0.00 if missing or non-paying
+            let annualDividendPerShare = dividendCache[ticker] !== undefined ? dividendCache[ticker] : 0.00;
+            
+            const annualTotal = dataObj.shares * annualDividendPerShare;
+            grandTotal += annualTotal;
+
+            parsedPortfolioData.push({
+                ticker: ticker,
+                amountBought: dataObj.amountBought,
+                totalOwned: dataObj.totalOwned,
+                annualPayout: annualTotal
+            });
+        }
+
+        document.getElementById('totalDividend').innerText = `$${grandTotal.toFixed(6)}`;
+        document.getElementById('avgMonthly').innerText = `$${(grandTotal / 12).toFixed(6)}`;
+
+        renderTableRows(parsedPortfolioData);
+    }
+
+    function renderTableRows(data) {
+        const tableBody = document.querySelector('#portfolioTable tbody');
+        tableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: #777;">No active positions detected.</td></tr>`;
+            return;
+        }
+
+        data.forEach(item => {
+            tableBody.innerHTML += `
+                <tr>
+                    <td><strong>${item.ticker}</strong></td>
+                    <td>$${item.amountBought.toFixed(2)}</td>
+                    <td>$${item.totalOwned.toFixed(2)}</td>
+                    <td>$${item.annualPayout.toFixed(6)}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function sortTable(columnIndex, type) {
+        if (parsedPortfolioData.length === 0) return;
+
+        if (currentSortColumn === columnIndex) {
+            currentSortAscending = !currentSortAscending;
+        } else {
+            currentSortColumn = columnIndex;
+            currentSortAscending = true;
+        }
+
+        for (let i = 0; i < 4; i++) {
+            document.getElementById(`sortIcon${i}`).innerText = '';
+        }
+
+        document.getElementById(`sortIcon${columnIndex}`).innerText = currentSortAscending ? ' ▲' : ' ▼';
+
+        parsedPortfolioData.sort((a, b) => {
+            let valA, valB;
+            
+            if (columnIndex === 0) { valA = a.ticker; valB = b.ticker; }
+            else if (columnIndex === 1) { valA = a.amountBought; valB = b.amountBought; }
+            else if (columnIndex === 2) { valA = a.totalOwned; valB = b.totalOwned; }
+            else if (columnIndex === 3) { valA = a.annualPayout; valB = b.annualPayout; }
+
+            if (type === 'number') {
+                return currentSortAscending ? valA - valB : valB - valA;
+            } else {
+                return currentSortAscending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        });
+
+        renderTableRows(parsedPortfolioData);
+    }
+</script>
+
+</body>
+</html>
