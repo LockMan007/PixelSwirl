@@ -13,7 +13,7 @@
             padding: 40px;
         }
         .container {
-            max-width: 950px;
+            max-width: 1050px;
             margin: 0 auto;
             background: #2a2a35;
             padding: 30px;
@@ -48,7 +48,7 @@
         .btn:hover { background-color: #00e606; }
         .metrics {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -58,8 +58,8 @@
             border-radius: 8px;
             border-left: 4px solid #00c805;
         }
-        .card h3 { margin: 0 0 10px 0; color: #aaa; font-size: 14px; text-transform: uppercase; }
-        .card p { margin: 0; font-size: 28px; font-weight: bold; }
+        .card h3 { margin: 0 0 10px 0; color: #aaa; font-size: 13px; text-transform: uppercase; }
+        .card p { margin: 0; font-size: 24px; font-weight: bold; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -95,7 +95,7 @@
             <div id="csvFileName" class="file-status">No CSV selected</div>
         </div>
         <div class="upload-section">
-            <p>2. Load Dividend Cache (Optional JSON)</p>
+            <p>2. Load Dividend Cache (JSON)</p>
             <label for="jsonFile" class="btn">Choose JSON</label>
             <input type="file" id="jsonFile" accept=".json">
             <div id="jsonFileName" class="file-status">No cache loaded (defaults to 0.00)</div>
@@ -111,6 +111,10 @@
             <h3>Average Monthly Income</h3>
             <p id="avgMonthly">$0.000000</p>
         </div>
+        <div class="card">
+            <h3>Total Invested / Average APY</h3>
+            <p id="avgApy">$0.00, 0.00%</p>
+        </div>
     </div>
 
     <h2>Your Holdings (Click Headers to Sort)</h2>
@@ -118,14 +122,14 @@
         <thead>
             <tr>
                 <th onclick="sortTable(0, 'string')">Ticker<span id="sortIcon0" class="sort-icon"></span></th>
-                <th onclick="sortTable(1, 'number')">Amount Bought<span id="sortIcon1" class="sort-icon"></span></th>
+                <th onclick="sortTable(1, 'number')">Amount Invested<span id="sortIcon1" class="sort-icon"></span></th>
                 <th onclick="sortTable(2, 'number')">Total Owned<span id="sortIcon2" class="sort-icon"></span></th>
                 <th onclick="sortTable(3, 'number')">Estimated 12-Month Payout<span id="sortIcon3" class="sort-icon"></span></th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td colspan="4" style="text-align:center; color: #777;">Upload your CSV file to process data</td>
+                <td colspan="4" style="text-align:center; color: #777;">Upload your files to process data</td>
             </tr>
         </tbody>
     </table>
@@ -238,7 +242,7 @@
             let transCode = transIdx !== -1 ? row[transIdx].trim().toLowerCase() : "";
 
             if (!trackerMap[ticker]) {
-                trackerMap[ticker] = { shares: 0, amountBought: 0, totalOwned: 0 };
+                trackerMap[ticker] = { shares: 0, amountInvested: 0, totalOwned: 0 };
             }
 
             const isDividendReinvest = descriptionText.includes("dividend reinvestment") || descriptionText.includes("reinvestment") || descriptionText.includes("cash div") || transCode.includes("cdiv");
@@ -246,42 +250,50 @@
             const isSell = transCode.includes("sell") || descriptionText.includes("sell");
 
             if (isDividendReinvest) {
+                // DRIP adds to share count and Total Owned value, but NOT out-of-pocket Amount Invested
                 trackerMap[ticker].shares += qty;
                 trackerMap[ticker].totalOwned += Math.abs(cashAmount);
             } else if (isBuy) {
+                // Manual purchase adds to shares, out-of-pocket Amount Invested, AND Total Owned
                 trackerMap[ticker].shares += qty;
-                trackerMap[ticker].amountBought += Math.abs(cashAmount);
+                trackerMap[ticker].amountInvested += Math.abs(cashAmount);
                 trackerMap[ticker].totalOwned += Math.abs(cashAmount);
             } else if (isSell) {
+                // Sale reduces share count, Amount Invested, AND Total Owned
                 trackerMap[ticker].shares -= qty;
-                trackerMap[ticker].amountBought -= Math.abs(cashAmount);
+                trackerMap[ticker].amountInvested -= Math.abs(cashAmount);
                 trackerMap[ticker].totalOwned -= Math.abs(cashAmount);
             }
         }
 
         parsedPortfolioData = [];
-        let grandTotal = 0;
+        let grandTotalAnnualPayout = 0;
+        let grandTotalInvested = 0;
 
         for (let ticker in trackerMap) {
             const dataObj = trackerMap[ticker];
             if (dataObj.shares <= 0.000001) continue; 
 
-            // Pull rate from loaded JSON cache; strictly 0.00 if missing or non-paying
             let annualDividendPerShare = dividendCache[ticker] !== undefined ? dividendCache[ticker] : 0.00;
-            
             const annualTotal = dataObj.shares * annualDividendPerShare;
-            grandTotal += annualTotal;
+            
+            grandTotalAnnualPayout += annualTotal;
+            grandTotalInvested += dataObj.amountInvested;
 
             parsedPortfolioData.push({
                 ticker: ticker,
-                amountBought: dataObj.amountBought,
+                amountInvested: dataObj.amountInvested,
                 totalOwned: dataObj.totalOwned,
                 annualPayout: annualTotal
             });
         }
 
-        document.getElementById('totalDividend').innerText = `$${grandTotal.toFixed(6)}`;
-        document.getElementById('avgMonthly').innerText = `$${(grandTotal / 12).toFixed(6)}`;
+        // Calculate weighted APY based on out-of-pocket capital invested
+        let portfolioApy = grandTotalInvested > 0 ? (grandTotalAnnualPayout / grandTotalInvested) * 100 : 0.00;
+
+        document.getElementById('totalDividend').innerText = `$${grandTotalAnnualPayout.toFixed(6)}`;
+        document.getElementById('avgMonthly').innerText = `$${(grandTotalAnnualPayout / 12).toFixed(6)}`;
+        document.getElementById('avgApy').innerText = `$${grandTotalInvested.toFixed(2)}, ${portfolioApy.toFixed(2)}%`;
 
         renderTableRows(parsedPortfolioData);
     }
@@ -299,7 +311,7 @@
             tableBody.innerHTML += `
                 <tr>
                     <td><strong>${item.ticker}</strong></td>
-                    <td>$${item.amountBought.toFixed(2)}</td>
+                    <td>$${item.amountInvested.toFixed(2)}</td>
                     <td>$${item.totalOwned.toFixed(2)}</td>
                     <td>$${item.annualPayout.toFixed(6)}</td>
                 </tr>
@@ -327,7 +339,7 @@
             let valA, valB;
             
             if (columnIndex === 0) { valA = a.ticker; valB = b.ticker; }
-            else if (columnIndex === 1) { valA = a.amountBought; valB = b.amountBought; }
+            else if (columnIndex === 1) { valA = a.amountInvested; valB = b.amountInvested; }
             else if (columnIndex === 2) { valA = a.totalOwned; valB = b.totalOwned; }
             else if (columnIndex === 3) { valA = a.annualPayout; valB = b.annualPayout; }
 
