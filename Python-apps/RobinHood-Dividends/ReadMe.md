@@ -112,3 +112,10 @@ it is possible that the website source it gets the dividend information from, do
 
 I will review this information later today or soon and see what the issue is.
 I also might be making wrong understanding in calculations.
+
+<hr>
+<hr>
+UPDATE: 1/6/2026 later:
+Okay so some of them the "yfinance" responded with 0.00 which i fixed and got it within 2.75% of what I had calculated manually.
+I suspect the remaining 2.75% is because of rounding.
+Robinhood shows quarterly values like $0.2501 whereas yfinance is giving me yearly, so you multiply quarterly by 4 to get yearly at like $1.00 which means it is losing the $0.0004 and while in this example it's practically nothing, another example could be more significant, especially if you have a ton of stocks, the fractions add up.
