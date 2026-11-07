@@ -1,3 +1,8 @@
+11/6/2026:
+Added "Total Invested / Average APY"<br>
+$20.00, 0.75%<br>
+where $20 is how much you deposited and 0.75% is the average when you add up all the APY and divide by that number.<br>
+
 11/5/2026 Initial Release: (Coded with the help of Google Gemini AI LLM)<br><br>
 NOTE: If you use this python script and this HTML file, absolutely zero data is sent to or collected in any way by me.<br>
 I specifically created this app, because I didn't want to trust anyone else with information or account linking.<br>
