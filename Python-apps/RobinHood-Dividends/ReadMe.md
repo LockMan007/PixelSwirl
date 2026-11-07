@@ -1,7 +1,8 @@
-11/5/2026 Initial Release: (Coded with the help of Google Gemini AI LLM)<br>
+11/5/2026 Initial Release: (Coded with the help of Google Gemini AI LLM)<br><br>
 NOTE: If you use this python script and this HTML file, absolutely zero data is sent to or collected in any way by me.<br>
 I specifically created this app, because I didn't want to trust anyone else with information or account linking.<br>
 "yfinance offers a Pythonic way to fetch financial & market data from Yahoo!Ⓡ finance."<br>
+"Unofficial Library: yfinance is not affiliated with, endorsed, or vetted by Yahoo, Inc."<br>
 (NOTE: I did not make yfinance and just trust it blindly.)<br>
 
 censored information (The white boxes are from deleting the sections of the image and not on the actual output)
