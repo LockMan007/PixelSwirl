@@ -4,7 +4,11 @@ I specifically created this app, because I didn't want to trust anyone else with
 "yfinance offers a Pythonic way to fetch financial & market data from Yahoo!Ⓡ finance."<br>
 "Unofficial Library: yfinance is not affiliated with, endorsed, or vetted by Yahoo, Inc."<br>
 (NOTE: I did not make yfinance and just trust it blindly.)<br>
-
+<br>
+<br>
+To my best understanding the python script extracts out the ticker symbols and only piece of information transmitted across the network, is the ticker symbol strings themselves, such as "NVDA" with no other data.
+<br>
+<br>
 censored information (The white boxes are from deleting the sections of the image and not on the actual output)
 <img src="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/RobinHood-Dividends/robinhoodhtml.png?raw=true">
 
