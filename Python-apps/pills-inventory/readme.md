@@ -1,3 +1,14 @@
+Version 0.3.4:<br>
+MAJOR data wipe bug fix<br>
+Version 0.3.3 had a major bug where if you saved a shortcut to python and pinned this app and launched it that way, it would delete all your medications.ini data and overwrite it with just the current date. I now modified it to have it use the "base folder" of the app so that it doesn't do this.<br>
+<br>
+However, I still recommend saving a backup copy of your medications.ini file every so often to avoid redoing stuff.<br>
+It's too late for me, I have a month old backup, but have to recount medications to ensure they are accurate...<br>
+<br>
+<br>
+<hr>
+<br>
+<br>
 version 0.3.3 (beta) note this was updated a few times today, while keeping the same version)
 <a href="https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pills-0.3.3.py">https://github.com/LockMan007/PixelSwirl/blob/main/Python-apps/pills-inventory/pills-0.3.3.py</a>
 - I haven't tested everything, but pretty sure it's fine.
