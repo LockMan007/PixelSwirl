@@ -8,9 +8,12 @@ from datetime import datetime, date, time, timedelta
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-APP_VERSION = "0.3.3"
-CONFIG_FILE = "medications.ini"
-SETTINGS_FILE = "settings.ini"
+APP_VERSION = "0.3.4"
+# Anchor all file paths to the script's actual directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_FILE = os.path.join(BASE_DIR, "medications.ini")
+SETTINGS_FILE = os.path.join(BASE_DIR, "settings.ini")
+
 DATE_FORMAT = "%Y-%m-%d"
 DISPLAY_DATE_FORMAT = "%m/%d/%Y"
 GITHUB_URL = "https://github.com/LockMan007/PixelSwirl/tree/main/Python-apps/pills-inventory"
@@ -458,14 +461,14 @@ class MedTrackerApp:
 
     def log_manual_change(self, entry_str):
         year = date.today().strftime("%Y")
-        log_filename = f"Log-{year}.txt"
-        timestamp = datetime.now().strftime("%m/%d/%Y %I:%M %p")
+        log_filename = os.path.join(BASE_DIR, f"Log-{year}.txt")
+        timestamp = datetime.now().strftime("%m/%d/%Y I:%M %p")
         with open(log_filename, "a", encoding="utf-8") as f:
             f.write(f"[{timestamp}] {entry_str}\n")
 
     def log_refill_action(self, person, pill, refill_amount, refills_left):
         year = date.today().strftime("%Y")
-        refill_filename = f"Refills-{year}.txt"
+        refill_filename = os.path.join(BASE_DIR, f"Refills-{year}.txt")
         file_exists = os.path.exists(refill_filename)
         
         today_str = date.today().strftime(DISPLAY_DATE_FORMAT)
