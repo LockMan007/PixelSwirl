@@ -4,6 +4,7 @@ Version 0.3.3 had a major bug where if you saved a shortcut to python and pinned
 <br>
 However, I still recommend saving a backup copy of your medications.ini file every so often to avoid redoing stuff.<br>
 It's too late for me, I have a month old backup, but have to recount medications to ensure they are accurate...<br>
+Update: My log files did document updates, so I am just going to do "refills" based on the logs and hope for the best.
 <br>
 <br>
 <hr>
